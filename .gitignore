@@ -1,0 +1,7 @@
+_htmresc/
+*.html
+*.htm
+.metadata/
+.vs/
+html/
+htm/
