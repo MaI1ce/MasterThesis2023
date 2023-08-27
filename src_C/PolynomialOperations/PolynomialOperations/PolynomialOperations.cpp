@@ -3,8 +3,13 @@
 
 #include <iostream>
 
+extern "C" {
+#include "../../poly_lib/polynomial.h"
+}
+
 int main()
 {
+    int a = test();
     std::cout << "Hello World!\n";
 }
 
