@@ -1,0 +1,118 @@
+#include <bits/stdc++.h>
+using namespace std;
+ 
+// For storing complex values of nth roots
+// of unity we use complex<double>
+typedef complex<double> cd;
+ 
+// Recursive function of FFT
+vector<cd> fft(vector<cd>& a)
+{
+    int n = a.size();
+ 
+    // if input contains just one element
+    if (n == 1)
+        return vector<cd>(1, a[0]);
+ 
+    // For storing n complex nth roots of unity
+    vector<cd> w(n);
+    for (int i = 0; i < n; i++) {
+        double alpha = -2 * M_PI * i / n;
+        w[i] = cd(cos(alpha), sin(alpha));
+    }
+ 
+    vector<cd> A0(n / 2), A1(n / 2);
+    for (int i = 0; i < n / 2; i++) {
+ 
+        // even indexed coefficients
+        A0[i] = a[i * 2];
+ 
+        // odd indexed coefficients
+        A1[i] = a[i * 2 + 1];
+    }
+ 
+    // Recursive call for even indexed coefficients
+    vector<cd> y0 = fft(A0);
+ 
+    // Recursive call for odd indexed coefficients
+    vector<cd> y1 = fft(A1);
+ 
+    // for storing values of y0, y1, y2, ..., yn-1.
+    vector<cd> y(n);
+ 
+    for (int k = 0; k < n / 2; k++) {
+        y[k] = y0[k] + w[k] * y1[k];
+        y[k + n / 2] = y0[k] - w[k] * y1[k];
+    }
+    return y;
+}
+ 
+// Driver code
+int main()
+{
+    vector<cd> a{1, 2, 3, 4};
+    vector<cd> b = fft(a);
+    for (int i = 0; i < 4; i++)
+        cout << b[i] << endl;
+ 
+    return 0;
+}
+-------------------------------------------------------------------------
+https://en.wikipedia.org/wiki/Root_of_unity_modulo_n
+
+https://www.youtube.com/watch?v=h7apO7q16V0 - FFT on polynomials + code on python
+
+https://www.youtube.com/watch?v=Ty0JcR6Dvis - continues prew video with example of recursion
+
+https://www.youtube.com/watch?v=KuXjwB4LzSA - convolution explanation (multiplication of polynomials after NTT)
+
+https://github.com/SRI-CSL/NTT/blob/master/paper/main_final.pdf - NTT implementation
+
+https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm - Wiki FFT
+
+https://pq-crystals.org/dilithium/resources.shtml - Reference implementation
+
+-------------------------------------------------------------------------
+
+That’s actually a really cool problem! The first time I read the editorial, I completely missed the point. You don’t use FFT as a black-box here like usual. You use the idea of how FFT works to evaluate the function at a bunch of points.
+
+You can just evaluate it at x= all points from 1...mod. The idea the editorial describes (which is also how FFT works) is that if you split your x coordinates into two groups in this particularly clever way, the two groups are pretty much the same, so you only have to go down one path instead of two. This makes the runtime n*log(n) rather than n^2.
+
+The key insight here is that instead of using roots of unity (weird imaginary number stuff) you can use powers of a number called a generator with the special property that it has a cycle of length mod-1 if you look at all of its powers. If you just find one of these first, you can use this number as your base and evaluate the polynomial at ALL X’s(!) instead of at a bunch of imaginary numbers around the unit circle.
+
+Clearly, if you have the polynomial evaluated everywhere, the problem is now trivial.
+
+
+-------------------------------------------------------------------------
+
+If you have a generator ω
+of any cyclic group (regardless of whether it comes from a field or not), it is easy to construct elements of any order you want. Say the cyclic group (and hence ω as well) has order k. Then for any d dividing k (which are all the possible orders), the element ωk/d will have order d
+
+.
+
+Assuming your question is asking about the multiplicative group (Z/NZ)×
+, then an element of order d is the same thing as a primitive dth root of unity modulo N.
+-------------------------------------------------------------------------
+
+A primitive nth root of unity is a complex number 𝜔 such that 𝜔^n = 1, but 𝜔^m ≠ 1 for any positive integer m < n. In other words, a primitive nth root of unity is an nth root of unity that is not also an mth root of unity for any m < n.
+
+-----------------------------------------------------------------------------
+
+The number theoretic transform (NTT) is a fast Fourier transform (FFT) that works over a finite field. It is a powerful tool for many applications, such as cryptography, digital signal processing, and image processing.
+
+To perform an NTT, we need to first choose a modulus, which is a prime number. The input vector is then converted to elements of the finite field modulo the modulus. The NTT is then performed using the following steps:
+
+    Calculate the twiddle factors, which are powers of a primitive nth root of unity modulo the modulus.
+    For each input element, multiply it by the appropriate twiddle factor.
+    Perform a butterfly operation on each pair of elements.
+    Repeat steps 2 and 3 until the desired number of transforms have been performed.
+
+The butterfly operation is the heart of the NTT. It takes two input elements and combines them to produce two output elements. The butterfly operation is defined as follows:
+
+(a, b) -> (a + b, a - b)
+
+where a and b are the input elements, and + and - are operations modulo the modulus.
+
+The NTT can be implemented efficiently using a divide-and-conquer algorithm. This algorithm divides the input vector into two halves, and then recursively performs the NTT on each half. The final result is obtained by combining the results of the two recursive calls.
+
+The NTT is a very efficient algorithm for computing the Fourier transform over a finite field. It is much faster than the naive algorithm, which simply computes the Fourier transform directly. The NTT is also more accurate than the naive algorithm, because it does not suffer from roundoff error.
