@@ -35,8 +35,8 @@ static void poly_naivemul(poly* c, const poly* a, const poly* b) {
 }
 
 //#define TEST_VECTORS
-//#define TEST_DILITHIUM
-#define TEST_MUL
+#define TEST_DILITHIUM
+//#define TEST_MUL
 
 
 int main()
@@ -99,7 +99,7 @@ int main()
         printf("\n");
 
         polyvec_matrix_expand(mat, seed);
-        printf("A = ([");
+        /*printf("A = ([");
         for (j = 0; j < K; ++j) {
             for (k = 0; k < L; ++k) {
                 for (l = 0; l < N; ++l) {
@@ -110,7 +110,7 @@ int main()
                     else printf("])\n");
                 }
             }
-        }
+        }*/
 
         polyvecl_uniform_eta(&s, seed, 0);
 
@@ -123,7 +123,7 @@ int main()
         polyvecl_reduce(&s);
         if (polyvecl_chknorm(&s, ETA + 1))
             fprintf(stderr, "ERROR in polyvecl_chknorm(&s ,ETA+1)!\n");
-
+        /*
         printf("s = ([");
         for (j = 0; j < L; ++j) {
             for (k = 0; k < N; ++k) {
@@ -133,7 +133,7 @@ int main()
                 else if (j < L - 1) printf("],\n     [");
                 else printf("])\n");
             }
-        }
+        }*/
 
         polyvecl_uniform_gamma1(&y, seed, 0);
 
@@ -145,7 +145,7 @@ int main()
 
         if (polyvecl_chknorm(&y, GAMMA1 + 1))
             fprintf(stderr, "ERROR in polyvecl_chknorm(&y, GAMMA1)!\n");
-
+        /*
         printf("y = ([");
         for (j = 0; j < L; ++j) {
             for (k = 0; k < N; ++k) {
@@ -155,7 +155,7 @@ int main()
                 else if (j < L - 1) printf("],\n     [");
                 else printf("])\n");
             }
-        }
+        }*/
 
         polyvecl_ntt(&y);
         polyvec_matrix_pointwise_montgomery(&w, mat, &y);
@@ -191,7 +191,7 @@ int main()
 #endif
         if (polyveck_chknorm(&w0, GAMMA2 + 1))
             fprintf(stderr, "ERROR in polyveck_chknorm(&w0, GAMMA2+1)!\n");
-
+        /*
         printf("w1 = ([");
         for (j = 0; j < K; ++j) {
             for (k = 0; k < N; ++k) {
@@ -211,7 +211,7 @@ int main()
                 else printf("])\n");
             }
         }
-
+        */
         polyveck_power2round(&t1, &t0, &w);
 
         for (j = 0; j < N; ++j) {
@@ -237,7 +237,7 @@ int main()
             fprintf(stderr, "ERROR in polyveck_chknorm(&t1, 1024)!\n");
         if (polyveck_chknorm(&t0, (1U << (D - 1)) + 1))
             fprintf(stderr, "ERROR in polyveck_chknorm(&t0, (1 << (D-1)) + 1)!\n");
-
+        /*
         printf("t1 = ([");
         for (j = 0; j < K; ++j) {
             for (k = 0; k < N; ++k) {
@@ -257,15 +257,16 @@ int main()
                 else printf("])\n");
             }
         }
-
+        */
         poly_challenge(&c, seed);
+        /*
         printf("c = [");
         for (j = 0; j < N; ++j) {
             u = c.coeffs[j];
             printf("%2d", u);
             if (j < N - 1) printf(", ");
             else printf("]\n");
-        }
+        }*/
 
         polyveck_make_hint(&h, &w0, &w1);
         pack_sig(buf, seed, &y, &h);

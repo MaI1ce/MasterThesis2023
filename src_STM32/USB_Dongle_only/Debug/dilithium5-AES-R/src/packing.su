@@ -1,0 +1,6 @@
+../dilithium5-AES-R/src/packing.c:15:6:pqcrystals_dilithium2aes_r_ref_pack_pk	32	static
+../dilithium5-AES-R/src/packing.c:38:6:pqcrystals_dilithium2aes_r_ref_unpack_pk	32	static
+../dilithium5-AES-R/src/packing.c:64:6:pqcrystals_dilithium2aes_r_ref_pack_sk	32	static
+../dilithium5-AES-R/src/packing.c:116:6:pqcrystals_dilithium2aes_r_ref_upack_sk	32	static
+../dilithium5-AES-R/src/packing.c:163:6:pqcrystals_dilithium2aes_r_ref_pack_sig	40	static
+../dilithium5-AES-R/src/packing.c:205:5:pqcrystals_dilithium2aes_r_ref_unpack_sig	40	static

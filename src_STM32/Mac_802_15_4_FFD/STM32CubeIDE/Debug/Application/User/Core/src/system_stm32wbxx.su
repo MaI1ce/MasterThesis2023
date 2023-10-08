@@ -1,0 +1,10 @@
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:1318:22:LL_RCC_HSE_Enable	4	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:1338:26:LL_RCC_HSE_IsReady	4	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:1359:22:LL_RCC_HSE_SetCapacitorTuning	16	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:1860:22:LL_RCC_MSI_Disable	4	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:2058:22:LL_RCC_SetSysClkSource	16	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:2072:26:LL_RCC_GetSysClkSource	4	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_system.h:1976:22:LL_FLASH_SetLatency	16	static
+../../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_system.h:1990:26:LL_FLASH_GetLatency	4	static
+F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/system_stm32wbxx.c:191:6:SystemInit	16	static
+F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/system_stm32wbxx.c:282:6:SystemCoreClockUpdate	32	static

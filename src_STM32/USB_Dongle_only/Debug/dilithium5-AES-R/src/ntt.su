@@ -1,0 +1,2 @@
+../dilithium5-AES-R/src/ntt.c:49:6:pqcrystals_dilithium2aes_r_ref_ntt	64	static
+../dilithium5-AES-R/src/ntt.c:77:6:pqcrystals_dilithium2aes_r_ref_invntt_tomont	104	static
