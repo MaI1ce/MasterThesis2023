@@ -273,6 +273,17 @@ void poly_use_hint(poly *b, const poly *a, const poly *h) {
   DBENCH_STOP(*tround);
 }
 
+void poly_use_hint_r(poly* b, const poly* a, const uint8_t* h) {
+    unsigned int i;
+    DBENCH_START();
+
+    for (i = 0; i < N; ++i)
+        b->coeffs[i] = use_hint(a->coeffs[i], h[i]);
+
+    DBENCH_STOP(*tround);
+}
+
+
 /*************************************************
 * Name:        poly_chknorm
 *

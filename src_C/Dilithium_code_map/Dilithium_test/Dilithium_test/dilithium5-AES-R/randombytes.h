@@ -6,4 +6,6 @@
 
 void randombytes(uint8_t *out, size_t outlen);
 
+void randombytes2(uint8_t* out, size_t outlen);
+
 #endif

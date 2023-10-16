@@ -38,6 +38,8 @@ unsigned int poly_make_hint(poly *h, const poly *a0, const poly *a1);
 #define poly_use_hint DILITHIUM_NAMESPACE(_poly_use_hint)
 void poly_use_hint(poly *b, const poly *a, const poly *h);
 
+void poly_use_hint_r(poly* b, const poly* a, const uint8_t* h);
+
 #define poly_chknorm DILITHIUM_NAMESPACE(_poly_chknorm)
 int poly_chknorm(const poly *a, int32_t B);
 #define poly_uniform DILITHIUM_NAMESPACE(_poly_uniform)

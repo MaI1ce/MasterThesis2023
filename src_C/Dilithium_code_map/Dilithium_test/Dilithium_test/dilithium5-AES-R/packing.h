@@ -39,4 +39,30 @@ void unpack_sk(uint8_t rho[SEEDBYTES],
 int unpack_sig(uint8_t c[SEEDBYTES], polyvecl *z, polyveck *h,
                const uint8_t sig[CRYPTO_BYTES]);
 
+///////////////////////////////////////
+
+int verify_sig_z_h_malform(uint8_t h_buf[N * K], const uint8_t sig[CRYPTO_BYTES]);
+
+void unpack_pk_t1(poly* t1_i, uint32_t i, const uint8_t pk[CRYPTO_PUBLICKEYBYTES]);
+
+void unpack_pk_rho(uint8_t rho[SEEDBYTES], const uint8_t pk[CRYPTO_PUBLICKEYBYTES]);
+
+void unpack_sig_z(poly* z_i, uint32_t i, const uint8_t sig[CRYPTO_BYTES]);
+
+void unpack_sig_c(uint8_t c[SEEDBYTES], const uint8_t sig[CRYPTO_BYTES]);
+
+void pack_sk_r(uint8_t sk[CRYPTO_SECRETKEYBYTES],
+    const uint8_t rho[SEEDBYTES],
+    const uint8_t rhoprime[SEEDBYTES],
+    const uint8_t tr[CRHBYTES],
+    const uint8_t key[SEEDBYTES],
+    const polyveck* t0);
+
+void unpack_sk_r(uint8_t rho[SEEDBYTES],
+    uint8_t rhoprime[SEEDBYTES],
+    uint8_t tr[CRHBYTES],
+    uint8_t key[SEEDBYTES],
+    polyveck* t0,
+    const uint8_t sk[CRYPTO_SECRETKEYBYTES]);
+
 #endif

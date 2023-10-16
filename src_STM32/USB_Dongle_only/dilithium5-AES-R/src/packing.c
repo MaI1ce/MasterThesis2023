@@ -3,6 +3,7 @@
 #include "polyvec.h"
 #include "poly.h"
 
+
 /*************************************************
 * Name:        pack_pk
 *
@@ -63,6 +64,40 @@ void unpack_pk(uint8_t rho[SEEDBYTES],
 **************************************************/
 void pack_sk(uint8_t sk[CRYPTO_SECRETKEYBYTES],
              const uint8_t rho[SEEDBYTES],
+             const uint8_t tr[CRHBYTES],
+             const uint8_t key[SEEDBYTES],
+             const polyveck *t0,
+             const polyvecl *s1,
+             const polyveck *s2)
+{
+  unsigned int i;
+
+  for(i = 0; i < SEEDBYTES; ++i)
+    sk[i] = rho[i];
+  sk += SEEDBYTES;
+
+  for(i = 0; i < SEEDBYTES; ++i)
+    sk[i] = key[i];
+  sk += SEEDBYTES;
+
+  for(i = 0; i < CRHBYTES; ++i)
+    sk[i] = tr[i];
+  sk += CRHBYTES;
+
+  for(i = 0; i < L; ++i)
+    polyeta_pack(sk + i*POLYETA_PACKEDBYTES, &s1->vec[i]);
+  sk += L*POLYETA_PACKEDBYTES;
+
+  for(i = 0; i < K; ++i)
+    polyeta_pack(sk + i*POLYETA_PACKEDBYTES, &s2->vec[i]);
+  sk += K*POLYETA_PACKEDBYTES;
+
+  for(i = 0; i < K; ++i)
+    polyt0_pack(sk + i*POLYT0_PACKEDBYTES, &t0->vec[i]);
+}
+
+void pack_sk_r(uint8_t sk[CRYPTO_SECRETKEYBYTES],
+             const uint8_t rho[SEEDBYTES],
 			 const uint8_t rhoprime[SEEDBYTES],
              const uint8_t tr[CRHBYTES],
              const uint8_t key[SEEDBYTES],
@@ -114,6 +149,40 @@ void pack_sk(uint8_t sk[CRYPTO_SECRETKEYBYTES],
 *              - uint8_t sk[]: byte array containing bit-packed sk
 **************************************************/
 void unpack_sk(uint8_t rho[SEEDBYTES],
+               uint8_t tr[CRHBYTES],
+               uint8_t key[SEEDBYTES],
+               polyveck *t0,
+               polyvecl *s1,
+               polyveck *s2,
+               const uint8_t sk[CRYPTO_SECRETKEYBYTES])
+{
+  unsigned int i;
+
+  for(i = 0; i < SEEDBYTES; ++i)
+    rho[i] = sk[i];
+  sk += SEEDBYTES;
+
+  for(i = 0; i < SEEDBYTES; ++i)
+    key[i] = sk[i];
+  sk += SEEDBYTES;
+
+  for(i = 0; i < CRHBYTES; ++i)
+    tr[i] = sk[i];
+  sk += CRHBYTES;
+
+  for(i=0; i < L; ++i)
+    polyeta_unpack(&s1->vec[i], sk + i*POLYETA_PACKEDBYTES);
+  sk += L*POLYETA_PACKEDBYTES;
+
+  for(i=0; i < K; ++i)
+    polyeta_unpack(&s2->vec[i], sk + i*POLYETA_PACKEDBYTES);
+  sk += K*POLYETA_PACKEDBYTES;
+
+  for(i=0; i < K; ++i)
+    polyt0_unpack(&t0->vec[i], sk + i*POLYT0_PACKEDBYTES);
+}
+
+void unpack_sk_r(uint8_t rho[SEEDBYTES],
 			   uint8_t rhoprime[SEEDBYTES],
                uint8_t tr[CRHBYTES],
                uint8_t key[SEEDBYTES],
@@ -242,3 +311,106 @@ int unpack_sig(uint8_t c[SEEDBYTES],
 
   return 0;
 }
+
+
+/*************************************************
+ * ShV
+ *
+* Name:        verify_sig_h_malform
+*
+* Description: checks if h part of signature was malformed.
+*
+* Arguments:   - const uint8_t sig[]: byte array containing
+*                bit-packed signature
+*              - uint8_t h_buf[N_*K]: output buffer with reconstructed hint vector
+*
+*              return 0 if signature is ok
+*              return 1 if an error found
+*
+* Returns 1 in case of malformed signature; otherwise 0.
+**************************************************/
+static int verify_sig_h_malform(uint8_t h_buf[N_*K], const uint8_t sig[CRYPTO_BYTES]){
+    uint8_t* sig_ptr = sig + SEEDBYTES + L * POLYZ_PACKEDBYTES;
+    /* Decode h */
+    unsigned int i, j, k = 0;
+    for (i = 0; i < K; ++i) {
+
+        //for(j = 0; j < N_; ++j)
+        //  h_buf[i*N_+j] = 0;
+
+        if (sig_ptr[OMEGA + i] < k || sig_ptr[OMEGA + i] > OMEGA)
+            return 3;
+
+        for (j = k; j < sig_ptr[OMEGA + i]; ++j) {
+            /* Coefficients are ordered for strong unforgeability */
+            if (j > k && sig_ptr[j] <= sig_ptr[j - 1])
+                return 4;
+            h_buf[i * N_ + sig_ptr[j]] = 1;
+        }
+
+        k = sig_ptr[OMEGA + i];
+    }
+
+    /* Extra indices are zero for strong unforgeability */
+    for (j = k; j < OMEGA; ++j)
+        if (sig_ptr[j])
+            return 5;
+
+    return 0;
+}
+
+/*************************************************
+ * ShV
+ *
+* Name:        verify_sig_z_h_malform
+*
+* Description: checks if signature (z and h parts) was malformed.
+*
+* Arguments:   - const uint8_t sig[]: byte array containing
+*                bit-packed signature
+*              - uint8_t h_buf[N_*K]: output buffer with reconstructed hint vector
+*
+*              return 0 if signature is ok
+*              return 1 if an error found
+*
+* Returns 1 in case of malformed signature; otherwise 0.
+**************************************************/
+int verify_sig_z_h_malform(uint8_t h_buf[N_*K], const uint8_t sig[CRYPTO_BYTES]){
+	uint8_t *sig_ptr = sig + SEEDBYTES;// + L*POLYZ_PACKEDBYTES;
+	unsigned int i = 0;
+	poly z_i;
+	for(i = 0; i < L; ++i){
+	    polyz_unpack(&z_i, sig_ptr + i*POLYZ_PACKEDBYTES);
+		if(poly_chknorm(&z_i, GAMMA1 - BETA))
+	      return 2;
+	}
+	/* Decode h */
+	return verify_sig_h_malform(h_buf, sig);
+}
+
+
+void unpack_sig_c(uint8_t c[SEEDBYTES], const uint8_t sig[CRYPTO_BYTES]){
+    unsigned int i;
+	for(i = 0; i < SEEDBYTES; ++i)
+	  c[i] = sig[i];
+}
+
+void unpack_sig_z(poly *z_i, uint32_t i, const uint8_t sig[CRYPTO_BYTES]){
+	polyz_unpack(z_i, sig + SEEDBYTES + i*POLYZ_PACKEDBYTES);
+}
+
+void unpack_pk_rho(uint8_t rho[SEEDBYTES],
+               const uint8_t pk[CRYPTO_PUBLICKEYBYTES])
+{
+  unsigned int i;
+
+  for(i = 0; i < SEEDBYTES; ++i)
+    rho[i] = pk[i];
+}
+
+void unpack_pk_t1(poly *t1_i, uint32_t i,
+               const uint8_t pk[CRYPTO_PUBLICKEYBYTES])
+{
+   polyt1_unpack(t1_i, pk + SEEDBYTES + i*POLYT1_PACKEDBYTES);
+}
+

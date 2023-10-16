@@ -3,6 +3,236 @@
 #include "polyvec.h"
 #include "poly.h"
 
+#ifdef DEBUG_LOG
+#include <stdio.h>
+#endif
+
+/*************************************************
+ * ShV
+* Name:        matrix_poly_smul_montgomery
+*
+* Description: Combines implementation of ExpandA and polyvec_matrix_pointwise_montgomery functions.
+* 			   Generates matrix A and vector s1 with uniformly random coefficients a_{i,j}
+* 			   by performing rejection sampling on the output stream of SHAKE128(rho|j|i) or AES256CTR(rho,j|i).
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = 4*N*4 = 4Kb
+*
+* Arguments:   - polyveck t: output vector after multiplication of A*s1+s2
+*              - const uint8_t rho[]: byte array containing seed rho for matrix
+*              - const uint8_t rhoprime[]: byte array containing seed rhoprime for vectors s1 and s2
+**************************************************/
+void polyvec_matrix_poly_smul_montgomery(polyveck* t, const uint8_t rho[], const uint8_t rhoprime[]) {
+	unsigned int i, j;
+	poly acc;
+	poly a_ij;
+	poly s1_j;
+	poly s2_j;
+
+	for (i = 0; i < K; ++i) {
+		memset(&acc, 0, sizeof(acc));
+		for (j = 0; j < L; ++j) {
+			poly_uniform(&a_ij, rho, (i << 8) + j); // generate A[i][j]
+			poly_uniform_eta(&s1_j, rhoprime, j);		// generate s1[j]
+			poly_ntt(&s1_j);						// transform s1[j] to ntt
+			poly_pointwise_montgomery(&a_ij, &a_ij, &s1_j); // multiply A[i][j] on s1[j]
+			poly_add(&acc, &acc, &a_ij);
+		}
+		poly_reduce(&acc);
+		poly_invntt_tomont(&acc); // invert accumulated result from ntt
+		poly_uniform_eta(&s2_j, rhoprime, L + i); // generate s2[j]
+		poly_add(&t->vec[i], &acc, &s2_j);	// add accumulator and s2[j]
+	}
+}
+
+/*************************************************
+ * ShV
+* Name:        matrix_poly_ymul_montgomery
+*
+* Description: Combines implementation of ExpandA and polyvec_matrix_pointwise_montgomery functions.
+* 			   Generates matrix A and vector s1 with uniformly random coefficients a_{i,j}
+* 			   by performing rejection sampling on the output stream of SHAKE128(rho|j|i) or AES256CTR(rho,j|i).
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = 2*N*4 = 2Kb
+*
+* Arguments:   - polyveck w: output vector after multiplication of A*y
+*              - const uint8_t rho[]: byte array containing seed rho for matrix
+*              - const uint8_t rhoprime[]: byte array containing seed rhoprime for vectors y
+**************************************************/
+void polyvec_matrix_poly_ymul_montgomery(polyveck* w, const uint8_t rho[], const uint8_t rhoprime[], uint16_t nonce) {
+	unsigned int i, j;
+	poly a_ij;
+	poly y_j;
+#ifdef DEBUG_LOG
+	FILE* log_file;
+	fopen_s(&log_file, "new_sign1.log", "w");
+	fprintf(log_file, "nonce == %d y_rhoprime = ", nonce);
+	for (int i = 0; i < CRHBYTES; i++) {
+		fprintf(log_file, "%d", rhoprime[i]);
+	}
+	fprintf(log_file, "\n");
+#endif
+
+	for (i = 0; i < K; ++i) {
+		memset(&w->vec[i], 0, sizeof(uint32_t) * N);
+		for (j = 0; j < L; ++j) {
+			poly_uniform(&a_ij, rho, (i << 8) + j); 		// generate A[i][j]
+#ifdef DEBUG_LOG
+			fprintf(log_file, "a[%d][%d] = ", i, j);
+			for (int n = 0; n < N; n++) {
+				fprintf(log_file, "%d", a_ij.coeffs[n]);
+			}
+			fprintf(log_file, "\n");
+#endif
+			poly_uniform_gamma1(&y_j, rhoprime, L * nonce + j);	// generate y[j]
+			poly_ntt(&y_j);										// transform y[j] to ntt
+#ifdef DEBUG_LOG
+			fprintf(log_file, "y[%d] = ", j);
+			for (int n = 0; n < N; n++) {
+				fprintf(log_file, "%d", y_j.coeffs[n]);
+			}
+			fprintf(log_file, "\n");
+#endif
+			poly_pointwise_montgomery(&a_ij, &a_ij, &y_j); // multiply A[i][j] on y[j]
+			poly_add(&w->vec[i], &w->vec[i], &a_ij);
+		}
+		poly_reduce(&w->vec[i]);
+		poly_invntt_tomont(&w->vec[i]); // invert accumulated result from ntt
+
+#ifdef DEBUG_LOG
+		fprintf(log_file, "w1[%d] = ", i);
+		for (int n = 0; n < N; n++) {
+			fprintf(log_file, "%d", w->vec[i].coeffs[n]);
+		}
+		fprintf(log_file, "\n");
+#endif
+	}
+
+#ifdef DEBUG_LOG
+	fclose(log_file);
+#endif
+}
+
+
+/*************************************************
+ * ShV
+* Name:        polyvec_compute_z_montgomery
+*
+* Description: Generates vectors y and s1 with uniformly random coefficients and based on challenge polynomial cp computes
+* 			   vector of polynomials z = y + cp*s1.
+*
+* 			   !!! CP polynomial MUST be already in ntt form !!!
+*
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = 2*N*4 = 2Kb
+*
+* Arguments:   - polyvecl z: output vector
+* 			   - const poly *cp: challenge polynomial in ntt form
+*              - const uint8_t s_rhoprime[]: byte array containing seed for vector s1
+*              - const uint8_t y_rhoprime[]: byte array containing seed for vector y
+**************************************************/
+void polyvec_compute_z_montgomery(polyvecl* z, const poly* cp, const uint8_t s_rhoprime[], const uint8_t y_rhoprime[], uint16_t nonce) {
+	unsigned int j;
+	poly s1_j;
+	poly y_j;
+
+	for (j = 0; j < L; ++j) {
+		poly_uniform_eta(&s1_j, s_rhoprime, j);		// generate s1[j]
+		poly_ntt(&s1_j);								// transform s1[j] to ntt
+		poly_uniform_gamma1(&y_j, y_rhoprime, L * nonce + j);	// generate y[j]; nonce == j
+		poly_pointwise_montgomery(&s1_j, cp, &s1_j); // multiply cp on s1[j]
+		poly_invntt_tomont(&s1_j);					// invert multiplication result
+
+		poly_add(&z->vec[j], &y_j, &s1_j);			// z = y + cp*s1.
+		poly_reduce(&z->vec[j]);
+	}
+}
+
+/*************************************************
+ * ShV
+* Name:        polyvec_compute_h_montgomery
+*
+* Description: Generates vector s2 with uniformly random coefficients and based on challenge polynomial cp computes
+* 			   part of vector h = cp*s2.
+*
+* 			   !!! CP polynomial MUST be already in ntt form !!!
+*
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = N*4 = 1Kb
+*
+* Arguments:   - polyveck h: output vector
+* 			   - const poly *cp: challenge polynomial in ntt form
+*              - const uint8_t s_rhoprime[]: byte array containing seed for vector s2
+**************************************************/
+void polyvec_compute_h_montgomery(polyveck* h, const poly* cp, const uint8_t s_rhoprime[]) {
+	unsigned int j;
+	poly s2_j;
+
+	for (j = 0; j < K; ++j) {
+		poly_uniform_eta(&s2_j, s_rhoprime, L + j);		// generate s2[j]
+		poly_ntt(&s2_j);								// transform s2[j] to ntt
+		poly_pointwise_montgomery(&h->vec[j], cp, &s2_j); // h_j = cp*s2_j
+		poly_invntt_tomont(&h->vec[j]);					// invert multiplication result
+		//poly_reduce(&h->vec[j]);
+	}
+}
+
+
+/*************************************************
+ * ShV
+* Name:        polyvec_reconstruct_w1_montgomery
+*
+* Description: compute w1 = Az - c*2^d*t1
+*
+* 			   !!! CP polynomial MUST be already in ntt form !!!
+*
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = 4*N*4 = 4Kb
+*
+* Arguments:   - polyveck *w: output vector
+* 			   - const uint8_t sig[CRYPTO_BYTES]: signature
+* 			   - const uint8_t pk[CRYPTO_PUBLICKEYBYTES]: public key
+*
+**************************************************/
+void polyvec_reconstruct_w1_montgomery(polyveck* w, const uint8_t sig[CRYPTO_BYTES], const uint8_t pk[CRYPTO_PUBLICKEYBYTES]) {
+	unsigned int i, j;
+	uint8_t rho[SEEDBYTES];
+	uint8_t c[SEEDBYTES];
+	poly cp;
+	poly a_ij;
+	poly z_j;
+	poly t1_i;
+
+	unpack_pk_rho(rho, pk);
+	unpack_sig_c(c, sig);
+	poly_challenge(&cp, c);
+	poly_ntt(&cp);
+
+	for (i = 0; i < K; ++i) {
+		memset(&w->vec[i], 0, sizeof(uint32_t) * N);
+		for (j = 0; j < L; ++j) {
+			poly_uniform(&a_ij, rho, (i << 8) + j); 		// generate A[i][j]
+			unpack_sig_z(&z_j, j, sig);						// extract z_j from signature
+			poly_ntt(&z_j);									// transform z[j] to ntt
+			poly_pointwise_montgomery(&a_ij, &a_ij, &z_j);  // multiply A[i][j] on z[j]
+			poly_add(&w->vec[i], &w->vec[i], &a_ij);		// accumulate result
+		}
+		// compute c*2^d*t1
+		unpack_pk_t1(&t1_i, i, pk);
+		poly_shiftl(&t1_i);
+		poly_ntt(&t1_i);
+		poly_pointwise_montgomery(&t1_i, &cp, &t1_i);
+
+		poly_sub(&w->vec[i], &w->vec[i], &t1_i);
+		poly_reduce(&w->vec[i]);
+		poly_invntt_tomont(&w->vec[i]); // invert accumulated result from ntt
+	}
+}
+
 /*************************************************
 * Name:        expand_mat
 *
@@ -410,6 +640,13 @@ void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
 
   for(i = 0; i < K; ++i)
     poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
+}
+
+void polyveck_use_hint_r(polyveck* w, const polyveck* u, const uint8_t h[N*K]) {
+	unsigned int i;
+
+	for (i = 0; i < K; ++i)
+		poly_use_hint_r(&w->vec[i], &u->vec[i], &h[i*N]);
 }
 
 void polyveck_pack_w1(uint8_t r[K*POLYW1_PACKEDBYTES], const polyveck *w1) {

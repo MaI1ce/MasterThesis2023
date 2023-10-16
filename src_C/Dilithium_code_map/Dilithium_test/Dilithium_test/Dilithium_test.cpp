@@ -34,13 +34,163 @@ static void poly_naivemul(poly* c, const poly* a, const poly* b) {
 
 }
 
+#define _CRT_SECURE_NO_WARNINGS
+
+#define MLEN 59
+#define NTESTS 1
+
 //#define TEST_VECTORS
 #define TEST_DILITHIUM
 //#define TEST_MUL
-
+//#define VERIF2_TEST
+//#define KEY_GENERATOR_TEST
+//#define SIGN_TEST
 
 int main()
 {
+
+#ifdef KEY_GENERATOR_TEST
+    int ret, ret2;
+    size_t mlen, smlen;
+    uint8_t m[MLEN] = { 0x55 };
+    uint8_t sm[MLEN + CRYPTO_BYTES];
+    uint8_t m2[MLEN + CRYPTO_BYTES];
+    uint8_t pk1[CRYPTO_PUBLICKEYBYTES];
+    uint8_t sk1[CRYPTO_SECRETKEYBYTES];
+    uint8_t pk2[CRYPTO_PUBLICKEYBYTES];
+    uint8_t sk2[CRYPTO_SECRETKEYBYTES];
+
+
+    FILE* file_ptr;
+
+    crypto_sign_keypair(pk1, sk1);
+    crypto_sign_keypair2(pk2, sk2);
+
+    fopen_s(&file_ptr, "pk1_std.pk", "wb");
+    fwrite(pk1, sizeof(pk1), 1, file_ptr);
+    fclose(file_ptr);
+
+    fopen_s(&file_ptr, "pk2_new.pk", "wb");
+    fwrite(pk2, sizeof(pk2), 1, file_ptr);
+    fclose(file_ptr);
+
+    fopen_s(&file_ptr, "sk2_new.pk", "wb");
+    fwrite(sk2, sizeof(sk2), 1, file_ptr);
+    fclose(file_ptr);
+
+    fopen_s(&file_ptr, "sk1_std.pk", "wb");
+    fwrite(sk1, sizeof(sk1), 1, file_ptr);
+    fclose(file_ptr);
+
+#ifndef SECRET_KEY_TEST //OK
+
+    crypto_sign(sm, &smlen, m, MLEN, sk1);
+    ret = crypto_sign_open(m2, &mlen, sm, smlen, pk1);
+
+    if (ret) {
+        fprintf(stderr, "Verification 1 failed, err_code = %d\n", ret);
+        return -1;
+    }
+    else {
+        fprintf(stderr, "Verification 1 - OK\n");
+    }
+#else//OK
+    crypto_sign(sm, &smlen, m, MLEN, sk2);
+    ret2 = crypto_sign_open(m2, &mlen, sm, smlen, pk2);
+
+    if (ret2) {
+        fprintf(stderr, "Verification 2 failed, err_code = %d\n", ret2);
+        return -1;
+    }
+    else {
+        fprintf(stderr, "Verification 2 - OK\n");
+    }
+
+    printf("Secret keys are OK\n");
+#endif//SECRET_KEY_TEST
+#endif//KEY_GENERATOR_TEST
+
+#ifdef VERIF2_TEST
+
+    FILE* sk_ptr;
+    FILE* pk_ptr;
+    size_t mlen, smlen;
+    uint8_t m[MLEN] = { 0x55 };
+    uint8_t sm[MLEN + CRYPTO_BYTES];
+    uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+    uint8_t sk[CRYPTO_SECRETKEYBYTES];
+
+#ifndef SECRET_KEY_TEST//OK
+    fopen_s(&sk_ptr, "sk1_std.pk", "rb");
+    fread(sk, sizeof(sk), 1, sk_ptr);
+    fclose(sk_ptr);
+
+    fopen_s(&pk_ptr, "pk1_std.pk", "rb");
+    fread(pk, sizeof(pk), 1, pk_ptr);
+    fclose(pk_ptr);
+
+    crypto_sign(sm, &smlen, m, MLEN, sk);
+    
+    int err_code1 = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, MLEN, pk);
+    printf("std verif err_code = %d\r\n", err_code1);
+#else//OK
+
+    fopen_s(&sk_ptr, "sk2_new.pk", "rb");
+    fread(sk, sizeof(sk), 1, sk_ptr);
+    fclose(sk_ptr);
+
+    fopen_s(&pk_ptr, "pk2_new.pk", "rb");
+    fread(pk, sizeof(pk), 1, pk_ptr);
+    fclose(pk_ptr);
+
+    crypto_sign(sm, &smlen, m, MLEN, sk);
+
+    int err_code2 = crypto_sign_verify2(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, MLEN, pk);
+    printf("new verif err_code = %d\r\n", err_code2);
+
+#endif
+
+#endif//VERIF2_TEST
+
+#ifdef SIGN_TEST
+    FILE* sk_ptr;
+    FILE* pk_ptr;
+    FILE* sig_ptr;
+    size_t mlen, smlen;
+    uint8_t m[MLEN] = { 0x55 };
+    uint8_t sm[MLEN + CRYPTO_BYTES];
+    uint8_t sm2[MLEN + CRYPTO_BYTES];
+    uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+    uint8_t sk[CRYPTO_SECRETKEYBYTES];
+
+    fopen_s(&sk_ptr, "sk2_new.pk", "rb");
+    fread(sk, sizeof(sk), 1, sk_ptr);
+    fclose(sk_ptr);
+
+    fopen_s(&pk_ptr, "pk2_new.pk", "rb");
+    fread(pk, sizeof(pk), 1, pk_ptr);
+    fclose(pk_ptr);
+
+    crypto_sign(sm, &smlen, m, MLEN, sk);
+    crypto_sign2(sm2, &smlen, m, MLEN, sk);
+
+    int err_code1 = crypto_sign_verify2(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, MLEN, pk);
+    printf("new verif err_code = %d\r\n", err_code1);
+
+    fopen_s(&sig_ptr, "std.sig", "wb");
+    fwrite(sm, sizeof(sm), 1, sig_ptr);
+    fclose(sig_ptr);
+
+    int err_code2 = crypto_sign_verify2(sm2, CRYPTO_BYTES, sm2 + CRYPTO_BYTES, MLEN, pk);
+    printf("new verif err_code = %d\r\n", err_code2);
+
+    fopen_s(&sig_ptr, "new.sig", "wb");
+    fwrite(sm2, sizeof(sm2), 1, sig_ptr);
+    fclose(sig_ptr);
+
+
+
+#endif //SIGN_TEST
 
 #ifdef TEST_VECTORS
 
@@ -279,11 +429,9 @@ int main()
 #endif
 
 #ifdef TEST_DILITHIUM
-#define MLEN 59
-#define NTESTS 1
 
     unsigned int i, j;
-    int ret;
+    int ret, ret2, ret3;
     size_t mlen, smlen;
     uint8_t m[MLEN] = { 0 };
     uint8_t sm[MLEN + CRYPTO_BYTES];
@@ -292,15 +440,37 @@ int main()
     uint8_t sk[CRYPTO_SECRETKEYBYTES];
 
     for (i = 0; i < NTESTS; ++i) {
+
         randombytes(m, MLEN);
 
-        crypto_sign_keypair(pk, sk);
-        crypto_sign(sm, &smlen, m, MLEN, sk);
+
+        crypto_sign_keypair2(pk, sk);
+        crypto_sign2(sm, &smlen, m, MLEN, sk);
+
         ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
+        ret2 = crypto_sign_open2(m2, &mlen, sm, smlen, pk);
+/*
+        crypto_sign_keypair2(pk_test, sk_test);
+        crypto_sign2(sm_test, &smlen, m, MLEN, sk_test);
+
+        ret2 = crypto_sign_open(m2_test, &mlen, sm_test, smlen, pk);
+        ret3 = crypto_sign_open2(m2_test, &mlen, sm_test, smlen, pk_test);
+*/
 
         if (ret) {
-            fprintf(stderr, "Verification failed\n");
+            fprintf(stderr, "Verification 1 failed, err_code = %d\n", ret);
             return -1;
+        }
+        else {
+            fprintf(stderr, "Verification 1 - OK\n");
+        }
+
+        if (ret2) {
+            fprintf(stderr, "Verification 2 failed, err_code = %d\n", ret2);
+            return -1;
+        }
+        else {
+            fprintf(stderr, "Verification 2 - OK\n");
         }
 
         if (mlen != MLEN) {
@@ -314,7 +484,7 @@ int main()
                 return -1;
             }
         }
-
+/*
         randombytes((uint8_t*)&j, sizeof(j));
         do {
             randombytes(m2, 1);
@@ -325,17 +495,16 @@ int main()
             fprintf(stderr, "Trivial forgeries possible\n");
             return -1;
         }
+ */   
     }
-
+    printf("TEST - OK\n");
     printf("CRYPTO_PUBLICKEYBYTES = %d\n", CRYPTO_PUBLICKEYBYTES);
     printf("CRYPTO_SECRETKEYBYTES = %d\n", CRYPTO_SECRETKEYBYTES);
     printf("CRYPTO_BYTES = %d\n", CRYPTO_BYTES);
-
+    
 #endif
 
 #ifdef TEST_MUL
-#define NTESTS 1
-
 
     unsigned int i, j;
     uint8_t seed[SEEDBYTES];

@@ -8,6 +8,7 @@
 #include "symmetric.h"
 #include "fips202.h"
 
+
 /*************************************************
 * Name:        crypto_sign_keypair
 *
@@ -20,41 +21,57 @@
 *
 * Returns 0 (success)
 **************************************************/
-int crypto_sign_keypair(RNG_HandleTypeDef *hrng, uint8_t *pk, uint8_t *sk) {
-  uint8_t seedbuf[3*SEEDBYTES];
-  uint8_t tr[CRHBYTES];
-  const uint8_t *rho, *rhoprime, *key;
-  //polyvecl mat[K];
-  polyveck t1, t0;
+#ifdef STM32WB55xx
+int crypto_sign_keypair(RNG_HandleTypeDef *hrng, uint8_t *pk, uint8_t *sk)
+#else
+int crypto_sign_keypair(uint8_t *pk, uint8_t *sk)
+#endif
+{
+	uint8_t seedbuf[3*SEEDBYTES];
+	uint8_t tr[CRHBYTES];
+	const uint8_t *rho, *rhoprime, *key;
 
+#ifdef CONSTRAINED_DEVICE
+	polyveck t1, t0;
+#else
+	polyvecl mat[K];
+	polyvecl s1, s1hat;
+	polyveck s2, t1, t0;
+
+	randombytes(seedbuf, SEEDBYTES);
+#endif
   /* Get randomness for rho, rhoprime and key */
-  randombytes(hrng, seedbuf, SEEDBYTES);
-  shake256(seedbuf, 3*SEEDBYTES, seedbuf, SEEDBYTES);
-  rho = seedbuf;
-  rhoprime = seedbuf + SEEDBYTES;
-  key = seedbuf + 2*SEEDBYTES;
+#ifdef STM32WB55xx
+	randombytes(hrng, seedbuf, SEEDBYTES);
+#else
+	randombytes(seedbuf, SEEDBYTES);
+#endif
+	shake256(seedbuf, 3*SEEDBYTES, seedbuf, SEEDBYTES);
+	rho = seedbuf;
+	rhoprime = seedbuf + SEEDBYTES;
+	key = seedbuf + 2*SEEDBYTES;
 
-  /* Expand matrix */
-  //polyvec_matrix_expand(mat, rho);
+#ifdef CONSTRAINED_DEVICE
+	polyvec_matrix_poly_smul_montgomery(&t1, rho, rhoprime);
 
-  /* Sample short vectors s1 and s2 */
-  /*
-  polyvecl_uniform_eta(&s1, rhoprime, 0);
-  polyveck_uniform_eta(&s2, rhoprime, L);
-  */
+#else
+	/* Expand matrix */
+	polyvec_matrix_expand(mat, rho);
 
-  /* Matrix-vector multiplication */
-  polyvec_matrix_poly_smul_montgomery(&t1, rho, rhoprime);
-  /*
-  s1hat = s1;
-  polyvecl_ntt(&s1hat);
-  polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
-  polyveck_reduce(&t1);
-  polyveck_invntt_tomont(&t1);
+	/* Sample short vectors s1 and s2 */
+	polyvecl_uniform_eta(&s1, rhoprime, 0);
+	polyveck_uniform_eta(&s2, rhoprime, L);
 
-  // Add error vector s2
-  polyveck_add(&t1, &t1, &s2);
-  */
+	/* Matrix-vector multiplication */
+	s1hat = s1;
+	polyvecl_ntt(&s1hat);
+	polyvec_matrix_pointwise_montgomery(&t1, mat, &s1hat);
+	polyveck_reduce(&t1);
+	polyveck_invntt_tomont(&t1);
+
+	// Add error vector s2
+	polyveck_add(&t1, &t1, &s2);
+#endif
 
   /* Extract t1 and write public key */
   polyveck_caddq(&t1);
@@ -63,8 +80,11 @@ int crypto_sign_keypair(RNG_HandleTypeDef *hrng, uint8_t *pk, uint8_t *sk) {
 
   /* Compute CRH(rho, t1) and write secret key */
   crh(tr, pk, CRYPTO_PUBLICKEYBYTES);
-  pack_sk(sk, rho, rhoprime, tr, key, &t0);
-
+#ifdef CONSTRAINED_DEVICE
+  pack_sk_r(sk, rho, rhoprime, tr, key, &t0);
+#else
+  pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
+#endif
   return 0;
 }
 
@@ -81,18 +101,28 @@ int crypto_sign_keypair(RNG_HandleTypeDef *hrng, uint8_t *pk, uint8_t *sk) {
 *
 * Returns 0 (success)
 **************************************************/
+#ifdef STM32WB55xx
 int crypto_sign_signature(RNG_HandleTypeDef *hrng, uint8_t *sig,
                           size_t *siglen,
                           const uint8_t *m,
                           size_t mlen,
                           const uint8_t *sk)
+#else
+int crypto_sign_signature(uint8_t *sig,
+                          size_t *siglen,
+                          const uint8_t *m,
+                          size_t mlen,
+                          const uint8_t *sk)
+#endif
 {
+
+#ifdef CONSTRAINED_DEVICE
   unsigned int n;
   uint8_t seedbuf[3*SEEDBYTES + 3*CRHBYTES];
   uint8_t *rho, *s_rhoprime, *tr, *key, *mu, *y_rhoprime;
   uint16_t nonce = 0;
-  polyvecl z; // mat[K], s1, y,
-  polyveck t0, w1, w0, h; // s2,
+  polyvecl z;
+  polyveck t0, w1, w0, h;
   poly cp;
   keccak_state state;
 
@@ -102,10 +132,25 @@ int crypto_sign_signature(RNG_HandleTypeDef *hrng, uint8_t *sig,
   key = tr + CRHBYTES;
   mu = key + SEEDBYTES;
   y_rhoprime = mu + CRHBYTES;
-  unpack_sk(rho, s_rhoprime, tr, key, &t0, sk);
+  unpack_sk_r(rho, s_rhoprime, tr, key, &t0, sk);
+#else
+  unsigned int n;
+  uint8_t seedbuf[2*SEEDBYTES + 3*CRHBYTES];
+  uint8_t *rho, *tr, *key, *mu, *rhoprime;
+  uint16_t nonce = 0;
+  polyvecl mat[K], s1, y, z;
+  polyveck t0, s2, w1, w0, h;
+  poly cp;
+  keccak_state state;
 
-  //polyvecl_uniform_eta(&s1, s_rhoprime, 0);
-  //polyveck_uniform_eta(&s2, s_rhoprime, L);
+  rho = seedbuf;
+  tr = rho + SEEDBYTES;
+  key = tr + CRHBYTES;
+  mu = key + SEEDBYTES;
+  rhoprime = mu + CRHBYTES;
+  unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
+#endif
+
 
   /* Compute CRH(tr, msg) */
   shake256_init(&state);
@@ -114,22 +159,36 @@ int crypto_sign_signature(RNG_HandleTypeDef *hrng, uint8_t *sig,
   shake256_finalize(&state);
   shake256_squeeze(mu, CRHBYTES, &state);
 
-#ifdef DILITHIUM_RANDOMIZED_SIGNING
+#if defined(CONSTRAINED_DEVICE) && defined(DILITHIUM_RANDOMIZED_SIGNING)
+#ifdef STM32WB55xx
   randombytes(hrng, y_rhoprime, CRHBYTES);
 #else
+  randombytes(y_rhoprime, CRHBYTES);
+#endif //STM32WB55xx
+#elif defined(CONSTRAINED_DEVICE) && !defined(DILITHIUM_RANDOMIZED_SIGNING)
   crh(y_rhoprime, key, SEEDBYTES + CRHBYTES);
+#elif !defined(CONSTRAINED_DEVICE) && defined(DILITHIUM_RANDOMIZED_SIGNING)
+#ifdef STM32WB55xx
+  randombytes(hrng, rhoprime, CRHBYTES);
+#else
+  randombytes(rhoprime, CRHBYTES);
+#endif //STM32WB55xx
+#elif !defined(CONSTRAINED_DEVICE) && !defined(DILITHIUM_RANDOMIZED_SIGNING)
+  crh(rhoprime, key, SEEDBYTES + CRHBYTES);
 #endif
 
+
+#ifndef CONSTRAINED_DEVICE
   /* Expand matrix and transform vectors */
-  /*
   polyvec_matrix_expand(mat, rho);
   polyvecl_ntt(&s1);
   polyveck_ntt(&s2);
-  */
+#endif
   polyveck_ntt(&t0);
 
 rej:
-/*
+
+#ifndef CONSTRAINED_DEVICE
   //Sample intermediate vector y
   polyvecl_uniform_gamma1(&y, y_rhoprime, nonce++);
   z = y;
@@ -139,8 +198,9 @@ rej:
   polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
   polyveck_reduce(&w1);
   polyveck_invntt_tomont(&w1);
-  */
-  polyvec_matrix_poly_ymul_montgomery(&w1, rho, y_rhoprime, nonce);
+#else
+  polyvec_matrix_poly_ymul_montgomery(&w1, rho, y_rhoprime, nonce++);
+#endif
 
   /* Decompose w and call the random oracle */
   polyveck_caddq(&w1);
@@ -155,23 +215,31 @@ rej:
   poly_challenge(&cp, sig);
   poly_ntt(&cp);
 
+#ifndef CONSTRAINED_DEVICE
   /* Compute z, reject if it reveals secret */
-  polyvec_compute_z_montgomery(&z, &cp, s_rhoprime, y_rhoprime, nonce);
-  /*
   polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
   polyvecl_invntt_tomont(&z);
   polyvecl_add(&z, &z, &y);
   polyvecl_reduce(&z);
-  */
+
+  /* Check that subtracting cs2 does not change high bits of w and low bits
+   * do not reveal secret information */
+  polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
+  polyveck_invntt_tomont(&h);
+
+
+#else
+  /* Compute z, reject if it reveals secret */
+  polyvec_compute_z_montgomery(&z, &cp, s_rhoprime, y_rhoprime, nonce);
+
   if(polyvecl_chknorm(&z, GAMMA1 - BETA))
     goto rej;
 
   /* Check that subtracting cs2 does not change high bits of w and low bits
    * do not reveal secret information */
-  /*polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
-  polyveck_invntt_tomont(&h);
-  */
   polyvec_compute_h_montgomery(&h, &cp, s_rhoprime);
+#endif
+
   polyveck_sub(&w0, &w0, &h);
   polyveck_reduce(&w0);
   if(polyveck_chknorm(&w0, GAMMA2 - BETA))
@@ -212,17 +280,29 @@ rej:
 *
 * Returns 0 (success)
 **************************************************/
+#ifdef STM32WB55xx
 int crypto_sign(RNG_HandleTypeDef *hrng, uint8_t *sm,
                 size_t *smlen,
                 const uint8_t *m,
                 size_t mlen,
                 const uint8_t *sk)
+#else
+int crypto_sign(uint8_t *sm,
+                size_t *smlen,
+                const uint8_t *m,
+                size_t mlen,
+                const uint8_t *sk)
+#endif
 {
   size_t i;
 
   for(i = 0; i < mlen; ++i)
     sm[CRYPTO_BYTES + mlen - 1 - i] = m[mlen - 1 - i];
+#ifdef STM32WB55xx
   crypto_sign_signature(hrng, sm, smlen, sm + CRYPTO_BYTES, mlen, sk);
+#else
+  crypto_sign_signature(sm, smlen, sm + CRYPTO_BYTES, mlen, sk);
+#endif
   *smlen += mlen;
   return 0;
 }
@@ -246,6 +326,26 @@ int crypto_sign_verify(const uint8_t *sig,
                        size_t mlen,
                        const uint8_t *pk)
 {
+#ifdef CONSTRAINED_DEVICE
+  unsigned int i;
+  uint8_t buf[K*POLYW1_PACKEDBYTES];
+  uint8_t mu[CRHBYTES];
+  uint8_t c2[SEEDBYTES];
+  uint8_t c[SEEDBYTES];
+  polyveck w1;
+  uint8_t h[N_*K] = {0};
+  keccak_state state;
+
+  if(siglen != CRYPTO_BYTES)
+    return 1;
+
+  //if signature OK - the h part will be unpacked - else - error
+  int err_code = verify_sig_z_h_malform(h, sig);
+  if(err_code)
+	  return err_code;
+
+  unpack_sig_c(c, sig);
+#else
   unsigned int i;
   uint8_t buf[K*POLYW1_PACKEDBYTES];
   uint8_t rho[SEEDBYTES];
@@ -265,6 +365,8 @@ int crypto_sign_verify(const uint8_t *sig,
     return -1;
   if(polyvecl_chknorm(&z, GAMMA1 - BETA))
     return -1;
+#endif
+
 
   /* Compute CRH(CRH(rho, t1), msg) */
   crh(mu, pk, CRYPTO_PUBLICKEYBYTES);
@@ -274,6 +376,15 @@ int crypto_sign_verify(const uint8_t *sig,
   shake256_finalize(&state);
   shake256_squeeze(mu, CRHBYTES, &state);
 
+#ifdef CONSTRAINED_DEVICE
+  /* Matrix-vector multiplication; compute Az - c2^dt1 */
+  polyvec_reconstruct_w1_montgomery(&w1, sig, pk);
+
+  /* Reconstruct w1 */
+  polyveck_caddq(&w1);
+  polyveck_use_hint_r(&w1, &w1, h);
+  polyveck_pack_w1(buf, &w1);
+#else
   /* Matrix-vector multiplication; compute Az - c2^dt1 */
   poly_challenge(&cp, c);
   polyvec_matrix_expand(mat, rho);
@@ -295,6 +406,7 @@ int crypto_sign_verify(const uint8_t *sig,
   polyveck_use_hint(&w1, &w1, &h);
   polyveck_pack_w1(buf, &w1);
 
+#endif
   /* Call random oracle and verify challenge */
   shake256_init(&state);
   shake256_absorb(&state, mu, CRHBYTES);
@@ -303,7 +415,7 @@ int crypto_sign_verify(const uint8_t *sig,
   shake256_squeeze(c2, SEEDBYTES, &state);
   for(i = 0; i < SEEDBYTES; ++i)
     if(c[i] != c2[i])
-      return -1;
+      return 6;
 
   return 0;
 }
@@ -329,12 +441,14 @@ int crypto_sign_open(uint8_t *m,
                      const uint8_t *pk)
 {
   size_t i;
+  int err_code = -1;
 
   if(smlen < CRYPTO_BYTES)
     goto badsig;
 
   *mlen = smlen - CRYPTO_BYTES;
-  if(crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, *mlen, pk))
+  err_code = crypto_sign_verify(sm, CRYPTO_BYTES, sm + CRYPTO_BYTES, *mlen, pk);
+  if(err_code)
     goto badsig;
   else {
     /* All good, copy msg, return 0 */
@@ -349,5 +463,5 @@ badsig:
   for(i = 0; i < smlen; ++i)
     m[i] = 0;
 
-  return -1;
+  return err_code;
 }

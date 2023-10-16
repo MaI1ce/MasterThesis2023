@@ -3,6 +3,7 @@
 #include "params.h"
 #include "polyvec.h"
 #include "poly.h"
+#include "packing.h"
 
 
 /*************************************************
@@ -144,7 +145,57 @@ void polyvec_compute_h_montgomery(polyveck *h, const poly *cp, const uint8_t s_r
 }
 
 
+/*************************************************
+ * ShV
+* Name:        polyvec_reconstruct_w1_montgomery
+*
+* Description: compute w1 = Az - c*2^d*t1
+*
+* 			   !!! CP polynomial MUST be already in ntt form !!!
+*
+*			   Generation and computation is performed 'on fly' and 'in place' in order to take less memory
+*
+* Memory allocation = 4*N*4 = 4Kb
+*
+* Arguments:   - polyveck *w: output vector
+* 			   - const uint8_t sig[CRYPTO_BYTES]: signature
+* 			   - const uint8_t pk[CRYPTO_PUBLICKEYBYTES]: public key
+*
+**************************************************/
+void polyvec_reconstruct_w1_montgomery(polyveck *w, const uint8_t sig[CRYPTO_BYTES], const uint8_t pk[CRYPTO_PUBLICKEYBYTES]) {
+	  unsigned int i, j;
+	  uint8_t rho[SEEDBYTES];
+	  uint8_t c[SEEDBYTES];
+	  poly cp;
+	  poly a_ij;
+	  poly z_j;
+	  poly t1_i;
 
+	  unpack_pk_rho(rho, pk);
+	  unpack_sig_c(c, sig);
+	  poly_challenge(&cp, c);
+	  poly_ntt(&cp);
+
+	  for(i = 0; i < K; ++i) {
+		memset(&w->vec[i], 0, sizeof(uint32_t)*N_);
+		for(j = 0; j < L; ++j) {
+			poly_uniform(&a_ij, rho, (i << 8) + j); 		// generate A[i][j]
+			unpack_sig_z(&z_j, j, sig);						// extract z_j from signature
+			poly_ntt(&z_j);									// transform z[j] to ntt
+			poly_pointwise_montgomery(&a_ij, &a_ij, &z_j);  // multiply A[i][j] on z[j]
+			poly_add(&w->vec[i], &w->vec[i], &a_ij);		// accumulate result
+		}
+		// compute c*2^d*t1
+		unpack_pk_t1(&t1_i, i, pk);
+		poly_shiftl(&t1_i);
+		poly_ntt(&t1_i);
+		poly_pointwise_montgomery(&t1_i, &cp, &t1_i);
+
+		poly_sub(&w->vec[i], &w->vec[i], &t1_i);
+		poly_reduce(&w->vec[i]);
+		poly_invntt_tomont(&w->vec[i]); // invert accumulated result from ntt
+	  }
+}
 
 /*************************************************
 * Name:        expand_mat
@@ -553,6 +604,13 @@ void polyveck_use_hint(polyveck *w, const polyveck *u, const polyveck *h) {
 
   for(i = 0; i < K; ++i)
     poly_use_hint(&w->vec[i], &u->vec[i], &h->vec[i]);
+}
+
+void polyveck_use_hint_r(polyveck *w, const polyveck *u, const uint8_t h[N_*K]) {
+  unsigned int i;
+
+  for(i = 0; i < K; ++i, h += i*N_)
+    poly_use_hint_r(&w->vec[i], &u->vec[i], h);
 }
 
 void polyveck_pack_w1(uint8_t r[K*POLYW1_PACKEDBYTES], const polyveck *w1) {

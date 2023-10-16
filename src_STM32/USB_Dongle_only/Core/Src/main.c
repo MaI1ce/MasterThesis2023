@@ -149,8 +149,9 @@ int main(void)
 	  crypto_sign(&hrng, sm, &smlen, m, MLEN, sk);
 	  ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
 
+	  memset(msg_buf, 0, sizeof(msg_buf));
 	  if (ret) {
-		  sprintf(msg_buf, "Verification failed\r\n");
+		  sprintf(msg_buf, "Verification failed - err_code = %d\r\n", ret);
 		  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
 		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
 		  test_ok = 0;
@@ -204,7 +205,7 @@ int main(void)
   }
   else {
 	  memset(msg_buf, 0, sizeof(msg_buf));
-	  sprintf(msg_buf, "New Dilithium - ERROR\r\n");
+	  sprintf(msg_buf, "New Dilithium - err_code = %d\r\n", ret);
   }
 
   //printf("CRYPTO_PUBLICKEYBYTES = %d\r\n", CRYPTO_PUBLICKEYBYTES);

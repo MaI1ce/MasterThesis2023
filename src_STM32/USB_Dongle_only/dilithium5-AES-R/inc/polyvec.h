@@ -84,7 +84,9 @@ unsigned int polyveck_make_hint(polyveck *h,
                                 const polyveck *v0,
                                 const polyveck *v1);
 #define polyveck_use_hint DILITHIUM_NAMESPACE(_polyveck_use_hint)
-void polyveck_use_hint(polyveck *w, const polyveck *v, const polyveck *h);
+void polyveck_use_hint(polyveck *w, const polyveck *v,  const polyveck *h);
+void polyveck_use_hint_r(polyveck *w, const polyveck *u, const uint8_t h[N_*K]);
+
 
 #define polyveck_pack_w1 DILITHIUM_NAMESPACE(_polyveck_pack_w1)
 void polyveck_pack_w1(uint8_t r[K*POLYW1_PACKEDBYTES], const polyveck *w1);
@@ -102,5 +104,7 @@ void polyvec_matrix_poly_ymul_montgomery(polyveck *w, const uint8_t rho[], const
 void polyvec_compute_z_montgomery(polyvecl *z, const poly *cp, const uint8_t s_rhoprime[], const uint8_t y_rhoprime[], uint16_t nonce);
 
 void polyvec_compute_h_montgomery(polyveck *h, const poly *cp, const uint8_t s_rhoprime[]);
+
+void polyvec_reconstruct_w1_montgomery(polyveck *w, const uint8_t sig[CRYPTO_BYTES], const uint8_t pk[CRYPTO_PUBLICKEYBYTES]);
 
 #endif
