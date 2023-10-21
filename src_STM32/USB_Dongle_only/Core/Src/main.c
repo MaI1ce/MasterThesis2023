@@ -26,14 +26,21 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <string.h>
+//#include <stdint.h>
+//#include <string.h>
 #include "fips202.h"
 #include "params.h"
 #include "sign.h"
 #include "poly.h"
 #include "polyvec.h"
 #include "packing.h"
+
+#include "usb_debug.h"
+
+//#define STATIC_KEYS
+#ifdef STATIC_KEYS
+#include "dilithium_keys.h"
+#endif
 
 /* USER CODE END Includes */
 
@@ -127,40 +134,48 @@ int main(void)
   MX_USB_Device_Init();
   MX_RNG_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin); // YELLOW LED
-  char msg_buf[80] = "Dilithium Signature Start\r\n";
-  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
+  HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin); // BLUE LED
+  //char msg_buf[80] = "Dilithium Signature Start\r\n";
+  //CDC_Transmit_FS((uint8_t*)msg_buf, 80);
+
+  HAL_Delay(3000);
+  USB_DEBUG_MSG("Program Compilation Date: %s %s\n", __DATE__, __TIME__);
+  USB_DEBUG_MSG("Dilithium Signature Start\n");
+  HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
 
   unsigned int i, j;
   int ret;
   size_t mlen, smlen;
-  uint8_t m[MLEN] = { 0 };
+  uint8_t m[MLEN] = { 0x55 };
   uint8_t sm[MLEN + CRYPTO_BYTES];
   uint8_t m2[MLEN + CRYPTO_BYTES];
+#ifndef STATIC_KEYS
   uint8_t pk[CRYPTO_PUBLICKEYBYTES];
   uint8_t sk[CRYPTO_SECRETKEYBYTES];
+#endif
 
   uint8_t test_ok = 1;
 
   for (i = 0; i < NTESTS; ++i) {
-	  randombytes(&hrng, m, MLEN);
+	  //
 
+#ifndef STATIC_KEYS
+	  randombytes(&hrng, m, MLEN);
 	  crypto_sign_keypair(&hrng, pk, sk);
+#endif
 	  crypto_sign(&hrng, sm, &smlen, m, MLEN, sk);
 	  ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
 
-	  memset(msg_buf, 0, sizeof(msg_buf));
+	  //memset(msg_buf, 0, sizeof(msg_buf));
 	  if (ret) {
-		  sprintf(msg_buf, "Verification failed - err_code = %d\r\n", ret);
-		  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
+		  USB_DEBUG_MSG("Verification failed - err_code = %d\r\n", ret);
 		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
 		  test_ok = 0;
 		  //return -1;
 	  }
 
 	  if (mlen != MLEN) {
-		  sprintf(msg_buf, "Message lengths don't match\r\n");
-		  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
+		  USB_DEBUG_MSG("Message lengths don't match\r\n");
 		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
 		  test_ok = 0;
 		  //return -1;
@@ -168,8 +183,7 @@ int main(void)
 
 	  for (j = 0; j < mlen; ++j) {
 		  if (m[j] != m2[j]) {
-			  sprintf(msg_buf, "Messages don't match\r\n");
-			  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
+			  USB_DEBUG_MSG("Messages don't match\r\n");
 			  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
 			  test_ok = 0;
 			  break;
@@ -194,23 +208,17 @@ int main(void)
 	  }
 */
   }
-
-  memset(msg_buf, 0, sizeof(msg_buf));
-  sprintf(msg_buf, "Program Compilation Date: %s %s\r\n", __DATE__, __TIME__);
-  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
   if (test_ok){
 	  HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin); // GREEN LED
-	  memset(msg_buf, 0, sizeof(msg_buf));
-	  sprintf(msg_buf, "New Dilithium - OK\r\n");
+	  USB_DEBUG_MSG("New Dilithium - OK\r\n");
   }
   else {
-	  memset(msg_buf, 0, sizeof(msg_buf));
-	  sprintf(msg_buf, "New Dilithium - err_code = %d\r\n", ret);
+	  USB_DEBUG_MSG("New Dilithium - err_code = %d\r\n", ret);
   }
 
-  //printf("CRYPTO_PUBLICKEYBYTES = %d\r\n", CRYPTO_PUBLICKEYBYTES);
-  //printf("CRYPTO_SECRETKEYBYTES = %d\r\n", CRYPTO_SECRETKEYBYTES);
-  //printf("CRYPTO_BYTES = %d\r\n", CRYPTO_BYTES);
+  USB_DEBUG_MSG("CRYPTO_PUBLICKEYBYTES = %d\r\n", CRYPTO_PUBLICKEYBYTES);
+  USB_DEBUG_MSG("CRYPTO_SECRETKEYBYTES = %d\r\n", CRYPTO_SECRETKEYBYTES);
+  USB_DEBUG_MSG("CRYPTO_BYTES = %d\r\n", CRYPTO_BYTES);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -220,7 +228,6 @@ int main(void)
   {
 	  HAL_Delay(1000);
 	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin); // YELLOW LED
-	  CDC_Transmit_FS((uint8_t*)msg_buf, 80);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -251,7 +258,13 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV4;
+  RCC_OscInitStruct.PLL.PLLN = 16;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -262,14 +275,14 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK4|RCC_CLOCKTYPE_HCLK2
                               |RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLK2Divider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLK2Divider = RCC_SYSCLK_DIV2;
   RCC_ClkInitStruct.AHBCLK4Divider = RCC_SYSCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }

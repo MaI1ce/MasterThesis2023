@@ -2,8 +2,6 @@
 #define SIGN_H
 
 
-#define CONSTRAINED_DEVICE
-
 #include <stddef.h>
 #include <stdint.h>
 #include "params.h"

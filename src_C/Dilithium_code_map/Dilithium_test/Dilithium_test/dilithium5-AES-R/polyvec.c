@@ -4,7 +4,7 @@
 #include "poly.h"
 
 #ifdef DEBUG_LOG
-#include <stdio.h>
+#include "../debug_log.h"
 #endif
 
 /*************************************************
@@ -64,54 +64,35 @@ void polyvec_matrix_poly_ymul_montgomery(polyveck* w, const uint8_t rho[], const
 	unsigned int i, j;
 	poly a_ij;
 	poly y_j;
-#ifdef DEBUG_LOG
-	FILE* log_file;
-	fopen_s(&log_file, "new_sign1.log", "w");
-	fprintf(log_file, "nonce == %d y_rhoprime = ", nonce);
-	for (int i = 0; i < CRHBYTES; i++) {
-		fprintf(log_file, "%d", rhoprime[i]);
-	}
-	fprintf(log_file, "\n");
-#endif
-
 	for (i = 0; i < K; ++i) {
 		memset(&w->vec[i], 0, sizeof(uint32_t) * N);
 		for (j = 0; j < L; ++j) {
 			poly_uniform(&a_ij, rho, (i << 8) + j); 		// generate A[i][j]
-#ifdef DEBUG_LOG
-			fprintf(log_file, "a[%d][%d] = ", i, j);
-			for (int n = 0; n < N; n++) {
-				fprintf(log_file, "%d", a_ij.coeffs[n]);
+			USB_DEBUG_MSG("a[%d][%d] = ", i, j);
+			for (int k = 0; k < N; k++) {
+				USB_DEBUG_MSG("%d", a_ij.coeffs[k]);
 			}
-			fprintf(log_file, "\n");
-#endif
+			USB_DEBUG_MSG("\r\n");
 			poly_uniform_gamma1(&y_j, rhoprime, L * nonce + j);	// generate y[j]
-			poly_ntt(&y_j);										// transform y[j] to ntt
-#ifdef DEBUG_LOG
-			fprintf(log_file, "y[%d] = ", j);
-			for (int n = 0; n < N; n++) {
-				fprintf(log_file, "%d", y_j.coeffs[n]);
+			USB_DEBUG_MSG("y[%d] = ", j);
+			for (int k = 0; k < N; k++) {
+				USB_DEBUG_MSG("%d", y_j.coeffs[k]);
 			}
-			fprintf(log_file, "\n");
-#endif
+			USB_DEBUG_MSG("\r\n");
+			poly_ntt(&y_j);										// transform y[j] to ntt
 			poly_pointwise_montgomery(&a_ij, &a_ij, &y_j); // multiply A[i][j] on y[j]
 			poly_add(&w->vec[i], &w->vec[i], &a_ij);
 		}
 		poly_reduce(&w->vec[i]);
 		poly_invntt_tomont(&w->vec[i]); // invert accumulated result from ntt
-
 #ifdef DEBUG_LOG
-		fprintf(log_file, "w1[%d] = ", i);
-		for (int n = 0; n < N; n++) {
-			fprintf(log_file, "%d", w->vec[i].coeffs[n]);
+		USB_DEBUG_MSG("w[%d] = ", i);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", w->vec[i].coeffs[k]);
 		}
-		fprintf(log_file, "\n");
+		USB_DEBUG_MSG("\r\n");
 #endif
 	}
-
-#ifdef DEBUG_LOG
-	fclose(log_file);
-#endif
 }
 
 
@@ -140,13 +121,34 @@ void polyvec_compute_z_montgomery(polyvecl* z, const poly* cp, const uint8_t s_r
 
 	for (j = 0; j < L; ++j) {
 		poly_uniform_eta(&s1_j, s_rhoprime, j);		// generate s1[j]
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("s1[%d] = ", j);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", s1_j.coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif
 		poly_ntt(&s1_j);								// transform s1[j] to ntt
 		poly_uniform_gamma1(&y_j, y_rhoprime, L * nonce + j);	// generate y[j]; nonce == j
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("y[%d] = ", j);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", y_j.coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif
 		poly_pointwise_montgomery(&s1_j, cp, &s1_j); // multiply cp on s1[j]
 		poly_invntt_tomont(&s1_j);					// invert multiplication result
 
 		poly_add(&z->vec[j], &y_j, &s1_j);			// z = y + cp*s1.
 		poly_reduce(&z->vec[j]);
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("z[%d] = ", j);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", z->vec[j].coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif
 	}
 }
 
@@ -173,10 +175,24 @@ void polyvec_compute_h_montgomery(polyveck* h, const poly* cp, const uint8_t s_r
 
 	for (j = 0; j < K; ++j) {
 		poly_uniform_eta(&s2_j, s_rhoprime, L + j);		// generate s2[j]
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("s2[%d] = ", j);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", s2_j.coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif	
 		poly_ntt(&s2_j);								// transform s2[j] to ntt
 		poly_pointwise_montgomery(&h->vec[j], cp, &s2_j); // h_j = cp*s2_j
 		poly_invntt_tomont(&h->vec[j]);					// invert multiplication result
 		//poly_reduce(&h->vec[j]);
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("h = ");
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", h->vec[j].coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif	
 	}
 }
 
@@ -212,17 +228,50 @@ void polyvec_reconstruct_w1_montgomery(polyveck* w, const uint8_t sig[CRYPTO_BYT
 	poly_challenge(&cp, c);
 	poly_ntt(&cp);
 
+#ifdef DEBUG_LOG
+	USB_DEBUG_MSG("cp_v = ");
+	for (int k = 0; k < N; k++) {
+		USB_DEBUG_MSG("%d", cp.coeffs[k]);
+	}
+	USB_DEBUG_MSG("\r\n");
+
+	USB_DEBUG_MSG("rho = ");
+	for (int k = 0; k < SEEDBYTES; k++) {
+		USB_DEBUG_MSG("%d", rho[k]);
+	}
+	USB_DEBUG_MSG("\r\n");
+#endif
+
 	for (i = 0; i < K; ++i) {
 		memset(&w->vec[i], 0, sizeof(uint32_t) * N);
 		for (j = 0; j < L; ++j) {
 			poly_uniform(&a_ij, rho, (i << 8) + j); 		// generate A[i][j]
 			unpack_sig_z(&z_j, j, sig);						// extract z_j from signature
 			poly_ntt(&z_j);									// transform z[j] to ntt
+#ifdef DEBUG_LOG
+			USB_DEBUG_MSG("a[%d][%d] = ", i, j);
+			for (int k = 0; k < N; k++) {
+				USB_DEBUG_MSG("%d", a_ij.coeffs[k]);
+			}
+			USB_DEBUG_MSG("\r\n");
+			USB_DEBUG_MSG("z[%d] = ", j);
+			for (int k = 0; k < N; k++) {
+				USB_DEBUG_MSG("%d", z_j.coeffs[k]);
+			}
+			USB_DEBUG_MSG("\r\n");
+#endif
 			poly_pointwise_montgomery(&a_ij, &a_ij, &z_j);  // multiply A[i][j] on z[j]
 			poly_add(&w->vec[i], &w->vec[i], &a_ij);		// accumulate result
 		}
 		// compute c*2^d*t1
 		unpack_pk_t1(&t1_i, i, pk);
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("t1[%d] = ", i);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", t1_i.coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif
 		poly_shiftl(&t1_i);
 		poly_ntt(&t1_i);
 		poly_pointwise_montgomery(&t1_i, &cp, &t1_i);
@@ -230,6 +279,13 @@ void polyvec_reconstruct_w1_montgomery(polyveck* w, const uint8_t sig[CRYPTO_BYT
 		poly_sub(&w->vec[i], &w->vec[i], &t1_i);
 		poly_reduce(&w->vec[i]);
 		poly_invntt_tomont(&w->vec[i]); // invert accumulated result from ntt
+#ifdef DEBUG_LOG
+		USB_DEBUG_MSG("w[%d] = ", i);
+		for (int k = 0; k < N; k++) {
+			USB_DEBUG_MSG("%d", w->vec[i].coeffs[k]);
+		}
+		USB_DEBUG_MSG("\r\n");
+#endif
 	}
 }
 

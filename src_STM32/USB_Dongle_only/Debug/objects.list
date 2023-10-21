@@ -39,6 +39,7 @@
 "./USB_Device/App/usbd_desc.o"
 "./USB_Device/Target/usbd_conf.o"
 "./dilithium5-AES-R/src/aes256ctr.o"
+"./dilithium5-AES-R/src/dilithium_keys.o"
 "./dilithium5-AES-R/src/fips202.o"
 "./dilithium5-AES-R/src/ntt.o"
 "./dilithium5-AES-R/src/packing.o"
@@ -50,3 +51,4 @@
 "./dilithium5-AES-R/src/sign.o"
 "./dilithium5-AES-R/src/symmetric-aes.o"
 "./dilithium5-AES-R/src/symmetric-shake.o"
+"./dilithium5-AES-R/src/usb_debug.o"

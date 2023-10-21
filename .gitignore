@@ -1,4 +1,7 @@
 _htmresc/
+Debug/
+x64/
+x32/
 *.html
 *.htm
 .metadata/

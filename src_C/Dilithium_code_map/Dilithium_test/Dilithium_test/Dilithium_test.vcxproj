@@ -127,7 +127,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="debug_log.c" />
     <ClCompile Include="dilithium5-AES-R\aes256ctr.c" />
+    <ClCompile Include="dilithium5-AES-R\dilithium_keys.c" />
     <ClCompile Include="dilithium5-AES-R\fips202.c" />
     <ClCompile Include="dilithium5-AES-R\ntt.c" />
     <ClCompile Include="dilithium5-AES-R\packing.c" />
@@ -142,9 +144,11 @@
     <ClCompile Include="Dilithium_test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="debug_log.h" />
     <ClInclude Include="dilithium5-AES-R\aes256ctr.h" />
     <ClInclude Include="dilithium5-AES-R\api.h" />
     <ClInclude Include="dilithium5-AES-R\config.h" />
+    <ClInclude Include="dilithium5-AES-R\dilithium_keys.h" />
     <ClInclude Include="dilithium5-AES-R\fips202.h" />
     <ClInclude Include="dilithium5-AES-R\ntt.h" />
     <ClInclude Include="dilithium5-AES-R\packing.h" />

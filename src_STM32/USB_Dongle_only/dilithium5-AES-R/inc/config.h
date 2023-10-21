@@ -3,9 +3,12 @@
 
 #define DILITHIUM_MODE 2
 #define DILITHIUM_USE_AES
-#define DILITHIUM_RANDOMIZED_SIGNING
+//#define DILITHIUM_RANDOMIZED_SIGNING
 
 #define CRYPTO_ALGNAME "Dilithium2-AES-R"
 #define DILITHIUM_NAMESPACE(s) pqcrystals_dilithium2aes_r_ref##s
+
+#define CONSTRAINED_DEVICE
+//#define DEBUG_LOG
 
 #endif

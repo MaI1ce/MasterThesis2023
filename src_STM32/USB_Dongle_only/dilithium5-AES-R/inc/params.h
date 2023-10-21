@@ -65,10 +65,16 @@
 #endif
 
 #define CRYPTO_PUBLICKEYBYTES (SEEDBYTES + K*POLYT1_PACKEDBYTES)
+
+#ifndef CONSTRAINED_DEVICE
 #define CRYPTO_SECRETKEYBYTES (2*SEEDBYTES + CRHBYTES \
                                + L*POLYETA_PACKEDBYTES \
                                + K*POLYETA_PACKEDBYTES \
                                + K*POLYT0_PACKEDBYTES)
+#else
+#define CRYPTO_SECRETKEYBYTES (3*SEEDBYTES + CRHBYTES \
+                               + K*POLYT0_PACKEDBYTES)
+#endif
 #define CRYPTO_BYTES (SEEDBYTES + L*POLYZ_PACKEDBYTES + POLYVECH_PACKEDBYTES)
 
 #endif

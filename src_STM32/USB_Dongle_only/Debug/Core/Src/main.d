@@ -60,7 +60,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/randombytes.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/poly.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/polyvec.h \
- F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/packing.h
+ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/packing.h \
+ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/usb_debug.h
 ../Core/Inc/main.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal.h:
 ../Core/Inc/stm32wbxx_hal_conf.h:
@@ -125,3 +126,4 @@ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/randombytes.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/poly.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/polyvec.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/packing.h:
+F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/usb_debug.h:

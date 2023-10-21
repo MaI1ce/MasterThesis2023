@@ -54,6 +54,12 @@
     <ClCompile Include="dilithium5-AES-R\symmetric-shake.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dilithium5-AES-R\dilithium_keys.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="debug_log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dilithium5-AES-R\aes256ctr.h">
@@ -96,6 +102,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dilithium5-AES-R\symmetric.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dilithium5-AES-R\dilithium_keys.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="debug_log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

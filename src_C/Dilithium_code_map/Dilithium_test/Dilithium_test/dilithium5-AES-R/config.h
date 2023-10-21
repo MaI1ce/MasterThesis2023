@@ -11,6 +11,6 @@
 #define CONSTRAINED_DEVICE
 //#define CONST_RAND_SEED
 //#define SECRET_KEY_TEST
-//#define DEBUG_LOG
+#define DEBUG_LOG
 
 #endif

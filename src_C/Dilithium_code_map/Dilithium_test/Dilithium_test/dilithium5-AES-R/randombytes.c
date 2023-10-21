@@ -20,9 +20,11 @@
 
 #ifdef _WIN32
 
+uint8_t const_base = 0;
+
 void randombytes2(uint8_t* out, size_t outlen) {
     for (int i = 0; i < outlen; i++)
-        out[i] = 0xAA;
+        out[i] = const_base;
 }
 
 void randombytes(uint8_t *out, size_t outlen) {
