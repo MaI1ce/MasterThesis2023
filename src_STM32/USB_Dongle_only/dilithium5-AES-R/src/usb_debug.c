@@ -13,7 +13,7 @@ Delay approx. 100 ns (93.75) at 64 MHz
 Error is -6.25%
 Test for 20 ms, takes 18.7 ms at 64 MHz
 */
-void Delay_100ns(uint32_t lulDelay)
+void Delay_94ns(uint32_t lulDelay)
 {
 	while(lulDelay) // 2 cycles
 	{

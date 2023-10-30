@@ -1,5 +1,5 @@
-../dilithium5-AES-R/src/sign.c:31:5:pqcrystals_dilithium2aes_r_ref_keypair	8384	static
-../dilithium5-AES-R/src/sign.c:137:5:pqcrystals_dilithium2aes_r_ref_signature	22040	static
-../dilithium5-AES-R/src/sign.c:455:5:pqcrystals_dilithium2aes_r_ref	40	static
-../dilithium5-AES-R/src/sign.c:494:5:pqcrystals_dilithium2aes_r_ref_verify	6248	static
-../dilithium5-AES-R/src/sign.c:672:5:pqcrystals_dilithium2aes_r_ref_open	40	static
+../dilithium5-AES-R/src/sign.c:34:5:pqcrystals_dilithium2aes_r_ref_keypair	8384	static
+../dilithium5-AES-R/src/sign.c:158:5:pqcrystals_dilithium2aes_r_ref_signature	22040	static
+../dilithium5-AES-R/src/sign.c:525:5:pqcrystals_dilithium2aes_r_ref	40	static
+../dilithium5-AES-R/src/sign.c:564:5:pqcrystals_dilithium2aes_r_ref_verify	6248	static
+../dilithium5-AES-R/src/sign.c:760:5:pqcrystals_dilithium2aes_r_ref_open	40	static

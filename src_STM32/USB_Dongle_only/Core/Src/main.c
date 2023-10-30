@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 //#include <stdint.h>
 //#include <string.h>
 #include "fips202.h"
@@ -37,10 +38,10 @@
 
 #include "usb_debug.h"
 
-//#define STATIC_KEYS
-#ifdef STATIC_KEYS
-#include "dilithium_keys.h"
-#endif
+#include "elapsed_time.h"
+
+#include "symmetric.h"
+
 
 /* USER CODE END Includes */
 
@@ -52,7 +53,16 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MLEN 59
-#define NTESTS 1
+#define NTESTS 5
+//#define KEYGEN_TEST
+//#define SIGN_VERIFY_TEST
+#define FULL_TEST
+//#define AES_TEST
+//#define STATIC_KEYS
+//#define KEYGEN
+#if defined(STATIC_KEYS) || defined(SIGN_VERIFY_TEST)
+#include "dilithium_keys.h"
+#endif
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -61,6 +71,12 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+//CRYP_HandleTypeDef hcryp1;
+#ifdef HARDWARE_AES
+__ALIGN_BEGIN static const uint32_t pKeyAES1[4] __ALIGN_END = {
+                            0x00000000,0x00000000,0x00000000,0x00000000};
+#endif
+
 IPCC_HandleTypeDef hipcc;
 
 RNG_HandleTypeDef hrng;
@@ -84,8 +100,11 @@ static void MX_RF_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_RTC_Init(void);
 static void MX_RNG_Init(void);
+#ifdef HARDWARE_AES
+static void MX_AES1_Init(void);
+#endif
 /* USER CODE BEGIN PFP */
-
+static int sign_verify_test_assert(int ret, int mlen, uint8_t ref_m[MLEN], uint8_t new_m[MLEN]);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -133,81 +152,83 @@ int main(void)
   MX_RTC_Init();
   MX_USB_Device_Init();
   MX_RNG_Init();
+#ifdef HARDWARE_AES
+  MX_AES1_Init();
+#endif
   /* USER CODE BEGIN 2 */
   HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin); // BLUE LED
-  //char msg_buf[80] = "Dilithium Signature Start\r\n";
-  //CDC_Transmit_FS((uint8_t*)msg_buf, 80);
-
   HAL_Delay(3000);
   USB_DEBUG_MSG("Program Compilation Date: %s %s\n", __DATE__, __TIME__);
-  USB_DEBUG_MSG("Dilithium Signature Start\n");
+  USB_DEBUG_MSG("Dilithium Signature Test Start\n");
   HAL_GPIO_TogglePin(LED4_GPIO_Port, LED4_Pin);
+  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 
-  unsigned int i, j;
+#ifdef KEYGEN_TEST
+
+  uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  uint8_t sk[CRYPTO_SECRETKEYBYTES];
+
+  elapsed_time_init();
+
+#define TIME_STAMP_INDEX 0
+
+  for (int i = 0; i < NTESTS; ++i) {
+	  //
+	  USB_DEBUG_MSG("Test %d\r\n", i);
+
+	  elapsed_time_start(TIME_STAMP_INDEX);
+
+	  crypto_sign_keypair(&hrng, pk, sk);
+
+	  elapsed_time_stop(TIME_STAMP_INDEX);
+
+	  USB_DEBUG_MSG("Cycles for keys generation max = %ld\r\n", elapsed_time_max(TIME_STAMP_INDEX));
+	  USB_DEBUG_MSG("Cycles for keys generation min = %ld\r\n", elapsed_time_min(TIME_STAMP_INDEX));
+
+	  elapsed_time_clr(TIME_STAMP_INDEX);
+  }
+  USB_DEBUG_MSG("CRYPTO_PUBLICKEYBYTES = %d\r\n", CRYPTO_PUBLICKEYBYTES);
+  USB_DEBUG_MSG("CRYPTO_SECRETKEYBYTES = %d\r\n", CRYPTO_SECRETKEYBYTES);
+  USB_DEBUG_MSG("CRYPTO_BYTES = %d\r\n", CRYPTO_BYTES);
+
+#elif defined SIGN_VERIFY_TEST
+
+  unsigned int i;
   int ret;
   size_t mlen, smlen;
   uint8_t m[MLEN] = { 0x55 };
   uint8_t sm[MLEN + CRYPTO_BYTES];
   uint8_t m2[MLEN + CRYPTO_BYTES];
-#ifndef STATIC_KEYS
-  uint8_t pk[CRYPTO_PUBLICKEYBYTES];
-  uint8_t sk[CRYPTO_SECRETKEYBYTES];
-#endif
-
   uint8_t test_ok = 1;
+
+#define TIME_STAMP_SIGN 0
+#define TIME_STAMP_VERF 1
+
+  elapsed_time_init();
 
   for (i = 0; i < NTESTS; ++i) {
 	  //
+	  USB_DEBUG_MSG("Test %d\r\n", i);
 
-#ifndef STATIC_KEYS
-	  randombytes(&hrng, m, MLEN);
-	  crypto_sign_keypair(&hrng, pk, sk);
-#endif
+	  elapsed_time_start(TIME_STAMP_SIGN );
+
 	  crypto_sign(&hrng, sm, &smlen, m, MLEN, sk);
+
+	  elapsed_time_stop(TIME_STAMP_SIGN );
+
+	  elapsed_time_start(TIME_STAMP_VERF);
+
 	  ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
 
-	  //memset(msg_buf, 0, sizeof(msg_buf));
-	  if (ret) {
-		  USB_DEBUG_MSG("Verification failed - err_code = %d\r\n", ret);
-		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
-		  test_ok = 0;
-		  //return -1;
-	  }
+	  elapsed_time_stop(TIME_STAMP_VERF);
 
-	  if (mlen != MLEN) {
-		  USB_DEBUG_MSG("Message lengths don't match\r\n");
-		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
-		  test_ok = 0;
-		  //return -1;
-	  }
-
-	  for (j = 0; j < mlen; ++j) {
-		  if (m[j] != m2[j]) {
-			  USB_DEBUG_MSG("Messages don't match\r\n");
-			  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
-			  test_ok = 0;
-			  break;
-			  //return -1;
-		  }
-
-	  }
-/*
-	  randombytes(&hrng, (uint8_t*)&j, sizeof(j));
-	  do {
-		  randombytes(&hrng, m2, 1);
-	  } while (!m2[0]);
-	  sm[j % CRYPTO_BYTES] += m2[0];
-	  ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
-	  if (!ret) {
-		  sprintf(msg_buf, "Trivial forgeries possible\r\n");
-		  CDC_Transmit_FS(msg_buf, 80);
-		  HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin); // RED LED
+	  if(sign_verify_test_assert(ret, mlen, m, m2)){
 		  test_ok = 0;
 		  break;
-		  //return -1;
 	  }
-*/
+
   }
+
   if (test_ok){
 	  HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin); // GREEN LED
 	  USB_DEBUG_MSG("New Dilithium - OK\r\n");
@@ -216,9 +237,152 @@ int main(void)
 	  USB_DEBUG_MSG("New Dilithium - err_code = %d\r\n", ret);
   }
 
+  USB_DEBUG_MSG("Cycles for full signature generation max = %ld\r\n", elapsed_time_max(TIME_STAMP_SIGN));
+  USB_DEBUG_MSG("Cycles for full signature generation min = %ld\r\n", elapsed_time_min(TIME_STAMP_SIGN));
+  USB_DEBUG_MSG("Cycles for full signature verification max = %ld\r\n", elapsed_time_max(TIME_STAMP_VERF));
+  USB_DEBUG_MSG("Cycles for full signature verification min = %ld\r\n", elapsed_time_min(TIME_STAMP_VERF));
   USB_DEBUG_MSG("CRYPTO_PUBLICKEYBYTES = %d\r\n", CRYPTO_PUBLICKEYBYTES);
   USB_DEBUG_MSG("CRYPTO_SECRETKEYBYTES = %d\r\n", CRYPTO_SECRETKEYBYTES);
   USB_DEBUG_MSG("CRYPTO_BYTES = %d\r\n", CRYPTO_BYTES);
+
+#elif defined FULL_TEST
+  unsigned int i, j;
+  int ret;
+  size_t mlen, smlen;
+  uint8_t m[MLEN] = { 0x55 };
+  uint8_t sm[MLEN + CRYPTO_BYTES];
+  uint8_t m2[MLEN + CRYPTO_BYTES];
+  uint8_t test_ok = 1;
+  uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  uint8_t sk[CRYPTO_SECRETKEYBYTES];
+
+  for (i = 0; i < NTESTS; ++i) {
+	  //
+	  USB_DEBUG_MSG("Test %d\r\n", i);
+
+	  crypto_sign_keypair(&hrng, pk, sk);
+	  crypto_sign(&hrng, sm, &smlen, m, MLEN, sk);
+	  ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
+
+	  if(sign_verify_test_assert(ret, mlen, m, m2)){
+		  test_ok = 0;
+		  break;
+	  }
+
+  }
+
+  if (test_ok){
+	  HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin); // GREEN LED
+	  USB_DEBUG_MSG("New Dilithium - OK\r\n");
+  }
+  else {
+	  USB_DEBUG_MSG("New Dilithium - err_code = %d\r\n", ret);
+  }
+
+#endif
+
+
+#ifdef TIME_BENCHMARK
+  USB_DEBUG_MSG("TIME BENCHMARK FOR %d TESTS\r\n",NTESTS);
+#if defined(STATIC_KEYS) || defined(SIGN_VERIFY_TEST)
+  USB_DEBUG_MSG("Cycles for keygen t = A*s1+s2 max = %ld\r\n", elapsed_time_max(KEYS_SMUL_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for keygen t = A*s1+s2 min = %ld\r\n", elapsed_time_min(KEYS_SMUL_TIMESTAMP));
+#else
+  USB_DEBUG_MSG("PREINSTALLED KEYS USED\r\n");
+#endif
+  USB_DEBUG_MSG("Cycles for sign   w = Ay      max = %ld\r\n", elapsed_time_max(SIGN_YMUL_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for sign   w = Ay      min = %ld\r\n", elapsed_time_min(SIGN_YMUL_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for sign   z = y+c*s1  max = %ld\r\n", elapsed_time_max(SIGN_Z_COMPUTE_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for sign   z = y+c*s1  min = %ld\r\n", elapsed_time_min(SIGN_Z_COMPUTE_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for sign   h0 = c*s2   max = %ld\r\n", elapsed_time_max(SIGN_H_COMPUTE_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for sign   h0 = c*s2   min = %ld\r\n", elapsed_time_min(SIGN_H_COMPUTE_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for verify w1 = Usehint(Az-c*t1*2^d) max = %ld\r\n", elapsed_time_max(VERIFY_RECONSTRUC_W1_TIMESTAMP));
+  USB_DEBUG_MSG("Cycles for verify w1 = Usehint(Az-c*t1*2^d) min = %ld\r\n", elapsed_time_min(VERIFY_RECONSTRUC_W1_TIMESTAMP));
+#endif
+
+#ifdef AES_TEST
+#define POLY_UNIFORM_NBLOCKS ((768 + STREAM128_BLOCKBYTES - 1)/STREAM128_BLOCKBYTES)
+  uint8_t buf[POLY_UNIFORM_NBLOCKS*STREAM128_BLOCKBYTES + 2] = {0};
+  stream128_state state;
+  uint8_t seed[32] = {0x55};
+  int nonce = 0;
+
+  poly a;
+
+  for(int i = 0; i < NTESTS; i++, nonce++){
+	  //randombytes(&hrng, seed, 32);
+	  USB_DEBUG_MSG("\r\nTETS %d\r\n", i);
+
+	  USB_DEBUG_MSG(" first\r\n");
+	  USB_DEBUG_MSG(" seed =");
+	  for(int j = 0; j < 32; j++){
+		  USB_DEBUG_MSG("%d ", seed[j]);
+	  }
+	  USB_DEBUG_MSG("\r\n");
+
+	  poly_uniform(&a, seed, 1);
+
+
+	  //for(int k = 0; k < K; k++){
+		  //for(int l = 0; l < L; l++){
+			  USB_DEBUG_MSG("a = ");
+			  for(int j = 0; j < N_; j++){
+				  USB_DEBUG_MSG("%ld", a.coeffs[j]);
+			  }
+			  USB_DEBUG_MSG("\r\n");
+		  //}
+		  //USB_DEBUG_MSG("\r\n");
+	  //}
+
+	  USB_DEBUG_MSG("\r\n second\r\n");
+	  USB_DEBUG_MSG(" seed =");
+	  for(int j = 0; j < 32; j++){
+		  USB_DEBUG_MSG("%d ", seed[j]);
+	  }
+	  USB_DEBUG_MSG("\r\n");
+
+	  poly_uniform(&a, seed, 1);
+
+
+	  //for(int k = 0; k < K; k++){
+		  //for(int l = 0; l < L; l++){
+			  USB_DEBUG_MSG("a = ");
+			  for(int j = 0; j < N_; j++){
+				  USB_DEBUG_MSG("%ld", a.coeffs[j]);
+			  }
+			  USB_DEBUG_MSG("\r\n");
+		  //}
+		  //USB_DEBUG_MSG("\r\n");
+	  //}
+  }
+
+
+
+
+
+#endif
+
+#ifdef KEYGEN
+  uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  uint8_t sk[CRYPTO_SECRETKEYBYTES];
+
+  crypto_sign_keypair(&hrng, pk, sk);
+
+  USB_DEBUG_MSG("Public key:\r\n");
+  for (int i = 0; i < sizeof(pk); i++) {
+      if (i % 8 == 0)
+    	  USB_DEBUG_MSG("\n\t");
+      USB_DEBUG_MSG("0x%02x, ", pk[i]);
+  }
+
+  USB_DEBUG_MSG("Secret key:\r\n");
+  for (int i = 0; i < sizeof(sk); i++) {
+      if (i % 8 == 0)
+    	  USB_DEBUG_MSG("\n\t");
+      USB_DEBUG_MSG("0x%02x, ", sk[i]);
+  }
+#endif
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -311,6 +475,41 @@ void PeriphCommonClock_Config(void)
 
   /* USER CODE END Smps */
 }
+
+/**
+  * @brief AES1 Initialization Function
+  * @param None
+  * @retval None
+  */
+
+#ifdef HARDWARE_AES
+static void MX_AES1_Init(void)
+{
+
+  /* USER CODE BEGIN AES1_Init 0 */
+
+  /* USER CODE END AES1_Init 0 */
+
+  /* USER CODE BEGIN AES1_Init 1 */
+
+  /* USER CODE END AES1_Init 1 */
+	hcryp_state.Instance = AES1;
+	hcryp_state.Init.DataType = CRYP_DATATYPE_32B;
+	hcryp_state.Init.KeySize = CRYP_KEYSIZE_128B;
+	hcryp_state.Init.pKey = (uint32_t *)pKeyAES1;
+	hcryp_state.Init.Algorithm = CRYP_AES_ECB;
+	hcryp_state.Init.DataWidthUnit = CRYP_DATAWIDTHUNIT_WORD;
+	hcryp_state.Init.KeyIVConfigSkip = CRYP_KEYIVCONFIG_ALWAYS;
+  if (HAL_CRYP_Init(&hcryp_state) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN AES1_Init 2 */
+
+  /* USER CODE END AES1_Init 2 */
+
+}
+#endif
 
 /**
   * @brief IPCC Initialization Function
@@ -538,7 +737,28 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static int sign_verify_test_assert(int ret, int mlen, uint8_t ref_m[MLEN], uint8_t new_m[MLEN]){
+	  if (ret) {
+	 		  USB_DEBUG_MSG("Verification failed - err_code = %d\r\n", ret);
+	 		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
+	 		 return 1;
+	 }
 
+	  if (mlen != MLEN) {
+		  USB_DEBUG_MSG("Message lengths don't match\r\n");
+		  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
+		  return 1;
+	  }
+
+	  for (int j = 0; j < mlen; ++j) {
+		  if (ref_m[j] != new_m[j]) {
+			  USB_DEBUG_MSG("Messages don't match\r\n");
+			  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // RED LED
+			  return 1;
+		  }
+	  }
+	  return 0;
+}
 /* USER CODE END 4 */
 
 /**

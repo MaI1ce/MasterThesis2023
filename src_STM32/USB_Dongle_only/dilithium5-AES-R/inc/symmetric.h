@@ -6,6 +6,8 @@
 
 #ifdef DILITHIUM_USE_AES
 
+#ifndef HARDWARE_AES
+
 #include "aes256ctr.h"
 #include "fips202.h"
 
@@ -29,6 +31,32 @@ void dilithium_aes256ctr_init(aes256ctr_ctx *state,
         dilithium_aes256ctr_init(STATE, SEED, NONCE)
 #define stream256_squeezeblocks(OUT, OUTBLOCKS, STATE) \
         aes256ctr_squeezeblocks(OUT, OUTBLOCKS, STATE)
+
+#else
+#include "fips202.h"
+#include "symmetric-aes_stm.h"
+
+typedef stm_aes256ctr_ctx stream128_state;
+typedef stm_aes256ctr_ctx stream256_state;
+
+#define STREAM128_BLOCKBYTES BLOCKBYTES
+#define STREAM256_BLOCKBYTES BLOCKBYTES
+
+#define crh(OUT, IN, INBYTES) shake256(OUT, CRHBYTES, IN, INBYTES)
+#define stream128_init(STATE, SEED, NONCE) \
+		dilithium_stm_stream_aes256ctr_init(STATE, SEED, NONCE)
+#define stream128_squeezeblocks(OUT, OUTBLOCKS, STATE) \
+		dilithium_stm_stream_aes256ctr_squeezeblocks(OUT, OUTBLOCKS, STATE)
+#define stream256_init(STATE, SEED, NONCE) \
+		dilithium_stm_stream_aes256ctr_init(STATE, SEED, NONCE)
+#define stream256_squeezeblocks(OUT, OUTBLOCKS, STATE) \
+		dilithium_stm_stream_aes256ctr_squeezeblocks(OUT, OUTBLOCKS, STATE)
+#define stream128_deinit(STATE) \
+		dilithium_stm_stream_aes256ctr_deinit(STATE)
+#define stream256_deinit(STATE) \
+		dilithium_stm_stream_aes256ctr_deinit(STATE)
+
+#endif
 
 #else
 

@@ -703,6 +703,7 @@ void polyveck_use_hint_r(polyveck* w, const polyveck* u, const uint8_t h[N*K]) {
 
 	for (i = 0; i < K; ++i)
 		poly_use_hint_r(&w->vec[i], &u->vec[i], &h[i*N]);
+
 }
 
 void polyveck_pack_w1(uint8_t r[K*POLYW1_PACKEDBYTES], const polyveck *w1) {

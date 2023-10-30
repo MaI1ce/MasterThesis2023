@@ -16,6 +16,8 @@ Core/Src/stm32wbxx_hal_msp.o: ../Core/Src/stm32wbxx_hal_msp.c \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_dmamux.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_dma_ex.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cortex.h \
+ ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp.h \
+ ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp_ex.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_exti.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash_ex.h \
@@ -59,6 +61,8 @@ Core/Src/stm32wbxx_hal_msp.o: ../Core/Src/stm32wbxx_hal_msp.c \
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_dmamux.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_dma_ex.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cortex.h:
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp.h:
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp_ex.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_exti.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash_ex.h:

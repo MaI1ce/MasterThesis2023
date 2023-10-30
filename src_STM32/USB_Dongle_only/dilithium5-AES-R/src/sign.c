@@ -12,6 +12,9 @@
 #include "usb_debug.h"
 #endif
 
+#ifdef TIME_BENCHMARK
+#include "elapsed_time.h"
+#endif
 
 /*************************************************
 * Name:        crypto_sign_keypair
@@ -32,14 +35,12 @@ int crypto_sign_keypair(RNG_HandleTypeDef * hrng, uint8_t * pk, uint8_t * sk)
 #else
 int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
 #endif
-
-#ifdef CONSTRAINED_DEVICE
 {
+#ifdef CONSTRAINED_DEVICE
     uint8_t seedbuf[3 * SEEDBYTES];
     uint8_t tr[CRHBYTES];
     const uint8_t* rho, * rhoprime, * key;
     polyveck t1, t0;
-
 
     /* Get randomness for rho, rhoprime and key */
 #if defined(CONST_RAND_SEED)
@@ -50,12 +51,24 @@ int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
     randombytes(seedbuf, SEEDBYTES);
 #endif
 
+#ifdef DEBUG_LOG
+    USB_DEBUG_MSG("\r\n KEYGEN \r\n");
+#endif
+
     shake256(seedbuf, 3 * SEEDBYTES, seedbuf, SEEDBYTES);
     rho = seedbuf;
     rhoprime = seedbuf + SEEDBYTES;
     key = seedbuf + 2 * SEEDBYTES;
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(KEYS_SMUL_TIMESTAMP);
+#endif
+
     polyvec_matrix_poly_smul_montgomery(&t1, rho, rhoprime);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(KEYS_SMUL_TIMESTAMP);
+#endif
 
     /* Extract t1 and write public key */
     polyveck_caddq(&t1);
@@ -65,10 +78,9 @@ int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
     /* Compute CRH(rho, t1) and write secret key */
     crh(tr, pk, CRYPTO_PUBLICKEYBYTES);
     pack_sk_r(sk, rho, rhoprime, tr, key, &t0);
-    return 0;
-}
+
 #else
-{
+
   uint8_t seedbuf[3 * SEEDBYTES];
   uint8_t tr[CRHBYTES];
   const uint8_t *rho, *rhoprime, *key;
@@ -90,6 +102,10 @@ int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
   rhoprime = seedbuf + SEEDBYTES;
   key = seedbuf + 2*SEEDBYTES;
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(KEYS_SMUL_TIMESTAMP);
+#endif
+
   /* Expand matrix */
   polyvec_matrix_expand(mat, rho);
 
@@ -107,6 +123,10 @@ int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
   /* Add error vector s2 */
   polyveck_add(&t1, &t1, &s2);
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(KEYS_SMUL_TIMESTAMP);
+#endif
+
   /* Extract t1 and write public key */
   polyveck_caddq(&t1);
   polyveck_power2round(&t1, &t0, &t1);
@@ -116,9 +136,10 @@ int crypto_sign_keypair(uint8_t * pk, uint8_t * sk)
   crh(tr, pk, CRYPTO_PUBLICKEYBYTES);
   pack_sk(sk, rho, tr, key, &t0, &s1, &s2);
 
+#endif
+
   return 0;
 }
-#endif
 
 /*************************************************
 * Name:        crypto_sign_signature
@@ -146,10 +167,9 @@ int crypto_sign_signature(uint8_t *sig,
                           size_t mlen,
                           const uint8_t *sk)
 #endif
-
-#ifdef CONSTRAINED_DEVICE
 {
 
+#ifdef CONSTRAINED_DEVICE
     unsigned int n;
     uint8_t seedbuf[2 * SEEDBYTES + 3 * CRHBYTES];
     uint8_t* rho, * s_rhoprime, * tr, * key, * mu;
@@ -189,6 +209,7 @@ int crypto_sign_signature(uint8_t *sig,
 #endif
 
 #ifdef DEBUG_LOG
+    USB_DEBUG_MSG("\r\n SIGNATURE \r\n");
 
     USB_DEBUG_MSG("rho = ");
     for(int i = 0; i < SEEDBYTES; i++){
@@ -233,8 +254,16 @@ int crypto_sign_signature(uint8_t *sig,
 #ifdef DEBUG_LOG
 	USB_DEBUG_MSG("nonce = %d\r\n", nonce);
 #endif
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_YMUL_TIMESTAMP);
+#endif
+
     polyvec_matrix_poly_ymul_montgomery(&w1, rho, y_rhoprime, nonce);
-    // IS OK
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_YMUL_TIMESTAMP);
+#endif
 
     /* Decompose w and call the random oracle */
     polyveck_caddq(&w1);
@@ -257,15 +286,31 @@ int crypto_sign_signature(uint8_t *sig,
 	USB_DEBUG_MSG("\r\n");
 #endif
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_Z_COMPUTE_TIMESTAMP);
+#endif
+
     /* Compute z, reject if it reveals secret */
     polyvec_compute_z_montgomery(&z, &cp, s_rhoprime, y_rhoprime, nonce++);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_Z_COMPUTE_TIMESTAMP);
+#endif
 
     if (polyvecl_chknorm(&z, GAMMA1 - BETA))
         goto rej;
 
     /* Check that subtracting cs2 does not change high bits of w and low bits
     * do not reveal secret information */
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_H_COMPUTE_TIMESTAMP);
+#endif
+
     polyvec_compute_h_montgomery(&h, &cp, s_rhoprime);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_H_COMPUTE_TIMESTAMP);
+#endif
 
     polyveck_sub(&w0, &w0, &h);
     polyveck_reduce(&w0);
@@ -324,10 +369,7 @@ int crypto_sign_signature(uint8_t *sig,
 	USB_DEBUG_MSG("\r\n");
 #endif
 
-    return 0;
-}
 #else
-{
   unsigned int n;
   uint8_t seedbuf[2*SEEDBYTES + 3*CRHBYTES];
   uint8_t *rho, *tr, *key, *mu, *rhoprime;
@@ -336,18 +378,19 @@ int crypto_sign_signature(uint8_t *sig,
   polyveck t0, s2, w1, w0, h;
   poly cp;
   keccak_state state;
-  uint8_t s_rhoprime[SEEDBYTES];
+  //uint8_t s_rhoprime[SEEDBYTES];
 
   rho = seedbuf;
   tr = rho + SEEDBYTES;
   key = tr + CRHBYTES;
   mu = key + SEEDBYTES;
   rhoprime = mu + CRHBYTES;
-  //unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
+  unpack_sk(rho, tr, key, &t0, &s1, &s2, sk);
+  /*
   unpack_sk_r(rho, s_rhoprime, tr, key, &t0, sk);
   polyvecl_uniform_eta(&s1, s_rhoprime, 0);
   polyveck_uniform_eta(&s2, s_rhoprime, L);
-
+   */
   /* Compute CRH(tr, msg) */
   shake256_init(&state);
   shake256_absorb(&state, tr, CRHBYTES);
@@ -368,12 +411,19 @@ int crypto_sign_signature(uint8_t *sig,
 #endif
 
   /* Expand matrix and transform vectors */
-  polyvec_matrix_expand(mat, rho);
+
   polyvecl_ntt(&s1);
   polyveck_ntt(&s2);
   polyveck_ntt(&t0);
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_YMUL_TIMESTAMP);
+#endif
+
+  polyvec_matrix_expand(mat, rho);
+
 rej:
+
   /* Sample intermediate vector y */
   polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
   z = y;
@@ -383,6 +433,10 @@ rej:
   polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
   polyveck_reduce(&w1);
   polyveck_invntt_tomont(&w1);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_YMUL_TIMESTAMP);
+#endif
 
   /* Decompose w and call the random oracle */
   polyveck_caddq(&w1);
@@ -397,18 +451,34 @@ rej:
   poly_challenge(&cp, sig);
   poly_ntt(&cp);
 
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_Z_COMPUTE_TIMESTAMP);
+#endif
   /* Compute z, reject if it reveals secret */
   polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
   polyvecl_invntt_tomont(&z);
   polyvecl_add(&z, &z, &y);
   polyvecl_reduce(&z);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_Z_COMPUTE_TIMESTAMP);
+#endif
   if(polyvecl_chknorm(&z, GAMMA1 - BETA))
     goto rej;
 
   /* Check that subtracting cs2 does not change high bits of w and low bits
    * do not reveal secret information */
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(SIGN_H_COMPUTE_TIMESTAMP);
+#endif
   polyveck_pointwise_poly_montgomery(&h, &cp, &s2);
   polyveck_invntt_tomont(&h);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(SIGN_H_COMPUTE_TIMESTAMP);
+#endif
 
   polyveck_sub(&w0, &w0, &h);
   polyveck_reduce(&w0);
@@ -431,9 +501,9 @@ rej:
   /* Write signature */
   pack_sig(sig, sig, &z, &h);
   *siglen = CRYPTO_BYTES;
-  return 0;
-}
 #endif
+	return 0;
+}
 
 /*************************************************
 * Name:        crypto_sign
@@ -496,9 +566,9 @@ int crypto_sign_verify(const uint8_t *sig,
                        const uint8_t *m,
                        size_t mlen,
                        const uint8_t *pk)
+{
 
 #ifdef CONSTRAINED_DEVICE
-{
     unsigned int i;
     uint8_t buf[K * POLYW1_PACKEDBYTES];
     uint8_t mu[CRHBYTES];
@@ -507,6 +577,10 @@ int crypto_sign_verify(const uint8_t *sig,
     polyveck w1;
     uint8_t h[N_ * K] = { 0 };
     keccak_state state;
+
+#ifdef DEBUG_LOG
+    USB_DEBUG_MSG("\r\n VERIFY \r\n");
+#endif
 
     if (siglen != CRYPTO_BYTES)
         return 1;
@@ -550,6 +624,9 @@ int crypto_sign_verify(const uint8_t *sig,
     USB_DEBUG_MSG("\r\n");
 #endif
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(VERIFY_RECONSTRUC_W1_TIMESTAMP);
+#endif
 
     /* Matrix-vector multiplication; compute Az - c2^dt1 */
     polyvec_reconstruct_w1_montgomery(&w1, sig, pk);
@@ -558,6 +635,10 @@ int crypto_sign_verify(const uint8_t *sig,
     polyveck_caddq(&w1);
     polyveck_use_hint_r(&w1, &w1, h);
     polyveck_pack_w1(buf, &w1);
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(VERIFY_RECONSTRUC_W1_TIMESTAMP);
+#endif
 
 #ifdef DEBUG_LOG
     USB_DEBUG_MSG("buf = ");
@@ -587,10 +668,8 @@ int crypto_sign_verify(const uint8_t *sig,
             return 6;
     }
 
-    return 0;
-}
 #else
-{
+
   unsigned int i;
   uint8_t buf[K*POLYW1_PACKEDBYTES];
   uint8_t rho[SEEDBYTES];
@@ -619,6 +698,10 @@ int crypto_sign_verify(const uint8_t *sig,
   shake256_finalize(&state);
   shake256_squeeze(mu, CRHBYTES, &state);
 
+
+#ifdef TIME_BENCHMARK
+    elapsed_time_start(VERIFY_RECONSTRUC_W1_TIMESTAMP);
+#endif
   /* Matrix-vector multiplication; compute Az - c2^dt1 */
   poly_challenge(&cp, c);
   polyvec_matrix_expand(mat, rho);
@@ -640,6 +723,10 @@ int crypto_sign_verify(const uint8_t *sig,
   polyveck_use_hint(&w1, &w1, &h);
   polyveck_pack_w1(buf, &w1);
 
+#ifdef TIME_BENCHMARK
+    elapsed_time_stop(VERIFY_RECONSTRUC_W1_TIMESTAMP);
+#endif
+
   /* Call random oracle and verify challenge */
   shake256_init(&state);
   shake256_absorb(&state, mu, CRHBYTES);
@@ -651,9 +738,10 @@ int crypto_sign_verify(const uint8_t *sig,
           return -1;
   }
 
+#endif
+
   return 0;
 }
-#endif
 
 /*************************************************
 * Name:        crypto_sign_open

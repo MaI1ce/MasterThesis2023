@@ -19,14 +19,13 @@
 
 extern uint8_t usb_msg_buf[80];
 
-void Delay_100ns(uint32_t lulDelay);
+void Delay_94ns(uint32_t lulDelay);
 
 #define USB_DEBUG_MSG(...) do {\
 		memset(usb_msg_buf, 0, 80);\
 		sprintf ((char*)usb_msg_buf, __VA_ARGS__);\
 		CDC_Transmit_FS((uint8_t*)usb_msg_buf, strlen((const char*)usb_msg_buf));\
-		Delay_100ns(1000);\
+		Delay_94ns(1000);\
 	} while (0)
-
 
 #endif /* INC_USB_DEBUG_H_ */

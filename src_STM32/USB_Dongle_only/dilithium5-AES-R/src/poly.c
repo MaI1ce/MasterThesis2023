@@ -17,6 +17,10 @@ extern uint64_t *tred, *tadd, *tmul, *tround, *tsample, *tpack;
 #define DBENCH_STOP(t)
 #endif
 
+#ifdef DEBUG_LOG
+#include "usb_debug.h"
+#endif
+
 /*************************************************
 * Name:        poly_reduce
 *
@@ -376,11 +380,28 @@ void poly_uniform(poly *a,
 {
   unsigned int i, ctr, off;
   unsigned int buflen = POLY_UNIFORM_NBLOCKS*STREAM128_BLOCKBYTES;
-  uint8_t buf[POLY_UNIFORM_NBLOCKS*STREAM128_BLOCKBYTES + 2];
+  uint8_t buf[POLY_UNIFORM_NBLOCKS*STREAM128_BLOCKBYTES + 2] = {0};
   stream128_state state;
 
   stream128_init(&state, seed, nonce);
+
+#ifdef DEBUG_LOG
+  USB_DEBUG_MSG("buf=");
+  for(int j = 0; j < sizeof(buf); j++){
+	  USB_DEBUG_MSG("%d ", buf[j]);
+  }
+  USB_DEBUG_MSG("\r\n");
+#endif
+
   stream128_squeezeblocks(buf, POLY_UNIFORM_NBLOCKS, &state);
+
+#ifdef DEBUG_LOG
+  USB_DEBUG_MSG("buf=");
+  for(int j = 0; j < sizeof(buf); j++){
+	  USB_DEBUG_MSG("%d ", buf[j]);
+  }
+  USB_DEBUG_MSG("\r\n");
+#endif
 
   ctr = rej_uniform(a->coeffs, N_, buf, buflen);
 
@@ -390,6 +411,15 @@ void poly_uniform(poly *a,
       buf[i] = buf[buflen - off + i];
 
     stream128_squeezeblocks(buf + off, 1, &state);
+
+#ifdef DEBUG_LOG
+  USB_DEBUG_MSG("buf=");
+  for(int j = 0; j < sizeof(buf); j++){
+	  USB_DEBUG_MSG("%d ", buf[j]);
+  }
+  USB_DEBUG_MSG("\r\n");
+#endif
+
     buflen = STREAM128_BLOCKBYTES + off;
     ctr += rej_uniform(a->coeffs + ctr, N_ - ctr, buf, buflen);
   }
@@ -466,7 +496,7 @@ void poly_uniform_eta(poly *a,
 {
   unsigned int ctr;
   unsigned int buflen = POLY_UNIFORM_ETA_NBLOCKS*STREAM128_BLOCKBYTES;
-  uint8_t buf[POLY_UNIFORM_ETA_NBLOCKS*STREAM128_BLOCKBYTES];
+  uint8_t buf[POLY_UNIFORM_ETA_NBLOCKS*STREAM128_BLOCKBYTES] = {0};
   stream128_state state;
 
   stream128_init(&state, seed, nonce);
@@ -500,7 +530,7 @@ void poly_uniform_gamma1(poly *a,
                          const uint8_t seed[CRHBYTES],
                          uint16_t nonce)
 {
-  uint8_t buf[POLY_UNIFORM_GAMMA1_NBLOCKS*STREAM256_BLOCKBYTES];
+  uint8_t buf[POLY_UNIFORM_GAMMA1_NBLOCKS*STREAM256_BLOCKBYTES] = {0};
   stream256_state state;
 
   stream256_init(&state, seed, nonce);

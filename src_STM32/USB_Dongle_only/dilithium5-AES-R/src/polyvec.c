@@ -35,7 +35,21 @@ void polyvec_matrix_poly_smul_montgomery(polyveck* t, const uint8_t rho[], const
 		memset(&acc, 0, sizeof(acc));
 		for (j = 0; j < L; ++j) {
 			poly_uniform(&a_ij, rho, (i << 8) + j); // generate A[i][j]
+#ifdef DEBUG_LOG
+			USB_DEBUG_MSG("a[%d][%d] = ",i, j);
+		    for(int k = 0; k < N_; k++){
+		    	USB_DEBUG_MSG("%d", a_ij.coeffs[k]);
+		    }
+		    USB_DEBUG_MSG("\r\n");
+#endif
 			poly_uniform_eta(&s1_j, rhoprime, j);		// generate s1[j]
+#ifdef DEBUG_LOG
+			USB_DEBUG_MSG("s1[%d] = ", j);
+		    for(int k = 0; k < N_; k++){
+		    	USB_DEBUG_MSG("%d", s1_j.coeffs[k]);
+		    }
+		    USB_DEBUG_MSG("\r\n");
+#endif
 			poly_ntt(&s1_j);						// transform s1[j] to ntt
 			poly_pointwise_montgomery(&a_ij, &a_ij, &s1_j); // multiply A[i][j] on s1[j]
 			poly_add(&acc, &acc, &a_ij);
@@ -43,6 +57,13 @@ void polyvec_matrix_poly_smul_montgomery(polyveck* t, const uint8_t rho[], const
 		poly_reduce(&acc);
 		poly_invntt_tomont(&acc); // invert accumulated result from ntt
 		poly_uniform_eta(&s2_j, rhoprime, L + i); // generate s2[j]
+#ifdef DEBUG_LOG
+			USB_DEBUG_MSG("s2[%d] = ", j);
+		    for(int k = 0; k < N_; k++){
+		    	USB_DEBUG_MSG("%d", s2_j.coeffs[k]);
+		    }
+		    USB_DEBUG_MSG("\r\n");
+#endif
 		poly_add(&t->vec[i], &acc, &s2_j);	// add accumulator and s2[j]
 	}
 }

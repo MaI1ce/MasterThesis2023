@@ -93,6 +93,7 @@ class Sniffer:
         try:
             self.ser = serial.Serial(port=self.port_var.get(),
                                      baudrate=int(self.baudrate_var.get()),
+                                     bytesize=8,
                                      parity=serial.PARITY_NONE,
                                      timeout=1)
             #self.ser.open()

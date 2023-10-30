@@ -29,9 +29,9 @@ extern "C" {
 #define MLEN 59
 #define NTESTS 1
 
-#define TEST_DILITHIUM
+//#define TEST_DILITHIUM
 //#define VERIFY_TEST
-//#define KEY_GENERATOR_TEST
+#define KEY_GENERATOR_TEST
 //#define SIGN_TEST
 
     int main()
@@ -40,43 +40,86 @@ extern "C" {
 
 #ifdef KEY_GENERATOR_TEST // TEST - OK keys are identical for 5 tests
         FILE* pk_fptr;
-        FILE* sk_fptr;
         uint8_t pk[CRYPTO_PUBLICKEYBYTES];
-        uint8_t sk[CRYPTO_SECRETKEYBYTES];
+        uint8_t sk[(2 * SEEDBYTES + CRHBYTES \
+            + L * POLYETA_PACKEDBYTES \
+            + K * POLYETA_PACKEDBYTES \
+            + K * POLYT0_PACKEDBYTES)];
+        uint8_t sk2[(3 * SEEDBYTES + CRHBYTES \
+            + K * POLYT0_PACKEDBYTES)];
+
+        unsigned int i, j;
+        int ret;
+        size_t mlen, smlen;
+        uint8_t m[MLEN] = { 0x55 };
+        uint8_t sm[MLEN + CRYPTO_BYTES];
+        uint8_t m2[MLEN + CRYPTO_BYTES];
+
         char pk_file_name[80] = { 0 };
-        char sk_file_name[80] = { 0 };
 
-        for (int i = 0; i < NTESTS; i++)
-        {
-            const_base = 0xA0 + i;
+        keygen(pk, sk, sk2);
 
-            sprintf(pk_file_name, "./keys/std/pub_key%d.pk", i);
-            sprintf(sk_file_name, "./keys/std/sec_key%d.sk", i);
-            fopen_s(&pk_fptr, pk_file_name, "wb");
-            fopen_s(&sk_fptr, sk_file_name, "wb");
+        sprintf(pk_file_name, "./dilithium5-AES-R/dilithium_keys.c");
+        fopen_s(&pk_fptr, pk_file_name, "w");
 
-            crypto_sign_keypair(pk, sk);
+        fprintf(pk_fptr, "#include \"dilithium_keys.h\"\n\n");
+        fprintf(pk_fptr, "uint8_t pk[CRYPTO_PUBLICKEYBYTES] = {");
 
-            fwrite(pk, sizeof(pk), 1, pk_fptr);
-            fwrite(sk, sizeof(sk), 1, sk_fptr);
-
-            fclose(pk_fptr);
-            fclose(sk_fptr);
-
-            sprintf(pk_file_name, "./keys/new/pub_key%d.pk", i);
-            sprintf(sk_file_name, "./keys/new/sec_key%d.sk", i);
-            fopen_s(&pk_fptr, pk_file_name, "wb");
-            fopen_s(&sk_fptr, sk_file_name, "wb");
-
-            crypto_sign_keypair2(pk, sk);
-
-            fwrite(pk, sizeof(pk), 1, pk_fptr);
-            fwrite(sk, sizeof(sk), 1, sk_fptr);
-
-            fclose(pk_fptr);
-            fclose(sk_fptr);
-
+        for (int i = 0; i < CRYPTO_PUBLICKEYBYTES; i++) {
+            if (i % 8 == 0)
+                fprintf(pk_fptr, "\n\t");
+            fprintf(pk_fptr, "0x%02x, ", pk[i]);
         }
+
+        fprintf(pk_fptr, "\n};\n\n");
+        fprintf(pk_fptr, "uint8_t sk[CRYPTO_SECRETKEYBYTES] = {\n");
+        fprintf(pk_fptr, "#ifndef CONSTRAINED_DEVICE\n");
+
+        for (int i = 0; i < sizeof(sk); i++) {
+            if (i % 8 == 0)
+                fprintf(pk_fptr, "\n\t");
+            fprintf(pk_fptr, "0x%02x, ", sk[i]);
+        }
+
+        fprintf(pk_fptr, "\n#else\n");
+
+        for (int i = 0; i < sizeof(sk2); i++) {
+            if (i % 8 == 0)
+                fprintf(pk_fptr, "\n\t");
+            fprintf(pk_fptr, "0x%02x, ", sk2[i]);
+        }
+
+        fprintf(pk_fptr, "\n#endif\n");
+        fprintf(pk_fptr, "};\n\n");
+
+        fclose(pk_fptr);
+
+        crypto_sign(sm, &smlen, m, MLEN, sk);
+
+        ret = crypto_sign_open(m2, &mlen, sm, smlen, pk);
+
+
+        if (ret) {
+            fprintf(stderr, "Verification 1 failed, err_code = %d\n", ret);
+            return -1;
+        }
+        else {
+            fprintf(stderr, "Verification 1 - OK\n");
+        }
+
+        if (mlen != MLEN) {
+            fprintf(stderr, "Message lengths don't match\n");
+            return -1;
+        }
+
+        for (j = 0; j < mlen; ++j) {
+            if (m[j] != m2[j]) {
+                fprintf(stderr, "Messages don't match\n");
+                return -1;
+            }
+        }
+        printf("TEST - OK\n");
+     
 #endif//KEY_GENERATOR_TEST
 
 #ifdef VERIFY_TEST //ndef CONST_RAND_SEED
@@ -149,38 +192,13 @@ extern "C" {
         uint8_t sk[CRYPTO_SECRETKEYBYTES];
 #endif
 
-#ifdef SAVE_KEYS
-        FILE* pk_fptr;
-        FILE* sk_fptr;
-#endif
+
         for (i = 0; i < NTESTS; ++i) {
 
             //randombytes(m, MLEN);
 
 #ifndef STATIC_KEYS
             crypto_sign_keypair(pk, sk);
-#endif
-
-#ifdef SAVE_KEYS
-            fopen_s(&pk_fptr, "./keys/new/pub_key.pk", "wb");
-            fopen_s(&sk_fptr, "./keys/new/sec_key.sk", "wb");
-
-            //fwrite(pk, sizeof(pk), 1, pk_fptr);
-            //fwrite(sk, sizeof(sk), 1, sk_fptr);
-
-            for (int i = 0; i < CRYPTO_PUBLICKEYBYTES; i++) {
-                if(i % 8 == 0)
-                    fprintf(pk_fptr, "\n");
-                fprintf(pk_fptr, "0x%02x, ", pk[i]);
-            }
-            for (int i = 0; i < CRYPTO_SECRETKEYBYTES; i++) {
-                if (i % 8 == 0)
-                    fprintf(sk_fptr, "\n");
-                fprintf(sk_fptr, "0x%02x, ", sk[i]);
-            }
-
-            fclose(pk_fptr);
-            fclose(sk_fptr);
 #endif
             crypto_sign(sm, &smlen, m, MLEN, sk);
 

@@ -1,0 +1,16 @@
+Program Compilation Date: Oct 25 2023 19:32:46
+Dilithium Signature Test Start
+Test 0
+Test 1
+Test 2
+Test 3
+Test 4
+New Dilithium - OK
+Cycles for full signature generation max = 64795852
+Cycles for full signature generation min = 64780038
+Cycles for full signature verification max = 23907639
+Cycles for full signature verification min = 23901621
+CRYPTO_PUBLICKEYBYTES = 1312
+CRYPTO_SECRETKEYBYTES = 2544
+CRYPTO_BYTES = 2420
+THREAD is closed

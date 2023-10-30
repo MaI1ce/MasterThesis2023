@@ -1,11 +1,2 @@
-﻿  polyvec.c
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\polyvec.c(33,3): warning C4013: 'memset' undefined; assuming extern returning int
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\polyvec.c(226,2): warning C4013: 'unpack_pk_rho' undefined; assuming extern returning int
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\polyvec.c(227,2): warning C4013: 'unpack_sig_c' undefined; assuming extern returning int
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\polyvec.c(249,4): warning C4013: 'unpack_sig_z' undefined; assuming extern returning int
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\polyvec.c(267,3): warning C4013: 'unpack_pk_t1' undefined; assuming extern returning int
-  sign.c
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\sign.h(44,5): warning C4003: not enough arguments for function-like macro invocation 'DILITHIUM_NAMESPACE'
-F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\sign.c(456,5): warning C4003: not enough arguments for function-like macro invocation 'DILITHIUM_NAMESPACE'
-  Generating Code...
+﻿  dilithium_keys.c
   Dilithium_test.vcxproj -> F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\x64\Debug\Dilithium_test.exe

@@ -23,6 +23,8 @@ dilithium5-AES-R/src/sign.o: ../dilithium5-AES-R/src/sign.c \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_dmamux.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_dma_ex.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cortex.h \
+ ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp.h \
+ ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp_ex.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_exti.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash.h \
  ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash_ex.h \
@@ -53,8 +55,8 @@ dilithium5-AES-R/src/sign.o: ../dilithium5-AES-R/src/sign.c \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/poly.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/randombytes.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/symmetric.h \
- F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/aes256ctr.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/fips202.h \
+ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/symmetric-aes_stm.h \
  F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/fips202.h
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/params.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/config.h:
@@ -80,6 +82,8 @@ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/randombytes.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_dmamux.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_dma_ex.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cortex.h:
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp.h:
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_cryp_ex.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_exti.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash.h:
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_hal_flash_ex.h:
@@ -110,6 +114,6 @@ F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/polyvec.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/poly.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/randombytes.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/symmetric.h:
-F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/aes256ctr.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/fips202.h:
+F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/symmetric-aes_stm.h:
 F:/MasterDiploma2/src_STM32/USB_Dongle_only/dilithium5-AES-R/inc/fips202.h:

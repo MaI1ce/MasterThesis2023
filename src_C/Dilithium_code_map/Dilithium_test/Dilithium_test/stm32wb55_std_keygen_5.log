@@ -1,0 +1,21 @@
+Program Compilation Date: Oct 25 2023 18:34:26
+Dilithium Signature Test Start
+Test 0
+Cycles for keys generation max = 25045352
+Cycles for keys generation min = 25045352
+Test 1
+Cycles for keys generation max = 25128165
+Cycles for keys generation min = 25128165
+Test 2
+Cycles for keys generation max = 25216233
+Cycles for keys generation min = 25216233
+Test 3
+Cycles for keys generation max = 25467971
+Cycles for keys generation min = 25467971
+Test 4
+Cycles for keys generation max = 25301474
+Cycles for keys generation min = 25301474
+CRYPTO_PUBLICKEYBYTES = 1312
+CRYPTO_SECRETKEYBYTES = 2544
+CRYPTO_BYTES = 2420
+THREAD is closed
