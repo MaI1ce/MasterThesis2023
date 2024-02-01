@@ -1,0 +1,8 @@
+build
+build-ios
+build-micro
+
+.vscode
+.DS_Store
+
+venv

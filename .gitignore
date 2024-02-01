@@ -4,6 +4,14 @@ x64/
 x32/
 *.html
 *.htm
+*.ilk
+*.obj
+*.log
+*.tlog
+*.pdb
+*.idb
+*.o
+*.d
 .metadata/
 .vs/
 html/

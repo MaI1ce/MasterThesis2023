@@ -2,7 +2,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS
-#define STATIC_KEYS
+//#define STATIC_KEYS
 extern "C" {
 
 #include <stdlib.h>
@@ -31,12 +31,57 @@ extern "C" {
 
 //#define TEST_DILITHIUM
 //#define VERIFY_TEST
-#define KEY_GENERATOR_TEST
+//#define KEY_GENERATOR_TEST
 //#define SIGN_TEST
+#define Y_GENERATION
 
     int main()
     {
         log_debug_log_init("dilithium_log.log");
+
+#ifdef Y_GENERATION
+        FILE* fptr_std;
+        FILE* fptr_ntt;
+
+        uint8_t rhoprime[SEEDBYTES] = {0xAA, 0xAA, 0xAA, 0xAA ,0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, };
+        polyvecl y;
+        polyvecl z;
+        int nonce = 0;
+
+        fopen_s(&fptr_std, "./std_y.txt", "w");
+        fopen_s(&fptr_ntt, "./ntt_y.txt", "w");
+
+        fprintf(fptr_std, "{\n");
+        fprintf(fptr_ntt, "{\n");
+
+        for (int i = 0; i < 10; i++) {
+            polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
+            z = y;
+            polyvecl_ntt(&z);
+            fprintf(fptr_std, "\t{\n");
+            fprintf(fptr_ntt, "\t{\n");
+            for (int j = 0; j < L; j++) {
+                fprintf(fptr_std, "\t\t{");
+                fprintf(fptr_ntt, "\t\t{");
+                for (int n = 0; n < N; n++) {
+                    fprintf(fptr_std, "0x%02x, ", y.vec[j].coeffs[n]);
+                    fprintf(fptr_ntt, "0x%02x, ", z.vec[j].coeffs[n]);
+                }
+                fprintf(fptr_std, "},\n");
+                fprintf(fptr_ntt, "},\n");
+            }
+            fprintf(fptr_std, "\t},\n");
+            fprintf(fptr_ntt, "\t},\n");
+
+        }
+        fprintf(fptr_std, "}\n");
+        fprintf(fptr_ntt, "}\n");
+
+
+
+        fclose(fptr_std);
+        fclose(fptr_ntt);
+#endif
 
 #ifdef KEY_GENERATOR_TEST // TEST - OK keys are identical for 5 tests
         FILE* pk_fptr;

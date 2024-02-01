@@ -60,6 +60,9 @@
     <ClCompile Include="debug_log.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dilithium5-AES-R\const_y.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dilithium5-AES-R\aes256ctr.h">
@@ -108,6 +111,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="debug_log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dilithium5-AES-R\const_y.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,2 +1,3 @@
-﻿  dilithium_keys.c
+﻿  Dilithium_test.cpp
+F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\Dilithium_test\dilithium5-AES-R\sign.h(24,5): warning C4003: not enough arguments for function-like macro invocation 'DILITHIUM_NAMESPACE'
   Dilithium_test.vcxproj -> F:\MasterDiploma2\src_C\Dilithium_code_map\Dilithium_test\x64\Debug\Dilithium_test.exe

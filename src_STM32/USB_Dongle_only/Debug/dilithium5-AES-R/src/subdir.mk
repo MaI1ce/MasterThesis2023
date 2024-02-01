@@ -6,6 +6,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../dilithium5-AES-R/src/aes256ctr.c \
+../dilithium5-AES-R/src/const_y.c \
 ../dilithium5-AES-R/src/dilithium_keys.c \
 ../dilithium5-AES-R/src/elapsed_time.c \
 ../dilithium5-AES-R/src/fips202.c \
@@ -25,6 +26,7 @@ C_SRCS += \
 
 OBJS += \
 ./dilithium5-AES-R/src/aes256ctr.o \
+./dilithium5-AES-R/src/const_y.o \
 ./dilithium5-AES-R/src/dilithium_keys.o \
 ./dilithium5-AES-R/src/elapsed_time.o \
 ./dilithium5-AES-R/src/fips202.o \
@@ -44,6 +46,7 @@ OBJS += \
 
 C_DEPS += \
 ./dilithium5-AES-R/src/aes256ctr.d \
+./dilithium5-AES-R/src/const_y.d \
 ./dilithium5-AES-R/src/dilithium_keys.d \
 ./dilithium5-AES-R/src/elapsed_time.d \
 ./dilithium5-AES-R/src/fips202.d \
@@ -69,7 +72,7 @@ dilithium5-AES-R/src/%.o dilithium5-AES-R/src/%.su: ../dilithium5-AES-R/src/%.c 
 clean: clean-dilithium5-2d-AES-2d-R-2f-src
 
 clean-dilithium5-2d-AES-2d-R-2f-src:
-	-$(RM) ./dilithium5-AES-R/src/aes256ctr.d ./dilithium5-AES-R/src/aes256ctr.o ./dilithium5-AES-R/src/aes256ctr.su ./dilithium5-AES-R/src/dilithium_keys.d ./dilithium5-AES-R/src/dilithium_keys.o ./dilithium5-AES-R/src/dilithium_keys.su ./dilithium5-AES-R/src/elapsed_time.d ./dilithium5-AES-R/src/elapsed_time.o ./dilithium5-AES-R/src/elapsed_time.su ./dilithium5-AES-R/src/fips202.d ./dilithium5-AES-R/src/fips202.o ./dilithium5-AES-R/src/fips202.su ./dilithium5-AES-R/src/ntt.d ./dilithium5-AES-R/src/ntt.o ./dilithium5-AES-R/src/ntt.su ./dilithium5-AES-R/src/packing.d ./dilithium5-AES-R/src/packing.o ./dilithium5-AES-R/src/packing.su ./dilithium5-AES-R/src/poly.d ./dilithium5-AES-R/src/poly.o ./dilithium5-AES-R/src/poly.su ./dilithium5-AES-R/src/polyvec.d ./dilithium5-AES-R/src/polyvec.o ./dilithium5-AES-R/src/polyvec.su ./dilithium5-AES-R/src/randombytes.d ./dilithium5-AES-R/src/randombytes.o ./dilithium5-AES-R/src/randombytes.su ./dilithium5-AES-R/src/reduce.d ./dilithium5-AES-R/src/reduce.o ./dilithium5-AES-R/src/reduce.su ./dilithium5-AES-R/src/rounding.d ./dilithium5-AES-R/src/rounding.o ./dilithium5-AES-R/src/rounding.su ./dilithium5-AES-R/src/sign.d ./dilithium5-AES-R/src/sign.o ./dilithium5-AES-R/src/sign.su ./dilithium5-AES-R/src/symmetric-aes.d ./dilithium5-AES-R/src/symmetric-aes.o ./dilithium5-AES-R/src/symmetric-aes.su ./dilithium5-AES-R/src/symmetric-aes_stm.d ./dilithium5-AES-R/src/symmetric-aes_stm.o ./dilithium5-AES-R/src/symmetric-aes_stm.su ./dilithium5-AES-R/src/symmetric-shake.d ./dilithium5-AES-R/src/symmetric-shake.o ./dilithium5-AES-R/src/symmetric-shake.su ./dilithium5-AES-R/src/time_testbench.d ./dilithium5-AES-R/src/time_testbench.o ./dilithium5-AES-R/src/time_testbench.su ./dilithium5-AES-R/src/usb_debug.d ./dilithium5-AES-R/src/usb_debug.o ./dilithium5-AES-R/src/usb_debug.su
+	-$(RM) ./dilithium5-AES-R/src/aes256ctr.d ./dilithium5-AES-R/src/aes256ctr.o ./dilithium5-AES-R/src/aes256ctr.su ./dilithium5-AES-R/src/const_y.d ./dilithium5-AES-R/src/const_y.o ./dilithium5-AES-R/src/const_y.su ./dilithium5-AES-R/src/dilithium_keys.d ./dilithium5-AES-R/src/dilithium_keys.o ./dilithium5-AES-R/src/dilithium_keys.su ./dilithium5-AES-R/src/elapsed_time.d ./dilithium5-AES-R/src/elapsed_time.o ./dilithium5-AES-R/src/elapsed_time.su ./dilithium5-AES-R/src/fips202.d ./dilithium5-AES-R/src/fips202.o ./dilithium5-AES-R/src/fips202.su ./dilithium5-AES-R/src/ntt.d ./dilithium5-AES-R/src/ntt.o ./dilithium5-AES-R/src/ntt.su ./dilithium5-AES-R/src/packing.d ./dilithium5-AES-R/src/packing.o ./dilithium5-AES-R/src/packing.su ./dilithium5-AES-R/src/poly.d ./dilithium5-AES-R/src/poly.o ./dilithium5-AES-R/src/poly.su ./dilithium5-AES-R/src/polyvec.d ./dilithium5-AES-R/src/polyvec.o ./dilithium5-AES-R/src/polyvec.su ./dilithium5-AES-R/src/randombytes.d ./dilithium5-AES-R/src/randombytes.o ./dilithium5-AES-R/src/randombytes.su ./dilithium5-AES-R/src/reduce.d ./dilithium5-AES-R/src/reduce.o ./dilithium5-AES-R/src/reduce.su ./dilithium5-AES-R/src/rounding.d ./dilithium5-AES-R/src/rounding.o ./dilithium5-AES-R/src/rounding.su ./dilithium5-AES-R/src/sign.d ./dilithium5-AES-R/src/sign.o ./dilithium5-AES-R/src/sign.su ./dilithium5-AES-R/src/symmetric-aes.d ./dilithium5-AES-R/src/symmetric-aes.o ./dilithium5-AES-R/src/symmetric-aes.su ./dilithium5-AES-R/src/symmetric-aes_stm.d ./dilithium5-AES-R/src/symmetric-aes_stm.o ./dilithium5-AES-R/src/symmetric-aes_stm.su ./dilithium5-AES-R/src/symmetric-shake.d ./dilithium5-AES-R/src/symmetric-shake.o ./dilithium5-AES-R/src/symmetric-shake.su ./dilithium5-AES-R/src/time_testbench.d ./dilithium5-AES-R/src/time_testbench.o ./dilithium5-AES-R/src/time_testbench.su ./dilithium5-AES-R/src/usb_debug.d ./dilithium5-AES-R/src/usb_debug.o ./dilithium5-AES-R/src/usb_debug.su
 
 .PHONY: clean-dilithium5-2d-AES-2d-R-2f-src
 

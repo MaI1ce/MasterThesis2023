@@ -6,7 +6,7 @@
  */
 #include "usb_debug.h"
 
-uint8_t usb_msg_buf[80];
+//uint8_t usb_msg_buf[80];
 
 /*
 Delay approx. 100 ns (93.75) at 64 MHz

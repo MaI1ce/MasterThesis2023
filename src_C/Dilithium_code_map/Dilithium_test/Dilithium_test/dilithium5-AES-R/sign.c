@@ -8,6 +8,10 @@
 #include "symmetric.h"
 #include "fips202.h"
 
+#include "const_y.h"
+
+#include <stdio.h>
+
 /*************************************************
 * Name:        crypto_sign_keypair
 *
@@ -132,10 +136,12 @@ int crypto_sign_signature(uint8_t *sig,
   uint8_t seedbuf[2*SEEDBYTES + 3*CRHBYTES];
   uint8_t *rho, *tr, *key, *mu, *rhoprime;
   uint16_t nonce = 0;
-  polyvecl mat[K], s1, y, z;
+  polyvecl mat[K], s1, z;
   polyveck t0, s2, w1, w0, h;
   poly cp;
   keccak_state state;
+  polyvecl* y;
+
 
   rho = seedbuf;
   tr = rho + SEEDBYTES;
@@ -154,7 +160,7 @@ int crypto_sign_signature(uint8_t *sig,
 #ifdef DILITHIUM_RANDOMIZED_SIGNING
   randombytes(rhoprime, CRHBYTES);
 #else
-  crh(rhoprime, key, SEEDBYTES + CRHBYTES);
+  //crh(rhoprime, key, SEEDBYTES + CRHBYTES);
 #endif
 
   /* Expand matrix and transform vectors */
@@ -166,12 +172,16 @@ int crypto_sign_signature(uint8_t *sig,
 rej:
   /* Sample intermediate vector y */
   printf("nonce = %d\n", nonce);
+  /*
   polyvecl_uniform_gamma1(&y, rhoprime, nonce++);
   z = y;
   polyvecl_ntt(&z);
+  */
+
+  y = &(ntt_y[nonce]);
 
   /* Matrix-vector multiplication */
-  polyvec_matrix_pointwise_montgomery(&w1, mat, &z);
+  polyvec_matrix_pointwise_montgomery(&w1, mat, y);
   polyveck_reduce(&w1);
   polyveck_invntt_tomont(&w1);
 
@@ -191,7 +201,8 @@ rej:
   /* Compute z, reject if it reveals secret */
   polyvecl_pointwise_poly_montgomery(&z, &cp, &s1);
   polyvecl_invntt_tomont(&z);
-  polyvecl_add(&z, &z, &y);
+  y = &(std_y[nonce++]);
+  polyvecl_add(&z, &z, y);
   polyvecl_reduce(&z);
   if(polyvecl_chknorm(&z, GAMMA1 - BETA))
     goto rej;

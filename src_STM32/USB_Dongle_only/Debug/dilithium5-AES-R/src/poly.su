@@ -14,10 +14,10 @@
 ../dilithium5-AES-R/src/poly.c:280:6:poly_use_hint_r	32	static
 ../dilithium5-AES-R/src/poly.c:301:5:pqcrystals_dilithium2aes_r_ref_poly_chknorm	24	static
 ../dilithium5-AES-R/src/poly.c:341:21:rej_uniform	40	static
-../dilithium5-AES-R/src/poly.c:377:6:pqcrystals_dilithium2aes_r_ref_poly_uniform	832	static
+../dilithium5-AES-R/src/poly.c:377:6:pqcrystals_dilithium2aes_r_ref_poly_uniform	1840	static
 ../dilithium5-AES-R/src/poly.c:442:21:rej_eta	40	static
-../dilithium5-AES-R/src/poly.c:493:6:pqcrystals_dilithium2aes_r_ref_poly_uniform_eta	240	static
-../dilithium5-AES-R/src/poly.c:529:6:pqcrystals_dilithium2aes_r_ref_poly_uniform_gamma1	616	static
+../dilithium5-AES-R/src/poly.c:493:6:pqcrystals_dilithium2aes_r_ref_poly_uniform_eta	1248	static
+../dilithium5-AES-R/src/poly.c:529:6:pqcrystals_dilithium2aes_r_ref_poly_uniform_gamma1	1624	static
 ../dilithium5-AES-R/src/poly.c:551:6:pqcrystals_dilithium2aes_r_ref_poly_challenge	408	static
 ../dilithium5-AES-R/src/poly.c:594:6:pqcrystals_dilithium2aes_r_ref_polyeta_pack	32	static
 ../dilithium5-AES-R/src/poly.c:633:6:pqcrystals_dilithium2aes_r_ref_polyeta_unpack	24	static

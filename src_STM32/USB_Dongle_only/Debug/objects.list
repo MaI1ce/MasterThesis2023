@@ -41,6 +41,7 @@
 "./USB_Device/App/usbd_desc.o"
 "./USB_Device/Target/usbd_conf.o"
 "./dilithium5-AES-R/src/aes256ctr.o"
+"./dilithium5-AES-R/src/const_y.o"
 "./dilithium5-AES-R/src/dilithium_keys.o"
 "./dilithium5-AES-R/src/elapsed_time.o"
 "./dilithium5-AES-R/src/fips202.o"
