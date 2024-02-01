@@ -1,7 +1,0 @@
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:59:6:APP_FFD_MAC_802_15_4_Init	16	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:90:6:APP_FFD_MAC_802_15_4_CoordSrvTask	40	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:121:6:APP_FFD_MAC_802_15_4_CoordDataTask	8	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:136:6:APP_FFD_MAC_802_15_4_SetupTask	80	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:276:6:APP_FFD_MAC_802_15_4_Error	16	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:298:13:APP_FFD_MAC_802_15_4_Config	8	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/STM32_WPAN/App/app_ffd_mac_802_15_4.c:341:13:APP_FFD_MAC_802_15_4_TraceError	16	static

@@ -1,4 +1,0 @@
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/stm_logging.c:68:24:logRegion	56	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/stm_logging.c:106:27:levelToString	16	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/stm_logging.c:134:24:logLevel	24	static
-F:/MasterDiploma2/src_STM32/Mac_802_15_4_FFD/Core/Src/stm_logging.c:167:6:logApplication	280	static
