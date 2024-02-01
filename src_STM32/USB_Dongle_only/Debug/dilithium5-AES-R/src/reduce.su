@@ -1,4 +1,0 @@
-../dilithium5-AES-R/src/reduce.c:15:9:pqcrystals_dilithium2aes_r_ref_montgomery_reduce	56	static
-../dilithium5-AES-R/src/reduce.c:33:9:pqcrystals_dilithium2aes_r_ref_reduce32	24	static
-../dilithium5-AES-R/src/reduce.c:50:9:pqcrystals_dilithium2aes_r_ref_caddq	16	static
-../dilithium5-AES-R/src/reduce.c:65:9:pqcrystals_dilithium2aes_r_ref_freeze	16	static

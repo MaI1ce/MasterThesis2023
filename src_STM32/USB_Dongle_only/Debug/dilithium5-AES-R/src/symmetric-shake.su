@@ -1,2 +1,0 @@
-../dilithium5-AES-R/src/symmetric-shake.c:6:6:dilithium_shake128_stream_init	32	static
-../dilithium5-AES-R/src/symmetric-shake.c:20:6:dilithium_shake256_stream_init	32	static

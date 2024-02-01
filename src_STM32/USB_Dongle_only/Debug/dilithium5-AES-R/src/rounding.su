@@ -1,4 +1,0 @@
-../dilithium5-AES-R/src/rounding.c:17:9:pqcrystals_dilithium2aes_r_ref_power2round	24	static
-../dilithium5-AES-R/src/rounding.c:39:9:pqcrystals_dilithium2aes_r_ref_decompose	24	static
-../dilithium5-AES-R/src/rounding.c:68:14:pqcrystals_dilithium2aes_r_ref_make_hint	16	static
-../dilithium5-AES-R/src/rounding.c:85:9:pqcrystals_dilithium2aes_r_ref_use_hint	24	static
