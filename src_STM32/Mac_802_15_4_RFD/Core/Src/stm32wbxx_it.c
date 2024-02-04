@@ -203,7 +203,7 @@ void USB_FS_WKUP_IRQHandler(void)
   * @param  None
   * @retval None
   */
-void EXTI4_IRQHandler(void)
+void EXTI15_10_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(BUTTON_SW1_PIN);
 }
@@ -211,19 +211,19 @@ void EXTI4_IRQHandler(void)
   * @brief  This function handles External External line 0 interrupt request.
   * @param  None
   * @retval None
-  */
+  *//*
 void EXTI0_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(BUTTON_SW2_PIN);
-}
+}*/
 /**
   * @brief  This function handles External External line 1 interrupt request.
   * @param  None
   * @retval None
-  */
+  *//*
 void EXTI1_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(BUTTON_SW3_PIN);
-}
+}*/
 
 /* USER CODE END 1 */
