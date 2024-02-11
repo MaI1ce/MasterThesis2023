@@ -104,7 +104,7 @@ class Sniffer:
 
             while self.thread_run:
                 if self.ser.inWaiting() > 0:
-                    data_str += self.ser.readline().decode('ascii').replace('\0', '')
+                    data_str += self.ser.readline().decode('latin-1').replace('\0', '')
                     print(data_str)
                     self.listbox.insert(self.index, data_str)
                     self.index += 1

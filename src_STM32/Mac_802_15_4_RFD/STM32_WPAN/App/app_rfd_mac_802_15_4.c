@@ -70,6 +70,7 @@ __IO ITStatus CertifOutputPeripheralReady = SET;
 
 void APP_RFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPacket_t* pCmdBuffer)
 {
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_Init");
   /* Register cmdbuffer */
   APP_ENTRY_RegisterCmdBuffer(pCmdBuffer);
 
@@ -97,17 +98,19 @@ void APP_RFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
 void APP_RFD_MAC_802_15_4_NodeSrvTask(void)
 {
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_NodeSrvTask");
   APP_DBG("Srv task :");
 }
 
 void APP_RFD_MAC_802_15_4_NodeDataTask(void)
 {
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_NodeDataTask");
 }
 
 
 void APP_RFD_MAC_802_15_4_SetupTask(void)
 {
-
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SetupTask");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_resetReq_t    ResetReq;
@@ -196,6 +199,7 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
 void APP_RFD_MAC_802_15_4_SendData(const char * data)
 {
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   BSP_LED_On(LED3);
@@ -255,6 +259,7 @@ void APP_RFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode)
  *************************************************************/
 static void APP_RFD_MAC_802_15_4_Config()
 {
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_Config");
   APP_DBG("configure RFD MAC 802.15.4 - 2\0");
     /* Register MAC 802.15.4 callback functions */
 

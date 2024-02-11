@@ -58,6 +58,8 @@ __IO ITStatus CertifOutputPeripheralReady = SET;
 
 void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPacket_t* pCmdBuffer)
 {
+
+	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_Init");
   /* Register cmdbuffer */
   APP_ENTRY_RegisterCmdBuffer(pCmdBuffer);
 
@@ -89,6 +91,7 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
 void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
 {
+	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_CoordSrvTask");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_associateRes_t AssociateRes;
@@ -120,6 +123,7 @@ void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
 
 void APP_FFD_MAC_802_15_4_CoordDataTask(void)
 {
+	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_CoordDataTask");
   APP_DBG("Data task :");
   switch (g_srvDataReq)
   {
@@ -135,7 +139,7 @@ void APP_FFD_MAC_802_15_4_CoordDataTask(void)
 
 void APP_FFD_MAC_802_15_4_SetupTask(void)
 {
-
+	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_SetupTask");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_resetReq_t    ResetReq;

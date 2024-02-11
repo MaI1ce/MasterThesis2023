@@ -82,6 +82,8 @@ int main(void)
 
   Init_Debug();
 
+  APP_DBG("RFD MAIN");
+
   APP_DBG("**** RFD MAC 802.15.4 EXAMPLE ****");
 
   /* Application init */

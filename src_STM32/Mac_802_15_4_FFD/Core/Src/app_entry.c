@@ -97,6 +97,7 @@ static void APPE_UserEvtRx(void * pPayload);
 
 void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
 {
+	APP_DBG("APP_ENTRY_Init - start");
   /**
    * The Standby mode should not be entered before the initialization is over
    * The default state of the Low Power Manager is to allow the Standby Mode so an request is needed here
@@ -110,7 +111,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
    * received on the system channel before starting the BLE Stack
    * This system event is received with APPE_UserEvtRx()
    */
-
+  APP_DBG("APP_ENTRY_Init - end");
   return;
 }
 
@@ -118,6 +119,8 @@ static void appe_Tl_Init( void )
 {
   TL_MM_Config_t tl_mm_config;
   SHCI_TL_HciInitConf_t SHci_Tl_Init_Conf;
+
+  APP_DBG("appe_Tl_Init - start");
 
   /**< Reference table initialization */
   TL_Init();
@@ -136,6 +139,8 @@ static void appe_Tl_Init( void )
   TL_MM_Init( &tl_mm_config );
 
   TL_Enable();
+
+  APP_DBG("appe_Tl_Init - end");
 
   return;
 }
@@ -186,6 +191,7 @@ static void APPE_UserEvtRx( void * pPayload )
 
 void APP_ENTRY_TL_MAC_802_15_4_Init(void)
 {
+	APP_DBG("FFD MAC - APP_ENTRY_TL_MAC_802_15_4_Init");
   Mac_802_15_4_ConfigBuffer.p_Mac_802_15_4_CmdRspBuffer = (uint8_t*)&Mac_802_15_4_CmdBuffer;
   Mac_802_15_4_ConfigBuffer.p_Mac_802_15_4_NotAckBuffer = (uint8_t*)Mac_802_15_4_NotifRspEvtBuffer;
   TL_MAC_802_15_4_Init( &Mac_802_15_4_ConfigBuffer );
@@ -199,6 +205,7 @@ void APP_ENTRY_TL_MAC_802_15_4_Init(void)
  */
 void APP_ENTRY_ProcessMsgFromRFCoreTask(void)
 {
+	APP_DBG("FFD MAC - APP_ENTRY_ProcessMsgFromRFCoreTask");
   if (pendingMsgFromRFCore != 0U)
   {
       pendingMsgFromRFCore = 0U;
@@ -209,6 +216,7 @@ void APP_ENTRY_ProcessMsgFromRFCoreTask(void)
 /* Received trace buffer from M0 */
 void TL_TRACES_EvtReceived( TL_EvtPacket_t * hcievt )
 {
+	APP_DBG("FFD MAC - TL_TRACES_EvtReceived");
 #if(CFG_DEBUG_TRACE != 0)
   /* Call write/print function using DMA from dbg_trace */
   /* - Cast to TL_AsynchEvt_t* to get "real" payload (without Sub Evt code 2bytes),

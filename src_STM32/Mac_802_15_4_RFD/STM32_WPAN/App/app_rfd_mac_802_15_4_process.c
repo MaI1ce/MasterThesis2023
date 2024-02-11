@@ -72,6 +72,7 @@ extern MAC_associateCnf_t g_MAC_associateCnf;
 
 MAC_Status_t APP_MAC_mlmeAssociateCnfCb( const  MAC_associateCnf_t * pAssociateCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeAssociateCnfCb");
   APP_DBG("RFD MAC APP - Association CNF Received");
   memset(&g_MAC_associateCnf,0x00,sizeof(MAC_associateCnf_t));
   memcpy(&g_MAC_associateCnf,pAssociateCnf,sizeof(MAC_associateCnf_t));
@@ -82,51 +83,59 @@ MAC_Status_t APP_MAC_mlmeAssociateCnfCb( const  MAC_associateCnf_t * pAssociateC
 
 MAC_Status_t APP_MAC_mlmeAssociateIndCb( const  MAC_associateInd_t * pAssociateInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeAssociateIndCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 MAC_Status_t APP_MAC_mlmeBeaconNotifyIndCb( const  MAC_beaconNotifyInd_t * pBeaconNotifyInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeBeaconNotifyIndCb");
   return MAC_SUCCESS;
 }
 
 MAC_Status_t APP_MAC_mlmeCommStatusIndCb( const  MAC_commStatusInd_t * pCommStatusInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeCommStatusIndCb");
   return MAC_SUCCESS;
 }
 
 MAC_Status_t APP_MAC_mlmeDisassociateCnfCb( const  MAC_disassociateCnf_t * pDisassociateCnf )
 {
-
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeDisassociateCnfCb");
   return MAC_SUCCESS;
 }
 
 MAC_Status_t APP_MAC_mlmeDisassociateIndCb( const  MAC_disassociateInd_t * pDisassociateInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeDisassociateIndCb");
   return MAC_SUCCESS;
 
 }
 
 MAC_Status_t APP_MAC_mlmeGetCnfCb( const  MAC_getCnf_t * pGetCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeGetCnfCb");
   return MAC_SUCCESS;
 
 }
 
 MAC_Status_t APP_MAC_mlmeOrphanIndCb( const  MAC_orphanInd_t * pOrphanInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeOrphanIndCb");
   return MAC_SUCCESS;
 
 }
 
 MAC_Status_t APP_MAC_mlmePollCnfCb( const  MAC_pollCnf_t * pPollCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmePollCnfCb");
   return MAC_SUCCESS;
 
 }
 
 MAC_Status_t APP_MAC_mlmeResetCnfCb( const  MAC_resetCnf_t * pResetCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeResetCnfCb");
   UTIL_SEQ_SetEvt(EVENT_DEVICE_RESET_CNF);
   return MAC_SUCCESS;
 }
@@ -134,18 +143,21 @@ MAC_Status_t APP_MAC_mlmeResetCnfCb( const  MAC_resetCnf_t * pResetCnf )
 
 MAC_Status_t APP_MAC_mlmeRxEnableCnfCb( const  MAC_rxEnableCnf_t * pRxEnableCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeRxEnableCnfCb");
   return MAC_SUCCESS;
 
 }
 
 MAC_Status_t APP_MAC_mlmeScanCnfCb( const  MAC_scanCnf_t * pScanCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeScanCnfCb");
   return MAC_SUCCESS;
 }
 
 
 MAC_Status_t APP_MAC_mlmeSetCnfCb( const  MAC_setCnf_t * pSetCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeSetCnfCb");
   UTIL_SEQ_SetEvt(EVENT_SET_CNF);
   return MAC_SUCCESS;
 }
@@ -153,12 +165,14 @@ MAC_Status_t APP_MAC_mlmeSetCnfCb( const  MAC_setCnf_t * pSetCnf )
 
 MAC_Status_t APP_MAC_mlmeStartCnfCb( const  MAC_startCnf_t * pStartCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeStartCnfCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 
 MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mcpsDataIndCb");
   APP_DBG("COORD : RECEIVE DATA : %s ", (char const *) pDataInd->msduPtr);
   return MAC_SUCCESS;
 }
@@ -166,6 +180,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 
 MAC_Status_t APP_MAC_mcpsDataCnfCb( const  MAC_dataCnf_t * pDataCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mcpsDataCnfCb");
   UTIL_SEQ_SetEvt( EVENT_DATA_CNF );
   return MAC_SUCCESS;
 
@@ -174,6 +189,7 @@ MAC_Status_t APP_MAC_mcpsDataCnfCb( const  MAC_dataCnf_t * pDataCnf )
 
 MAC_Status_t APP_MAC_mcpsPurgeCnfCb( const  MAC_purgeCnf_t * pPurgeCnf )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mcpsPurgeCnfCb");
   return MAC_SUCCESS;
 
 }
@@ -181,12 +197,14 @@ MAC_Status_t APP_MAC_mcpsPurgeCnfCb( const  MAC_purgeCnf_t * pPurgeCnf )
 
 MAC_Status_t APP_MAC_mlmeSyncLossIndCb( const MAC_syncLoss_t * syncLossPtr )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeSyncLossIndCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 
 MAC_Status_t APP_MAC_mlmeCalibrateCnfCb( const MAC_calibrateCnf_t * pCallibrateCnf)
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeCalibrateCnfCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
@@ -194,35 +212,41 @@ MAC_Status_t APP_MAC_mlmeCalibrateCnfCb( const MAC_calibrateCnf_t * pCallibrateC
 
 MAC_Status_t APP_MAC_mlmeDpsCnfCb( const MAC_dpsCnf_t * pDpsCnf  )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeDpsCnfCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 
 MAC_Status_t APP_MAC_mlmeDpsIndCb( const MAC_dpsInd_t * pDpsInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeDpsIndCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 
 MAC_Status_t APP_MAC_mlmeSoundingCnfCb( const MAC_soundingCnf_t * pSoudingCnf)
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeSoundingCnfCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 MAC_Status_t APP_MAC_mlmeGtsCnfCb( const MAC_gtsCnf_t * pGtsCnf)
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeGtsCnfCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 
 MAC_Status_t APP_MAC_mlmeGtsIndCb( const MAC_GtsInd_t * pGtsInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmeGtsIndCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 
 // APP_MAC_mlmePollIndCbPtr  mlmePollIndCb;
 MAC_Status_t APP_MAC_mlmePollIndCb( const MAC_pollInd_t * pPollInd )
 {
+	APP_DBG("RFD MAC APP - APP_MAC_mlmePollIndCb");
   return MAC_NOT_IMPLEMENTED_STATUS;
 }
 /******************************************************************************/
