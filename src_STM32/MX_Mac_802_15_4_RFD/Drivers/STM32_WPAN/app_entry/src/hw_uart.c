@@ -371,7 +371,7 @@ void HW_UART_DMA_Interrupt_Handler(hw_uart_id_t hw_uart_id)
 
   return;
 }
-/*
+
 void HAL_UART_MspInit(UART_HandleTypeDef *huart)
 {
   GPIO_InitTypeDef  GPIO_InitStruct = {0};
@@ -401,7 +401,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
   }
 
   return;
-}*/
+}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {

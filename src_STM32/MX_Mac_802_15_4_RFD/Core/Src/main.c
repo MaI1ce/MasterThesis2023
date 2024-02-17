@@ -18,11 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "app_rfd_mac_802_15_4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,12 +40,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-CRYP_HandleTypeDef hcryp1;
-__ALIGN_BEGIN static const uint32_t pKeyAES1[8] __ALIGN_END = {
-                            0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000,0x00000000};
-__ALIGN_BEGIN static const uint32_t pInitVectAES1[4] __ALIGN_END = {
-                            0x00000000,0x00000000,0x00000000,0x00000000};
-
 IPCC_HandleTypeDef hipcc;
 
 UART_HandleTypeDef hlpuart1;
@@ -66,14 +59,17 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_IPCC_Init(void);
-static void MX_LPUART1_UART_Init(void);
-static void MX_AES1_Init(void);
 static void MX_RNG_Init(void);
+static void MX_IPCC_Init(void);
 static void MX_RTC_Init(void);
+static void MX_LPUART1_UART_Init(void);
 static void MX_RF_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void SystemPower_Config(void);
+static void Reset_Device( void );
+static void Reset_IPCC( void );
+static void Reset_BackupDomain( void );
+static void Init_Debug( void );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -88,7 +84,7 @@ static void MX_RF_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	__HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -97,7 +93,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  Reset_Device();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -115,24 +111,37 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_LPUART1_UART_Init();
-  MX_AES1_Init();
+  //MX_DMA_Init();
   MX_RNG_Init();
-  MX_RTC_Init();
-  MX_USB_Device_Init();
+  //MX_RTC_Init();
+  //MX_LPUART1_UART_Init();
   MX_RF_Init();
   /* USER CODE BEGIN 2 */
+  SystemPower_Config();
 
+  Init_Debug();
+
+  //APP_DBG("RFD MAIN");
+  HAL_GPIO_TogglePin(GPIOD, LED_BLUE_Pin);
+
+  APP_DBG("**** RFD MAC 802.15.4 EXAMPLE ****");
+
+  /* Application init */
+  //APP_ENTRY_Init(APPE_LIMITED);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t rand_num = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_GPIO_TogglePin(GPIOC, LED_RED_Pin|LED_YELLOW_Pin|LED_GREEN_Pin);
+	  HAL_RNG_GenerateRandomNumber(&hrng, &rand_num);
+	  HAL_Delay(500+((rand_num&0xff)<<1));
+	  //UTIL_SEQ_Run( UTIL_SEQ_DEFAULT );
   }
   /* USER CODE END 3 */
 }
@@ -146,6 +155,11 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+  /** Configure LSE Drive Capability
+  */
+  HAL_PWR_EnableBkUpAccess();
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMHIGH);
+
   /** Configure the main internal regulator output voltage
   */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
@@ -153,11 +167,11 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSI
-                              |RCC_OSCILLATORTYPE_LSI1|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI1
+                              |RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -212,39 +226,6 @@ void PeriphCommonClock_Config(void)
   /* USER CODE BEGIN Smps */
 
   /* USER CODE END Smps */
-}
-
-/**
-  * @brief AES1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_AES1_Init(void)
-{
-
-  /* USER CODE BEGIN AES1_Init 0 */
-
-  /* USER CODE END AES1_Init 0 */
-
-  /* USER CODE BEGIN AES1_Init 1 */
-
-  /* USER CODE END AES1_Init 1 */
-  hcryp1.Instance = AES1;
-  hcryp1.Init.DataType = CRYP_DATATYPE_32B;
-  hcryp1.Init.KeySize = CRYP_KEYSIZE_256B;
-  hcryp1.Init.pKey = (uint32_t *)pKeyAES1;
-  hcryp1.Init.pInitVect = (uint32_t *)pInitVectAES1;
-  hcryp1.Init.Algorithm = CRYP_AES_CTR;
-  hcryp1.Init.DataWidthUnit = CRYP_DATAWIDTHUNIT_WORD;
-  hcryp1.Init.KeyIVConfigSkip = CRYP_KEYIVCONFIG_ALWAYS;
-  if (HAL_CRYP_Init(&hcryp1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN AES1_Init 2 */
-
-  /* USER CODE END AES1_Init 2 */
-
 }
 
 /**
@@ -381,6 +362,9 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
@@ -396,6 +380,39 @@ static void MX_RTC_Init(void)
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
   if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+  */
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.SubSeconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Enable the WakeUp
+  */
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
   {
     Error_Handler();
   }
@@ -482,6 +499,187 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+ * @brief  Reset Device
+ *
+ * @note
+ *
+ * @param  None
+ * @retval None
+ */
+static void Reset_Device( void )
+{
+#if ( CFG_HW_RESET_BY_FW == 1 )
+  Reset_BackupDomain();
+  Reset_IPCC();
+#endif
+
+  return;
+}
+
+/**
+ * @brief  Reset IPCC
+ *
+ * @note
+ *
+ * @param  None
+ * @retval None
+ */
+static void Reset_IPCC( void )
+{
+  LL_AHB3_GRP1_EnableClock(LL_AHB3_GRP1_PERIPH_IPCC);
+
+  LL_C1_IPCC_ClearFlag_CHx(
+                           IPCC,
+                           LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                               | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  LL_C2_IPCC_ClearFlag_CHx(
+                           IPCC,
+                           LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                               | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  LL_C1_IPCC_DisableTransmitChannel(
+                                    IPCC,
+                                    LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                                        | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  LL_C2_IPCC_DisableTransmitChannel(
+                                    IPCC,
+                                    LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                                        | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  LL_C1_IPCC_DisableReceiveChannel(
+                                   IPCC,
+                                   LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                                       | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  LL_C2_IPCC_DisableReceiveChannel(
+                                   IPCC,
+                                   LL_IPCC_CHANNEL_1 | LL_IPCC_CHANNEL_2 | LL_IPCC_CHANNEL_3 | LL_IPCC_CHANNEL_4
+                                       | LL_IPCC_CHANNEL_5 | LL_IPCC_CHANNEL_6);
+
+  return;
+}
+
+/**
+ * @brief  Reset the backup domain
+ *
+ * @note
+ *
+ * @param  None
+ * @retval None
+ */
+static void Reset_BackupDomain( void )
+{
+  if ((LL_RCC_IsActiveFlag_PINRST() != FALSE) && (LL_RCC_IsActiveFlag_SFTRST() == FALSE))
+  {
+    HAL_PWR_EnableBkUpAccess(); /**< Enable access to the RTC registers */
+
+    /**
+     *  Write twice the value to flush the APB-AHB bridge
+     *  This bit shall be written in the register before writing the next one
+     */
+    HAL_PWR_EnableBkUpAccess();
+
+    __HAL_RCC_BACKUPRESET_FORCE();
+    __HAL_RCC_BACKUPRESET_RELEASE();
+  }
+
+  return;
+}
+
+/**
+  * @brief EXTI line detection callback.
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  switch(GPIO_Pin)
+  {
+    case GPIO_PIN_10:
+      /* Send Data To Coordinator*/
+      APP_RFD_MAC_802_15_4_SendData("Data From Node\0");
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * @brief  Configure the system for power optimization
+ *
+ * @note  This API configures the system to be ready for low power mode
+ *
+ * @param  None
+ * @retval None
+ */
+static void SystemPower_Config( void )
+{
+  /**
+   * Select HSI as system clock source after Wake Up from Stop mode
+   */
+  LL_RCC_SetClkAfterWakeFromStop(LL_RCC_STOP_WAKEUPCLOCK_HSI);
+
+  /* Initialize low power manager */
+  UTIL_LPM_Init( );
+
+  return;
+}
+
+/**
+ * @brief  Initializes the system for debug purpose
+ *
+ * @note
+ *
+ * @param  None
+ * @retval None
+ */
+static void Init_Debug( void )
+{
+#if (CFG_DEBUGGER_SUPPORTED == 1)
+  /**
+   * Keep debugger enabled while in any low power mode
+   */
+  HAL_DBGMCU_EnableDBGSleepMode();
+  /* HAL_DBGMCU_EnableDBGStopMode(); */
+  /* HAL_DBGMCU_EnableDBGStandbyMode(); */
+
+  /***************** ENABLE DEBUGGER *************************************/
+  LL_EXTI_EnableIT_32_63(LL_EXTI_LINE_48);
+  LL_C2_EXTI_EnableIT_32_63(LL_EXTI_LINE_48);
+
+#else
+
+  GPIO_InitTypeDef gpio_config = {0};
+
+  gpio_config.Pull = GPIO_NOPULL;
+  gpio_config.Mode = GPIO_MODE_ANALOG;
+
+  gpio_config.Pin = GPIO_PIN_15 | GPIO_PIN_14 | GPIO_PIN_13;
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  HAL_GPIO_Init(GPIOA, &gpio_config);
+  __HAL_RCC_GPIOA_CLK_DISABLE();
+
+  gpio_config.Pin = GPIO_PIN_4 | GPIO_PIN_3;
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  HAL_GPIO_Init(GPIOB, &gpio_config);
+  __HAL_RCC_GPIOB_CLK_DISABLE();
+
+  HAL_DBGMCU_DisableDBGSleepMode();
+  HAL_DBGMCU_DisableDBGStopMode();
+  HAL_DBGMCU_DisableDBGStandbyMode();
+
+#endif /* (CFG_DEBUGGER_SUPPORTED == 1) */
+
+#if(CFG_DEBUG_TRACE != 0)
+  DbgTraceInit();
+#endif
+
+  return;
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -495,6 +693,14 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	    BSP_LED_Toggle(LED1);
+	    HAL_Delay(250);
+	    BSP_LED_Toggle(LED2);
+	    HAL_Delay(250);
+	    BSP_LED_Toggle(LED3);
+	    HAL_Delay(250);
+	    BSP_LED_Toggle(LED4);
+	    HAL_Delay(250);
   }
   /* USER CODE END Error_Handler_Debug */
 }

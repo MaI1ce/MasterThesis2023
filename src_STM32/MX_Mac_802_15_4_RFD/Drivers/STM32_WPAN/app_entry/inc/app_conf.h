@@ -37,7 +37,7 @@
  */
 #define CFG_HW_RESET_BY_FW        1
 
-#define CFG_LED_SUPPORTED         1
+#define CFG_LED_SUPPORTED         0
 
 /**
  * keep debugger enabled while in any low power mode when set to 1

@@ -70,62 +70,11 @@ void HAL_MspInit(void)
 
   /* USER CODE END MspInit 0 */
 
-  __HAL_RCC_HSEM_CLK_ENABLE();
-
   /* System interrupt init*/
-
-  /* Peripheral interrupt init */
-  /* HSEM_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(HSEM_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(HSEM_IRQn);
 
   /* USER CODE BEGIN MspInit 1 */
 
   /* USER CODE END MspInit 1 */
-}
-
-/**
-* @brief CRYP MSP Initialization
-* This function configures the hardware resources used in this example
-* @param hcryp: CRYP handle pointer
-* @retval None
-*/
-void HAL_CRYP_MspInit(CRYP_HandleTypeDef* hcryp)
-{
-  if(hcryp->Instance==AES1)
-  {
-  /* USER CODE BEGIN AES1_MspInit 0 */
-
-  /* USER CODE END AES1_MspInit 0 */
-    /* Peripheral clock enable */
-    __HAL_RCC_AES1_CLK_ENABLE();
-  /* USER CODE BEGIN AES1_MspInit 1 */
-
-  /* USER CODE END AES1_MspInit 1 */
-  }
-
-}
-
-/**
-* @brief CRYP MSP De-Initialization
-* This function freeze the hardware resources used in this example
-* @param hcryp: CRYP handle pointer
-* @retval None
-*/
-void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef* hcryp)
-{
-  if(hcryp->Instance==AES1)
-  {
-  /* USER CODE BEGIN AES1_MspDeInit 0 */
-
-  /* USER CODE END AES1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_AES1_CLK_DISABLE();
-  /* USER CODE BEGIN AES1_MspDeInit 1 */
-
-  /* USER CODE END AES1_MspDeInit 1 */
-  }
-
 }
 
 /**
@@ -178,42 +127,49 @@ void HAL_IPCC_MspDeInit(IPCC_HandleTypeDef* hipcc)
 * @param huart: UART handle pointer
 * @retval None
 */
+/*
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
   if(huart->Instance==LPUART1)
   {
+*/
   /* USER CODE BEGIN LPUART1_MspInit 0 */
 
   /* USER CODE END LPUART1_MspInit 0 */
 
   /** Initializes the peripherals clock
   */
+/*
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPUART1;
     PeriphClkInitStruct.Lpuart1ClockSelection = RCC_LPUART1CLKSOURCE_PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
     }
-
+*/
     /* Peripheral clock enable */
+/*
     __HAL_RCC_LPUART1_CLK_ENABLE();
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
+*/
     /**LPUART1 GPIO Configuration
     PA2     ------> LPUART1_TX
     PA3     ------> LPUART1_RX
     */
+/*
     GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF8_LPUART1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
+*/
     /* LPUART1 DMA Init */
     /* LPUART1_RX Init */
+/*
     hdma_lpuart1_rx.Instance = DMA1_Channel1;
     hdma_lpuart1_rx.Init.Request = DMA_REQUEST_LPUART1_RX;
     hdma_lpuart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -229,8 +185,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
     __HAL_LINKDMA(huart,hdmarx,hdma_lpuart1_rx);
-
+*/
     /* LPUART1_TX Init */
+/*
     hdma_lpuart1_tx.Instance = DMA1_Channel2;
     hdma_lpuart1_tx.Init.Request = DMA_REQUEST_LPUART1_TX;
     hdma_lpuart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
@@ -246,14 +203,20 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
     __HAL_LINKDMA(huart,hdmatx,hdma_lpuart1_tx);
-
+*/
+    /* LPUART1 interrupt Init */
+/*
+    HAL_NVIC_SetPriority(LPUART1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(LPUART1_IRQn);
+*/
   /* USER CODE BEGIN LPUART1_MspInit 1 */
 
   /* USER CODE END LPUART1_MspInit 1 */
+/*
   }
 
 }
-
+*/
 /**
 * @brief UART MSP De-Initialization
 * This function freeze the hardware resources used in this example
@@ -279,6 +242,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     /* LPUART1 DMA DeInit */
     HAL_DMA_DeInit(huart->hdmarx);
     HAL_DMA_DeInit(huart->hdmatx);
+
+    /* LPUART1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(LPUART1_IRQn);
   /* USER CODE BEGIN LPUART1_MspDeInit 1 */
 
   /* USER CODE END LPUART1_MspDeInit 1 */
@@ -312,6 +278,9 @@ void HAL_RNG_MspInit(RNG_HandleTypeDef* hrng)
 
     /* Peripheral clock enable */
     __HAL_RCC_RNG_CLK_ENABLE();
+    /* RNG interrupt Init */
+    HAL_NVIC_SetPriority(RNG_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(RNG_IRQn);
   /* USER CODE BEGIN RNG_MspInit 1 */
 
   /* USER CODE END RNG_MspInit 1 */
@@ -334,6 +303,9 @@ void HAL_RNG_MspDeInit(RNG_HandleTypeDef* hrng)
   /* USER CODE END RNG_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_RNG_CLK_DISABLE();
+
+    /* RNG interrupt DeInit */
+    HAL_NVIC_DisableIRQ(RNG_IRQn);
   /* USER CODE BEGIN RNG_MspDeInit 1 */
 
   /* USER CODE END RNG_MspDeInit 1 */
@@ -356,14 +328,10 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
 
   /* USER CODE END RTC_MspInit 0 */
 
-  /** Enable access to the backup domain
-  */
-    HAL_PWR_EnableBkUpAccess();
-
   /** Initializes the peripherals clock
   */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
-    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
@@ -372,6 +340,9 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
     /* Peripheral clock enable */
     __HAL_RCC_RTC_ENABLE();
     __HAL_RCC_RTCAPB_CLK_ENABLE();
+    /* RTC interrupt Init */
+    HAL_NVIC_SetPriority(RTC_WKUP_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(RTC_WKUP_IRQn);
   /* USER CODE BEGIN RTC_MspInit 1 */
 
   /* USER CODE END RTC_MspInit 1 */
@@ -395,6 +366,9 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* hrtc)
     /* Peripheral clock disable */
     __HAL_RCC_RTC_DISABLE();
     __HAL_RCC_RTCAPB_CLK_DISABLE();
+
+    /* RTC interrupt DeInit */
+    HAL_NVIC_DisableIRQ(RTC_WKUP_IRQn);
   /* USER CODE BEGIN RTC_MspDeInit 1 */
 
   /* USER CODE END RTC_MspDeInit 1 */

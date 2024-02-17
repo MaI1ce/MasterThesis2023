@@ -307,11 +307,13 @@ static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
   while(1 == 1)
   {
     BSP_LED_Toggle(LED1);
-    HAL_Delay(500);
+    HAL_Delay(250);
     BSP_LED_Toggle(LED2);
-    HAL_Delay(500);
+    HAL_Delay(250);
     BSP_LED_Toggle(LED3);
-    HAL_Delay(500);
+    HAL_Delay(250);
+    BSP_LED_Toggle(LED4);
+    HAL_Delay(250);
   }
 }
 

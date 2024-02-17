@@ -79,8 +79,8 @@
 #define CFG_HW_LPUART1_ENABLED                 1
 #define CFG_HW_LPUART1_DMA_TX_SUPPORTED        1
 
-#define CFG_HW_USART1_ENABLED                  1
-#define CFG_HW_USART1_DMA_TX_SUPPORTED         1
+#define CFG_HW_USART1_ENABLED                  0
+#define CFG_HW_USART1_DMA_TX_SUPPORTED         0
 
 #if(CFG_HW_LPUART1_ENABLED == 1)
 /**
@@ -142,7 +142,7 @@
 #define CFG_HW_USART1_PREEMPTPRIORITY         0x0F
 #define CFG_HW_USART1_SUBPRIORITY             0
 
-#define CFG_HW_USART1_BAUDRATE                57600
+#define CFG_HW_USART1_BAUDRATE                115200
 #define CFG_HW_USART1_WORDLENGTH              UART_WORDLENGTH_8B
 #define CFG_HW_USART1_STOPBITS                UART_STOPBITS_1
 #define CFG_HW_USART1_PARITY                  UART_PARITY_NONE

@@ -23,6 +23,7 @@
 #include "app_entry.h"
 #include "main.h"
 
+
 #include "app_rfd_mac_802_15_4.h"
 #include "app_conf.h"
 #include "utilities_common.h"
@@ -113,6 +114,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
    * The default state of the Low Power Manager is to allow the Standby Mode so an request is needed here
    */
   UTIL_LPM_SetOffMode(1U << CFG_LPM_APP, UTIL_LPM_DISABLE);
+  Led_Init();
   HW_UART_Init(CFG_CLI_UART);
   RxUART_Init();
   appe_Tl_Init(); /* Initialize all transport layers */
@@ -150,6 +152,19 @@ static void appe_Tl_Init( void )
 
   TL_Enable();
 
+  return;
+}
+
+static void Led_Init( void )
+{
+#if (CFG_LED_SUPPORTED == 1U)
+  /**
+   * Leds Initialization
+   */
+  BSP_LED_Init(LED_BLUE);
+  BSP_LED_Init(LED_GREEN);
+  BSP_LED_Init(LED_RED);
+#endif
   return;
 }
 
@@ -478,67 +493,58 @@ static void UartCmdExecute(void)
   }
 }
 
-void BSP_LED_On(BSP_LED_t led_id)
+
+
+void BSP_LED_On(led_enum_t led_id)
 {
 	switch(led_id){
-	case LED_RED:
+	case LED1:
 		HAL_GPIO_WritePin(GPIOC, LED_RED_Pin, GPIO_PIN_SET);
 		break;
-
-	case LED_YELLOW:
+	case LED2:
 		HAL_GPIO_WritePin(GPIOC, LED_YELLOW_Pin, GPIO_PIN_SET);
 		break;
-
-	case LED_GREEN:
+	case LED3:
 		HAL_GPIO_WritePin(GPIOC, LED_GREEN_Pin, GPIO_PIN_SET);
 		break;
-
-	case LED_BLUE:
+	case LED4:
 		HAL_GPIO_WritePin(GPIOD, LED_BLUE_Pin, GPIO_PIN_SET);
 		break;
 	}
 }
 
-
-void BSP_LED_Off(BSP_LED_t led_id)
+void BSP_LED_Off(led_enum_t led_id)
 {
 	switch(led_id){
-	case LED_RED:
+	case LED1:
 		HAL_GPIO_WritePin(GPIOC, LED_RED_Pin, GPIO_PIN_RESET);
 		break;
-
-	case LED_YELLOW:
+	case LED2:
 		HAL_GPIO_WritePin(GPIOC, LED_YELLOW_Pin, GPIO_PIN_RESET);
 		break;
-
-	case LED_GREEN:
+	case LED3:
 		HAL_GPIO_WritePin(GPIOC, LED_GREEN_Pin, GPIO_PIN_RESET);
 		break;
-
-	case LED_BLUE:
+	case LED4:
 		HAL_GPIO_WritePin(GPIOD, LED_BLUE_Pin, GPIO_PIN_RESET);
 		break;
 	}
 }
 
-void BSP_LED_Toggle(BSP_LED_t led_id)
+void BSP_LED_Toggle(led_enum_t led_id)
 {
 	switch(led_id){
-	case LED_RED:
+	case LED1:
 		HAL_GPIO_TogglePin(GPIOC, LED_RED_Pin);
 		break;
-
-	case LED_YELLOW:
+	case LED2:
 		HAL_GPIO_TogglePin(GPIOC, LED_YELLOW_Pin);
 		break;
-
-	case LED_GREEN:
+	case LED3:
 		HAL_GPIO_TogglePin(GPIOC, LED_GREEN_Pin);
 		break;
-
-	case LED_BLUE:
+	case LED4:
 		HAL_GPIO_TogglePin(GPIOD, LED_BLUE_Pin);
 		break;
 	}
 }
-

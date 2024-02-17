@@ -57,12 +57,12 @@ typedef enum
 	LED_YELLOW = LED2,
 	LED_GREEN = LED3,
 	LED_BLUE = LED4
-} BSP_LED_t;
+}led_enum_t;
 
-void BSP_LED_On(BSP_LED_t led_id);
-void BSP_LED_Off(BSP_LED_t led_id);
-void BSP_LED_Toggle(BSP_LED_t led_id);
 
+void BSP_LED_On(led_enum_t led_id);
+void BSP_LED_Off(led_enum_t led_id);
+void BSP_LED_Toggle(led_enum_t led_id);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
