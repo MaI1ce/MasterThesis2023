@@ -34,7 +34,7 @@
 #include "shci.h"
 #include "stm_logging.h"
 
-#define DEMO_CHANNEL 16
+#define DEMO_CHANNEL 20
 
 #define DATA_FROM_NODE "DATA FROM NODE\0"
 #define DATA "HELLO COORDINATOR\0"
@@ -174,7 +174,7 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
   APP_DBG("RFD MAC APP - Set Association Permit CNF Received\0");
   if(g_MAC_associateCnf.status != MAC_SUCCESS)
   {
-    APP_DBG("RFD MAC APP - ASSOCIATION FAILS !\0");
+    APP_DBG("RFD MAC APP - ASSOCIATION FAILS : status %x\0", g_MAC_associateCnf.status);
     return;
   }
 

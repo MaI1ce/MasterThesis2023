@@ -34,7 +34,7 @@
 #include "stm_logging.h"
 
 
-#define DEMO_CHANNEL 16
+#define DEMO_CHANNEL 20
 
 
 MAC_associateInd_t g_MAC_associateInd;
