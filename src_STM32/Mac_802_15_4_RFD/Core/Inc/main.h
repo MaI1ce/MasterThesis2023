@@ -39,6 +39,8 @@ extern "C" {
 #include "dbg_trace.h"
 #include "stm_logging.h"
 
+#include "stm_rng.h"
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

@@ -76,7 +76,7 @@ int main(void)
 
   /* Initialize the button in interrupt mode */
   BSP_PB_Init(BUTTON_SW1, BUTTON_MODE_EXTI);
-
+  RNG_Init();
   /* Configure the system Power Mode */
   SystemPower_Config();
 
@@ -318,3 +318,18 @@ static void Init_Debug( void )
   return;
 }
 
+
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_10);
+	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_11);
+	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_12);
+	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_10);
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
