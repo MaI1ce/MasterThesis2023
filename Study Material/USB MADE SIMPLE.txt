@@ -1,0 +1,7 @@
+https://www.usbmadesimple.co.uk/index.html
+
+https://community.st.com/t5/stm32-mcus-wireless/usb-non-recognizable-code-43-for-stm32wb55-microcontroller/td-p/309888
+
+https://community.st.com/t5/stm32-mcus-wireless/stm32wb55-wake-up-from-stop-1-mode-with-the-usb-vcp/m-p/203641
+
+https://community.st.com/t5/stm32-mcus-wireless/stm32wb55-usb-dongle-usb-driver-problem-whit-zigbee/td-p/70518

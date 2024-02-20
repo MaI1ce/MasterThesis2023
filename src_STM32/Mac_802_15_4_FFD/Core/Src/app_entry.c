@@ -111,6 +111,8 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
    * received on the system channel before starting the BLE Stack
    * This system event is received with APPE_UserEvtRx()
    */
+  BSP_LED_Toggle(LED3);
+
   APP_DBG("APP_ENTRY_Init - end");
   return;
 }

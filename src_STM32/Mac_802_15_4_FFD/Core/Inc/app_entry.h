@@ -27,6 +27,9 @@
 #include "stm32_seq.h"
 #include "tl.h"
 
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
