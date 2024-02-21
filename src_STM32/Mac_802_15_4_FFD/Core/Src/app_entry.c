@@ -105,7 +105,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
   UTIL_LPM_SetOffMode(1U << CFG_LPM_APP, UTIL_LPM_DISABLE);
   Led_Init();
   appe_Tl_Init(); /* Initialize all transport layers */
-
+  MX_USB_Device_Init();
   /**
    * From now, the application is waiting for the ready event ( VS_HCI_C2_Ready )
    * received on the system channel before starting the BLE Stack

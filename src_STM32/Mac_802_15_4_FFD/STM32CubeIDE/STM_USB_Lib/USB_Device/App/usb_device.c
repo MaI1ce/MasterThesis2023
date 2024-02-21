@@ -27,7 +27,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "stm_logging.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
@@ -66,20 +66,25 @@ extern USBD_DescriptorsTypeDef CDC_Desc;
 void MX_USB_Device_Init(void)
 {
   /* USER CODE BEGIN USB_Device_Init_PreTreatment */
-
+  uint8_t status = USBD_OK;
+  LL_HSEM_1StepLock( HSEM, 5 );
   /* USER CODE END USB_Device_Init_PreTreatment */
 
   /* Init Device Library, add supported class and start the library. */
-  if (USBD_Init(&hUsbDeviceFS, &CDC_Desc, DEVICE_FS) != USBD_OK) {
+  if ((status = USBD_Init(&hUsbDeviceFS, &CDC_Desc, DEVICE_FS)) != USBD_OK) {
+	  APP_DBG("ERROR USBD_Init - %ld", status);
     Error_Handler();
   }
-  if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK) {
+  if ((status = USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC)) != USBD_OK) {
+	  APP_DBG("ERROR USBD_RegisterClass - %ld", status);
     Error_Handler();
   }
-  if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK) {
+  if ((status = USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS)) != USBD_OK) {
+	  APP_DBG("ERROR USBD_CDC_RegisterInterface - %ld", status);
     Error_Handler();
   }
-  if (USBD_Start(&hUsbDeviceFS) != USBD_OK) {
+  if ((status = USBD_Start(&hUsbDeviceFS)) != USBD_OK) {
+	  APP_DBG("ERROR USBD_Start - %ld", status);
     Error_Handler();
   }
   /* USER CODE BEGIN USB_Device_Init_PostTreatment */
