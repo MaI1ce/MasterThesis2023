@@ -58,6 +58,7 @@ void CFG_HW_LPUART1_DMA_TX_IRQHandler(void);
 
 void USB_LP_IRQHandler(void);
 void USB_HP_IRQHandler(void);
+void EXTI15_10_IRQHandler(void);
 #ifdef USAGE_OF_VCP
 void USB_FS_WKUP_IRQHandler(void);
 #endif /* USAGE_OF_VCP */

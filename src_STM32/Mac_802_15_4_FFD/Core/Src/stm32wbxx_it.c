@@ -182,3 +182,15 @@ void USB_FS_WKUP_IRQHandler(void)
   HAL_PCD_IRQHandler(&hpcd);
 }
 #endif /* USAGE_OF_VCP */
+
+
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(BUTTON_SW1_PIN);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
+}

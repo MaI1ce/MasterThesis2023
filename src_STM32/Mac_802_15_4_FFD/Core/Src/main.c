@@ -72,6 +72,7 @@ int main(void)
   BSP_LED_Init(LED2);
   BSP_LED_Init(LED3);
   BSP_LED_Init(LED4);
+  BSP_PB_Init(BUTTON_SW1, BUTTON_MODE_EXTI);
 
   //MX_USB_Device_Init();
 
@@ -347,6 +348,31 @@ static void Init_Debug( void )
 
   return;
 }
+
+
+/**
+  * @brief EXTI line detection callback.
+  * @param GPIO_Pin: Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	uint8_t status = 0;
+	char _str[] = "FFP USB HELLO\n\r\0";
+  switch(GPIO_Pin)
+  {
+    case BUTTON_SW1_PIN:
+      /* Send Data To Coordinator*/
+  	  do {
+  		  status = CDC_Transmit_FS((uint8_t*)_str, sizeof(_str));
+  	  } while(status == USBD_BUSY);
+
+      break;
+    default:
+      break;
+  }
+}
+
 
 void Error_Handler(void)
 {
