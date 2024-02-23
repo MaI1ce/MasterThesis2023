@@ -40,9 +40,23 @@
 MAC_associateInd_t g_MAC_associateInd;
 
 
+
+
 /* Private function prototypes -----------------------------------------------*/
 static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode);
 static void APP_FFD_MAC_802_15_4_Config(void);
+
+//////////////////////////////////////////////////////////////////////////////
+static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void);
+static void APP_FFD_MAC_802_15_4_DS2_Abort(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
+
+DS2_packet msg_buffer = {0};
+
+static uint8_t active_parties[DS2_MAX_PARTY_NUM] = {0};
+//////////////////////////////////////////////////////////////////////////////
 
 MAC_callbacks_t macCbConfig ;
 
@@ -78,6 +92,12 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_SERVICE_COORD, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_CoordSrvTask);
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DATA_COORD, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_CoordDataTask);
+
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_1, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
 
   /* Configuration MAC 802_15_4 */
   APP_FFD_MAC_802_15_4_Config();
@@ -294,6 +314,39 @@ void APP_FFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode)
   }
 }
 
+
+void APP_FFD_MAC_802_15_4_SendData(DS2_packet * data) //TODO
+{
+	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
+  MAC_Status_t MacStatus = MAC_ERROR;
+
+  BSP_LED_On(LED3);
+  MAC_dataReq_t DataReq;
+  APP_DBG("RFD MAC APP - Send Data to Coordinator\0");
+  DataReq.src_addr_mode = g_SHORT_ADDR_MODE_c;
+  DataReq.dst_addr_mode = g_SHORT_ADDR_MODE_c;
+
+  memcpy(DataReq.a_dst_PAN_id,&g_panId,0x02);
+  memcpy(DataReq.dst_address.a_short_addr,&g_coordShortAddr,0x02);
+
+  DataReq.msdu_handle = g_dataHandle++;
+  DataReq.ack_Tx =0x00;
+  DataReq.GTS_Tx = FALSE;
+  memcpy(&rfBuffer,data,data_len);
+  rfBuffer[data_len] = xorSign(data,data_len);
+  DataReq.msduPtr = (uint8_t*) rfBuffer;
+  DataReq.msdu_length = data_len;
+  DataReq.security_level = 0x00;
+  MacStatus = MAC_MCPSDataReq( &DataReq );
+  if ( MAC_SUCCESS != MacStatus ) {
+    APP_DBG("RFD MAC - Data Req Fails\0");
+    return;
+  }
+  UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
+  BSP_LED_Off(LED3);
+  APP_DBG("RFD MAC APP - DATA CNF Received\0");
+}
+
 /*************************************************************
  *
  * LOCAL FUNCTIONS
@@ -381,6 +434,39 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
  * @{
  */
 
+static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
+{
+
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
+{
+
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
+{
+
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
+{
+
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
+{
+	uint8_t id = msg_buffer.src_node_id;
+	if(active_parties[id] == 0){
+		active_parties[id] = 1;
+	    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+	    msg_buffer.dst_node_id = id;
+	    msg_buffer.msg_code = DS2_COORDINATOR_HELLO_ACK;
+	    msg_buffer.packet_length = 4;
+
+	    APP_FFD_MAC_802_15_4_SendData((const char*)&msg_buffer, 4);
+	}
+}
 
 /**
  * @}

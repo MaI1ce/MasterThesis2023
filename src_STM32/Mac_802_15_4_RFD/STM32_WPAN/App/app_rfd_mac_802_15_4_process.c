@@ -26,6 +26,9 @@
 #include "app_rfd_mac_802_15_4.h"
 #include "stm_logging.h"
 
+#include "ds2_osi3.h"
+#include <string.h>
+
 /* Global define -------------------------------------------------------------*/
 
 /* Global variables ----------------------------------------------------------*/
@@ -107,7 +110,7 @@ MAC_Status_t APP_MAC_mlmeDisassociateCnfCb( const  MAC_disassociateCnf_t * pDisa
 
 MAC_Status_t APP_MAC_mlmeDisassociateIndCb( const  MAC_disassociateInd_t * pDisassociateInd )
 {
-	APP_DBG("RFD MAC APP - APP_MAC_mlmeDisassociateIndCb");
+	APP_DBG("RFD MAC APP - Coordinator Disassociated");
   return MAC_SUCCESS;
 
 }
@@ -172,15 +175,61 @@ MAC_Status_t APP_MAC_mlmeStartCnfCb( const  MAC_startCnf_t * pStartCnf )
 
 MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
-	APP_DBG("RFD MAC APP - APP_MAC_mcpsDataIndCb");
-  APP_DBG("COORD : RECEIVE DATA : %s ", (char const *) pDataInd->msduPtr);
+	DS2_packet *packet_ptr = (DS2_packet*)pDataInd->msduPtr;
+  //APP_DBG("COORD : RECEIVE DATA : %s ", (char const *) pDataInd->msduPtr);
+	if (packet_ptr != NULL){
+		if(packet_ptr->packet_length < 4){
+			APP_DBG("DS2 DATA ERROR - MSG IS TOO SHORT");
+		}
+		else {
+			if((packet_ptr->dst_node_id == DS2_NODE_ID)||(packet_ptr->dst_node_id == DS2_BROADCAST_ID)){
+				switch(packet_ptr->msg_code){
+				case DS2_COORDINATOR_HELLO_ACK:
+					APP_DBG("DS2 COORDINATOR CONNECTION - OK");
+					break;
+				case DS2_Pi_COMMIT_ACK:
+					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
+					break;
+				case DS2_Pi_VALUE_ACK :
+					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_2, CFG_SCH_PRIO_0 );
+					break;
+				case DS2_Ti_COMMIT_ACK :
+					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_3, CFG_SCH_PRIO_0 );
+					break;
+				case DS2_Ti_VALUE_ACK :
+					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
+					break;
+
+				case DS2_Fi_COMMIT_ACK:
+					break;
+
+				case DS2_Ri_VALUE_ACK:
+					break;
+
+				case DS2_Zi_VALUE_ACK:
+					break;
+
+				default :
+					APP_DBG("DS2 DATA ERROR - JOB ABORTED");
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_ABORT, CFG_SCH_PRIO_0 );
+					break;
+				}
+			} else {
+				APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID");
+			}
+		}
+	}
   return MAC_SUCCESS;
 }
 
 
 MAC_Status_t APP_MAC_mcpsDataCnfCb( const  MAC_dataCnf_t * pDataCnf )
 {
-	APP_DBG("RFD MAC APP - APP_MAC_mcpsDataCnfCb");
+	//APP_DBG("RFD MAC APP - APP_MAC_mcpsDataCnfCb");
   UTIL_SEQ_SetEvt( EVENT_DATA_CNF );
   return MAC_SUCCESS;
 

@@ -32,7 +32,7 @@ extern "C" {
 #include "tl.h"
 #include "tl_mac_802_15_4.h"
 
-
+#include "ds2_osi3.h"
 
 /* ---------------------------------------------------------------------------*/
 /* Exported types and defines ------------------------------------------------*/
@@ -63,6 +63,12 @@ typedef enum
   CFG_TASK_DATA_NODE,       	/* RFD DATA Task - Handle Service request/response */
   CFG_TASK_MSG_FROM_RF_CORE, 	/* Task handling Incoming RF Core messages. */
   CFG_TASK_SYSTEM_HCI_ASYNCH_EVT,
+  CFG_TASK_APP_KEYGEN_START,
+  CFG_TASK_APP_KEYGEN_STAGE_1,
+  CFG_TASK_APP_KEYGEN_STAGE_2,
+  CFG_TASK_APP_KEYGEN_STAGE_3,
+  CFG_TASK_APP_KEYGEN_FINAL,
+  CFG_TASK_APP_ABORT,
   CFG_TASK_NBR,  /**< Shall be last in the list */
 } CFG_IdleTask_Id_t;
 
@@ -166,7 +172,7 @@ void APP_RFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode);
 
 void APP_RFD_MAC_802_15_4_SetupTask(void);
 
-void APP_RFD_MAC_802_15_4_SendData(const char *);
+void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len);
 
 void APP_RFD_MAC_802_15_4_NodeSrvTask(void);
 void APP_RFD_MAC_802_15_4_NodeDataTask(void);
@@ -178,7 +184,10 @@ void APP_RFD_postMacInfCnfNot(const char * buf);
 
 void APP_RFD_parseClientReqResCmd ( const char * CommandString  );
 
+/////////////////////////////////
 
+#define DS2_NODE_ID 0x1
+extern DS2_packet msg_buffer;
 
 #ifdef __cplusplus
 } /* extern "C" */

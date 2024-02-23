@@ -5,3 +5,12 @@ https://community.st.com/t5/stm32-mcus-wireless/usb-non-recognizable-code-43-for
 https://community.st.com/t5/stm32-mcus-wireless/stm32wb55-wake-up-from-stop-1-mode-with-the-usb-vcp/m-p/203641
 
 https://community.st.com/t5/stm32-mcus-wireless/stm32wb55-usb-dongle-usb-driver-problem-whit-zigbee/td-p/70518
+
+
+IPCC priority
+
+RNG/USB share the same clock
+
+USB peripheral on all STM32 is not fully functional in stop mode.
+
+When you call VCP_Init function, a null pointer is give as second parameter, instead this null pointer, give a rx buffer in parameter like this: VCP_Init( &VcpTxBuffer[0], &VcpRxBuffer[0] );

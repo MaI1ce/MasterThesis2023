@@ -48,8 +48,18 @@ uint8_t xorSign( const char * pmessage, uint8_t message_len);
 static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode);
 static void APP_RFD_MAC_802_15_4_Config(void);
 
-static uint8_t rfBuffer[256];
+////////////////////////////////////////////////////////////////////////
+static void APP_RFD_MAC_802_15_4_DS2_Abort(void);
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void);
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void);
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
+
+DS2_packet msg_buffer = {0};
+////////////////////////////////////////////////////////////////////////
+static uint8_t rfBuffer[256];
 
 static uint16_t     g_panId             = 0x1AAA;
 static uint16_t     g_coordShortAddr    = 0x1122;
@@ -85,6 +95,13 @@ void APP_RFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_MSG_FROM_RF_CORE, UTIL_SEQ_RFU, APP_ENTRY_ProcessMsgFromRFCoreTask);
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_RFD, UTIL_SEQ_RFU,APP_RFD_MAC_802_15_4_SetupTask);
+
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_ABORT, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_Abort);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_KEYGEN_START, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Start);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_KEYGEN_STAGE_1, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_KEYGEN_STAGE_2, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_KEYGEN_STAGE_3, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_APP_KEYGEN_FINAL, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Final);
 
   /* Configuration MAC 802_15_4 */
   APP_RFD_MAC_802_15_4_Config();
@@ -194,10 +211,15 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
     BSP_LED_On(LED2);
 
-    APP_RFD_MAC_802_15_4_SendData(DATA);
+    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
+    msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
+    msg_buffer.packet_length = 4;
+
+    APP_RFD_MAC_802_15_4_SendData((const char*)&msg_buffer, 4);
 }
 
-void APP_RFD_MAC_802_15_4_SendData(const char * data)
+void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
 {
 	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
   MAC_Status_t MacStatus = MAC_ERROR;
@@ -214,10 +236,10 @@ void APP_RFD_MAC_802_15_4_SendData(const char * data)
   DataReq.msdu_handle = g_dataHandle++;
   DataReq.ack_Tx =0x00;
   DataReq.GTS_Tx = FALSE;
-  memcpy(&rfBuffer,data,strlen(data));
-  rfBuffer[strlen(data)] = xorSign(data,strlen(data));
+  memcpy(&rfBuffer,data,data_len);
+  rfBuffer[data_len] = xorSign(data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
-  DataReq.msdu_length = strlen(data)+1;
+  DataReq.msdu_length = data_len;
   DataReq.security_level = 0x00;
   MacStatus = MAC_MCPSDataReq( &DataReq );
   if ( MAC_SUCCESS != MacStatus ) {
@@ -331,6 +353,8 @@ static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 /** @defgroup APP RFD Global variable
  * @{
  */
+
+
 /**
  * @}
  */
@@ -366,6 +390,100 @@ uint8_t xorSign( const char * pmessage, uint8_t message_len)
 /** @defgroup APP RFD Private function
  * @{
  */
+
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
+{
+	APP_DBG("DS2 - KYEGEN START");
+	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+
+    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
+    msg_buffer.msg_code = DS2_Pi_COMMIT;
+    msg_buffer.packet_length = sizeof(msg_buffer);
+
+    for(int i = 0; i < 0; i++){ //send g_i - size 64 byte
+    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+
+    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
+
+    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
+    }
+
+}
+
+
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
+{
+	APP_DBG("DS2 - KYEGEN STAGE 1");
+	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+
+    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
+    msg_buffer.msg_code = DS2_Pi_VALUE;
+    msg_buffer.packet_length = sizeof(msg_buffer);
+
+    for(int i = 0; i < 0; i++){ //send rho_i - size 16 byte
+    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+
+    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
+
+    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
+    }
+}
+
+
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
+{
+	APP_DBG("DS2 - KYEGEN STAGE 2");
+	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+
+    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
+    msg_buffer.msg_code = DS2_Ti_COMMIT;
+    msg_buffer.packet_length = sizeof(msg_buffer);
+
+    for(int i = 0; i < 0; i++){ //send gt_i - size 64 byte
+    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+
+    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
+
+    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
+    }
+}
+
+
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
+{
+	APP_DBG("DS2 - KYEGEN STAGE 3");
+	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+
+    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
+    msg_buffer.msg_code = DS2_Ti_VALUE;
+    msg_buffer.packet_length = sizeof(msg_buffer);
+
+    for(int i = 0; i < 6; i++){ //send t_i - size 352 byte
+    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+
+    	memset((char*)&msg_buffer.data[0], i, sizeof(msg_buffer.data));
+
+    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
+    }
+}
+
+static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
+{
+	APP_DBG("DS2 - KYEGEN FINAL");
+
+}
+
+static void APP_RFD_MAC_802_15_4_DS2_Abort(void)
+{
+	APP_DBG("DS2 DATA ERROR - JOB ABORTED");
+	APP_DBG("DS2 ERROR CODE : %d", msg_buffer.msg_code);
+
+}
+
 /**
  * @}
  */

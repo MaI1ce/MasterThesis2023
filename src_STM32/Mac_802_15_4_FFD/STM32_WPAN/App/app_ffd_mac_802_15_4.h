@@ -31,7 +31,7 @@ extern "C" {
 
 #include "tl.h"
 #include "tl_mac_802_15_4.h"
-
+#include "ds2_osi3.h"
 
 
 /* ---------------------------------------------------------------------------*/
@@ -63,6 +63,11 @@ typedef enum
   CFG_TASK_DATA_COORD,       /* FFD DATA Task - Handle Service request/response */
   CFG_TASK_MSG_FROM_RF_CORE, 
   CFG_TASK_SYSTEM_HCI_ASYNCH_EVT,
+  CFG_TASK_DS2_NEW_CONNECTION,
+  CFG_TASK_DS2_ABORT,
+  CFG_TASK_DS2_KEYGEN_STAGE_1,
+  CFG_TASK_DS2_KEYGEN_STAGE_2,
+  CFG_TASK_DS2_KEYGEN_STAGE_3,
   CFG_TASK_NBR,  /**< Shall be last in the list */
 } CFG_IdleTask_Id_t;
 
@@ -179,7 +184,9 @@ void APP_FFD_postMacInfCnfNot(const char * buf);
 
 void APP_FFD_parseClientReqResCmd ( const char * CommandString  );
 
+void APP_FFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len);
 
+extern DS2_packet msg_buffer;
 
 #ifdef __cplusplus
 } /* extern "C" */

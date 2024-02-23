@@ -191,7 +191,6 @@ MAC_Status_t APP_MAC_mlmeStartCnfCb( const  MAC_startCnf_t * pStartCnf )
 
 MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
-	APP_DBG("FFD MAC - APP_MAC_mcpsDataIndCb");
   memcpy(&g_DataInd,pDataInd,sizeof(MAC_dataInd_t));
   // Check validity of the received Message extracting associated 
   // simple xor signature
@@ -204,11 +203,55 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
   }
   else
   {
-    pDataInd->msduPtr[pDataInd->msdu_length-1] = '\0';//erase signature with EOS
-    APP_DBG("FFD MAC APP - RECEIVE DATA : %s", (char const *) pDataInd->msduPtr);
-    BSP_LED_On(LED3);
-    HAL_Delay(300);
-    BSP_LED_Off(LED3);
+	  	DS2_packet *packet_ptr = (DS2_packet*)g_DataInd.msduPtr;
+		//APP_DBG("COORD : RECEIVE DATA : %s ", (char const *) pDataInd->msduPtr);
+		if (packet_ptr != NULL){
+			if(packet_ptr->packet_length < 4){
+				APP_DBG("DS2 DATA ERROR - MSG IS TOO SHORT");
+			}
+			else {
+				if((packet_ptr->dst_node_id == DS2_NODE_ID)||(packet_ptr->dst_node_id == CENTRAL_NODE_ID)){
+					switch(packet_ptr->msg_code){
+					case DS2_COORDINATOR_HELLO:
+						memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_NEW_CONNECTION, CFG_SCH_PRIO_0 );
+						break;
+					case DS2_Pi_COMMIT:
+						memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
+						break;
+					case DS2_Pi_VALUE:
+						memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_2, CFG_SCH_PRIO_0 );
+						break;
+					case DS2_Ti_COMMIT:
+						memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_3, CFG_SCH_PRIO_0 );
+						break;
+					case DS2_Ti_VALUE:
+						memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
+						break;
+
+					case DS2_Fi_COMMIT:
+						break;
+
+					case DS2_Ri_VALUE:
+						break;
+
+					case DS2_Zi_VALUE:
+						break;
+
+					default :
+						APP_DBG("DS2 DATA ERROR - JOB ABORTED");
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_ABORT, CFG_SCH_PRIO_0 );
+						break;
+					}
+				} else {
+					APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID");
+				}
+			}
+		}
   }
   return MAC_SUCCESS;
 }
