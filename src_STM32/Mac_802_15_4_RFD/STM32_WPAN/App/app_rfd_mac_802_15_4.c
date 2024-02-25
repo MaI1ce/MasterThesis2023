@@ -36,6 +36,8 @@
 
 #define DEMO_CHANNEL 20
 
+#define DS2_ID 0x1
+
 #define DATA_FROM_NODE "DATA FROM NODE\0"
 #define DATA "HELLO COORDINATOR\0"
 
@@ -132,7 +134,7 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
   MAC_resetReq_t    ResetReq;
   MAC_setReq_t      SetReq;
-
+  uint8_t PIB_Value = 0x00;
 
   MAC_associateReq_t AssociateReq;
 
@@ -209,9 +211,25 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
     UTIL_SEQ_WaitEvt( 1U << CFG_EVT_SET_CNF );
     APP_DBG("RFD MAC APP - Set Short Address CNF Received\0");
 
+    /* Set RxOnWhenIdle */
+    APP_DBG("FFD MAC APP - Set RX On When Idle");
+    memset(&SetReq,0x00,sizeof(MAC_setReq_t));
+    SetReq.PIB_attribute = g_MAC_RX_ON_WHEN_IDLE_c;
+    PIB_Value = g_TRUE;
+    SetReq.PIB_attribute_valuePtr = &PIB_Value;
+
+    MacStatus = MAC_MLMESetReq( &SetReq );
+    if ( MAC_SUCCESS != MacStatus ) {
+      APP_DBG("FFD MAC - Set Rx On When Idle Fails");
+      return;
+    }
+    UTIL_SEQ_WaitEvt( 1U << CFG_EVT_SET_CNF );
+    APP_DBG("FFD MAC APP - Set RX On When Idle CNF Received");
+
+
     BSP_LED_On(LED2);
 
-    msg_buffer.src_node_id = DS2_NODE_ID;
+    msg_buffer.src_node_id = DS2_ID;
     msg_buffer.dst_node_id = CENTRAL_NODE_ID;
     msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
     msg_buffer.packet_length = 4;
@@ -221,25 +239,28 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
 void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
 {
-	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
+	//APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
   MAC_Status_t MacStatus = MAC_ERROR;
+
+  uint16_t broadcast = 0xffff;
 
   BSP_LED_On(LED3);
   MAC_dataReq_t DataReq;
-  APP_DBG("RFD MAC APP - Send Data to Coordinator\0");
+  //APP_DBG("RFD MAC APP - Send Data to Coordinator\0");
   DataReq.src_addr_mode = g_SHORT_ADDR_MODE_c;
   DataReq.dst_addr_mode = g_SHORT_ADDR_MODE_c;
 
   memcpy(DataReq.a_dst_PAN_id,&g_panId,0x02);
-  memcpy(DataReq.dst_address.a_short_addr,&g_coordShortAddr,0x02);
+  //memcpy(DataReq.dst_address.a_short_addr,&g_coordShortAddr,0x02);
+  memcpy(DataReq.dst_address.a_short_addr,&broadcast,0x02);
 
   DataReq.msdu_handle = g_dataHandle++;
-  DataReq.ack_Tx =0x00;
+  DataReq.ack_Tx = TRUE;
   DataReq.GTS_Tx = FALSE;
   memcpy(&rfBuffer,data,data_len);
   rfBuffer[data_len] = xorSign(data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
-  DataReq.msdu_length = data_len;
+  DataReq.msdu_length = data_len+1;
   DataReq.security_level = 0x00;
   MacStatus = MAC_MCPSDataReq( &DataReq );
   if ( MAC_SUCCESS != MacStatus ) {
@@ -248,7 +269,7 @@ void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
   }
   UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
   BSP_LED_Off(LED3);
-  APP_DBG("RFD MAC APP - DATA CNF Received\0");
+  //APP_DBG("RFD MAC APP - DATA CNF Received\0");
 }
 /**
   * @brief  Trace the error or the warning reported.
@@ -401,7 +422,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
     msg_buffer.msg_code = DS2_Pi_COMMIT;
     msg_buffer.packet_length = sizeof(msg_buffer);
 
-    for(int i = 0; i < 0; i++){ //send g_i - size 64 byte
+    for(int i = 0; i < 1; i++){ //send g_i - size 64 byte
     	msg_buffer.data_offset = i * MAX_DATA_LEN;
 
     	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
@@ -422,7 +443,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
     msg_buffer.msg_code = DS2_Pi_VALUE;
     msg_buffer.packet_length = sizeof(msg_buffer);
 
-    for(int i = 0; i < 0; i++){ //send rho_i - size 16 byte
+    for(int i = 0; i < 1; i++){ //send rho_i - size 16 byte
     	msg_buffer.data_offset = i * MAX_DATA_LEN;
 
     	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
@@ -442,7 +463,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
     msg_buffer.msg_code = DS2_Ti_COMMIT;
     msg_buffer.packet_length = sizeof(msg_buffer);
 
-    for(int i = 0; i < 0; i++){ //send gt_i - size 64 byte
+    for(int i = 0; i < 1; i++){ //send gt_i - size 64 byte
     	msg_buffer.data_offset = i * MAX_DATA_LEN;
 
     	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));

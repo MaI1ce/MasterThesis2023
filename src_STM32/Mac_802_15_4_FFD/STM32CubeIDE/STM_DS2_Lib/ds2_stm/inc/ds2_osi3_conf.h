@@ -2,7 +2,7 @@
 #define DS2_OSI3_CONF_H
 
 #define MAX_DATA_LEN 16
-#define DS2_MAX_PARTY_NUM 2
+#define DS2_MAX_PARTY_NUM 1
 
 #define CENTRAL_NODE_ID 0x0
 

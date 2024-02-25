@@ -51,11 +51,26 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void);
 static void APP_FFD_MAC_802_15_4_DS2_Abort(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
-static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
-DS2_packet msg_buffer = {0};
+void APP_FFD_MAC_802_15_4_SendEcho(void);
 
-static uint8_t active_parties[DS2_MAX_PARTY_NUM] = {0};
+static uint8_t xorSign( const char * pmessage, uint8_t message_len);
+
+
+
+static uint8_t active_parties[DS2_MAX_PARTY_NUM+1] = {0};
+static DS2_packet msg_buffer = {0};
+
+static uint16_t     g_panId             = 0x1AAA;
+static uint16_t     g_coordShortAddr    = 0x1122;
+static uint8_t      g_dataHandle        = 0x02;
+static long long    g_extAddr           = 0xACDE480000000001;
+static uint8_t      g_channel           = DEMO_CHANNEL;
+static uint8_t      g_channel_page      = 0x00;
+
+static uint8_t rfBuffer[256];
 //////////////////////////////////////////////////////////////////////////////
 
 MAC_callbacks_t macCbConfig ;
@@ -93,12 +108,15 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DATA_COORD, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_CoordDataTask);
 
-  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
+
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DATA_ECHO, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_SendEcho);
+
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_NEW_CONNECTION, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_NewConnection);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_1, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
-
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_FINAL, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Final);
   /* Configuration MAC 802_15_4 */
   APP_FFD_MAC_802_15_4_Config();
 
@@ -111,7 +129,6 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
 void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
 {
-	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_CoordSrvTask");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_associateRes_t AssociateRes;
@@ -143,7 +160,6 @@ void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
 
 void APP_FFD_MAC_802_15_4_CoordDataTask(void)
 {
-	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_CoordDataTask");
   APP_DBG("Data task :");
   switch (g_srvDataReq)
   {
@@ -156,20 +172,19 @@ void APP_FFD_MAC_802_15_4_CoordDataTask(void)
   g_srvDataReq = CFG_SRV_DATA_REQ_NBR;
 }
 
-
 void APP_FFD_MAC_802_15_4_SetupTask(void)
 {
-	APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_SetupTask");
+	//APP_DBG("FFD MAC - APP_FFD_MAC_802_15_4_SetupTask");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_resetReq_t    ResetReq;
   MAC_setReq_t      SetReq;
   MAC_startReq_t    StartReq;
 
-  long long extAddr = 0xACDE480000000001;
-  uint16_t shortAddr   = 0x1122;
-  uint16_t panId       = 0x1AAA;
-  uint8_t channel      = DEMO_CHANNEL;
+  long long extAddr    = g_extAddr;
+  uint16_t shortAddr   = g_coordShortAddr;
+  uint16_t panId       = g_panId;
+  uint8_t channel      = g_channel;
   uint8_t PIB_Value = 0x00;
   
   int8_t tx_power_pib_value = 0;
@@ -315,25 +330,25 @@ void APP_FFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode)
 }
 
 
-void APP_FFD_MAC_802_15_4_SendData(DS2_packet * data) //TODO
+void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_packet* data)
 {
-	APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
   MAC_Status_t MacStatus = MAC_ERROR;
 
   BSP_LED_On(LED3);
   MAC_dataReq_t DataReq;
-  APP_DBG("RFD MAC APP - Send Data to Coordinator\0");
+  //APP_DBG("RFD MAC APP - Send Data to Coordinator\0");
   DataReq.src_addr_mode = g_SHORT_ADDR_MODE_c;
   DataReq.dst_addr_mode = g_SHORT_ADDR_MODE_c;
 
   memcpy(DataReq.a_dst_PAN_id,&g_panId,0x02);
-  memcpy(DataReq.dst_address.a_short_addr,&g_coordShortAddr,0x02);
+  memcpy(DataReq.dst_address.a_short_addr,(uint8_t*)&dst_addr,0x02);
 
+  uint8_t data_len = data->packet_length;
   DataReq.msdu_handle = g_dataHandle++;
-  DataReq.ack_Tx =0x00;
+  DataReq.ack_Tx = TRUE;
   DataReq.GTS_Tx = FALSE;
-  memcpy(&rfBuffer,data,data_len);
-  rfBuffer[data_len] = xorSign(data,data_len);
+  memcpy(&rfBuffer,(uint8_t*)data,data_len);
+  rfBuffer[data_len] = xorSign((uint8_t*)data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
   DataReq.msdu_length = data_len;
   DataReq.security_level = 0x00;
@@ -344,7 +359,44 @@ void APP_FFD_MAC_802_15_4_SendData(DS2_packet * data) //TODO
   }
   UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
   BSP_LED_Off(LED3);
-  APP_DBG("RFD MAC APP - DATA CNF Received\0");
+  //APP_DBG("RFD MAC APP - DATA CNF Received\0");
+}
+
+void APP_FFD_MAC_802_15_4_SendEcho(void)
+{
+	char data[] = "COORDINATOR ECHO\0";
+
+	  MAC_Status_t MacStatus = MAC_ERROR;
+
+	  uint16_t g_panId = 0x1AAA;
+	  uint16_t g_dst_addr = 0xFFFF;
+	  static uint16_t g_dataHandle = 0x03;
+
+	  BSP_LED_On(LED3);
+	  MAC_dataReq_t DataReq;
+	  //APP_DBG("FFD MAC APP - Send Data to NODE\0");
+	  DataReq.src_addr_mode = g_SHORT_ADDR_MODE_c;
+	  DataReq.dst_addr_mode = g_SHORT_ADDR_MODE_c;
+
+	  memcpy(DataReq.a_dst_PAN_id,&g_panId,0x02);
+	  memcpy(DataReq.dst_address.a_short_addr,&g_dst_addr,0x02);
+
+	  DataReq.msdu_handle = g_dataHandle++;
+	  DataReq.ack_Tx = TRUE;
+	  DataReq.GTS_Tx = FALSE;
+	  memcpy(&rfBuffer,data,strlen(data));
+	  rfBuffer[strlen(data)] = xorSign(data,strlen(data));
+	  DataReq.msduPtr = (uint8_t*) rfBuffer;
+	  DataReq.msdu_length = strlen(data)+1;
+	  DataReq.security_level = 0x00;
+	  MacStatus = MAC_MCPSDataReq( &DataReq );
+	  if ( MAC_SUCCESS != MacStatus ) {
+	    APP_DBG("FFD MAC - Data Req Fails\0");
+	    return;
+	  }
+	  UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
+	  BSP_LED_Off(LED3);
+	  //APP_DBG("FFD MAC APP - DATA CNF Received\0");
 }
 
 /*************************************************************
@@ -436,36 +488,135 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 
 static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 {
+	APP_DBG("DS2 ABORT");
 
+    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+    msg_buffer.dst_node_id = 0xff;
+    msg_buffer.msg_code = DS2_ABORT;
+    msg_buffer.packet_length = 4;
+
+    for(int i = 0; i < 1; i++){
+    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    }
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
+	APP_DBG("DS2 - KYEGEN STAGE 1");
+
+	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+
+    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+    msg_buffer.dst_node_id = 0xff;
+    msg_buffer.msg_code = DS2_Pi_COMMIT_ACK;
+    msg_buffer.packet_length = 4;
+
+    for(int i = 0; i < 1; i++){
+    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    }
 
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
+	APP_DBG("DS2 - KYEGEN STAGE 2");
 
+	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+
+    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+    msg_buffer.dst_node_id = 0xff;
+    msg_buffer.msg_code = DS2_Pi_VALUE_ACK;
+    msg_buffer.packet_length = sizeof(DS2_packet);
+
+    for(int i = 0; i < 1; i++){
+    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    }
 }
 
-static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 {
+	APP_DBG("DS2 - KYEGEN STAGE 3");
 
+	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+
+    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+    msg_buffer.dst_node_id = 0xff;
+    msg_buffer.msg_code = DS2_Ti_COMMIT_ACK;
+    msg_buffer.packet_length = sizeof(DS2_packet);
+
+    for(int i = 0; i < 1; i++){
+    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    }
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
+{
+	APP_DBG("DS2 - KYEGEN FINAL");
+
+    msg_buffer.src_node_id = CENTRAL_NODE_ID;
+    msg_buffer.dst_node_id = 0xff;
+    msg_buffer.msg_code = DS2_Ti_VALUE_ACK;
+    msg_buffer.packet_length = sizeof(DS2_packet);
+
+    for(int i = 0; i < 1; i++){
+    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    }
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 {
-	uint8_t id = msg_buffer.src_node_id;
-	if(active_parties[id] == 0){
-		active_parties[id] = 1;
-	    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-	    msg_buffer.dst_node_id = id;
-	    msg_buffer.msg_code = DS2_COORDINATOR_HELLO_ACK;
-	    msg_buffer.packet_length = 4;
+	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+	uint16_t dst_addr = 0;
+	memcpy((uint8_t*)&dst_addr, g_DataInd_rx.src_address.a_short_addr, 0x2);
+	uint8_t id = packet_ptr_rx->src_node_id;
 
-	    APP_FFD_MAC_802_15_4_SendData((const char*)&msg_buffer, 4);
+	APP_DBG("DS2 received COORDINATOR HELLO - ADDR:%d ID:%d", dst_addr, id);
+	msg_buffer.src_node_id = CENTRAL_NODE_ID;
+	msg_buffer.dst_node_id = id;
+	msg_buffer.packet_length = 4;
+
+	if(id >= DS2_MAX_PARTY_NUM){
+		msg_buffer.msg_code = DS2_ERROR_INVALID_NODE_ID;
 	}
+	else {
+		if(active_parties[id] == 0){
+			active_parties[id] = 1;
+			msg_buffer.msg_code = DS2_COORDINATOR_HELLO_ACK;
+		}
+		else {
+			msg_buffer.msg_code = DS2_ERROR_NODE_ID_ALREADY_IN_USE;
+		}
+	}
+
+	APP_FFD_MAC_802_15_4_SendData(dst_addr, &msg_buffer);
+/*
+	if(msg_buffer.msg_code > DS2_ABORT)
+	{
+		MAC_disassociateReq_t DisAssocReq = {0};
+		MAC_Status_t MacStatus = MAC_ERROR;
+
+		APP_DBG("RFD MAC APP - DISASSOCIATING ...");
+		DisAssocReq.device_addr_mode = g_SHORT_ADDR_MODE_c;
+		memcpy(DisAssocReq.a_device_PAN_id,&g_panId,0x02);
+		memcpy(DisAssocReq.device_address.a_short_addr,(uint8_t)&dst_addr,0x02);
+		DisAssocReq.disassociate_reason = msg_buffer.msg_code;
+		DisAssocReq.tx_Indirect =0x00;
+		DisAssocReq.security_level = 0x00;
+		MacStatus = MAC_MLMEDisassociateReq( &DisAssocReq );
+		if ( MAC_SUCCESS != MacStatus ) {
+		    APP_DBG("RFD MAC APP - DISASSOCIATION ERROR");
+		    return;
+		}
+		APP_DBG("RFD MAC APP - DISASSOCIATION ERROR");
+	}*/
+}
+
+static uint8_t xorSign( const char * pmessage, uint8_t message_len)
+{
+  uint8_t seed = 0x00;
+  for (uint8_t i=0x00;i<message_len;i++)
+    seed = (uint8_t)pmessage[i]^seed;
+  return seed;
 }
 
 /**

@@ -239,6 +239,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     case BUTTON_SW1_PIN:
       /* Send Data To Coordinator*/
       //APP_RFD_MAC_802_15_4_SendData("Data From Node\0", 15);
+    	//APP_DBG("INTERRUPT START\n\r");
     	UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_START, CFG_SCH_PRIO_0 );
       break;
     default:

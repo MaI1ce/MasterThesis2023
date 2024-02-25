@@ -1,5 +1,4 @@
 #include "rand.h"
-#include "stm_rng.h"
 
 #include <math.h>
 #include <stdint.h>

@@ -110,7 +110,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
 {
 	  uint32_t rand_num = 0;
 	  HAL_StatusTypeDef status;
-	APP_DBG("RFD MAC APP - APP_ENTRY_Init");
+	//APP_DBG("RFD MAC APP - APP_ENTRY_Init");
   /**
    * The Standby mode should not be entered before the initialization is over
    * The default state of the Low Power Manager is to allow the Standby Mode so an request is needed here
@@ -136,7 +136,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
 
 static void appe_Tl_Init( void )
 {
-	APP_DBG("RFD MAC APP - appe_Tl_Init");
+	//APP_DBG("RFD MAC APP - appe_Tl_Init");
   TL_MM_Config_t tl_mm_config;
   SHCI_TL_HciInitConf_t SHci_Tl_Init_Conf;
 
@@ -183,7 +183,7 @@ static void APPE_StatusNot( SHCI_TL_CmdStatus_t status )
 
 void APP_ENTRY_Init_RFD(void)
 {
-	APP_DBG("RFD MAC APP - APP_ENTRY_Init_RFD");
+	//APP_DBG("RFD MAC APP - APP_ENTRY_Init_RFD");
 }
 
 /**
@@ -198,7 +198,7 @@ void APP_ENTRY_Init_RFD(void)
 static void APPE_UserEvtRx( void * pPayload )
 {
   /* Traces channel initialization */
-	APP_DBG("RFD MAC APP - APPE_UserEvtRx");
+	//APP_DBG("RFD MAC APP - APPE_UserEvtRx");
   TL_TRACES_Init( );
 
   APP_RFD_MAC_802_15_4_Init(APP_MAC_802_15_4_FULL, &Mac_802_15_4_CmdBuffer);
@@ -210,7 +210,7 @@ static void APPE_UserEvtRx( void * pPayload )
 
 void APP_ENTRY_TL_MAC_802_15_4_Init(void)
 {
-	APP_DBG("RFD MAC APP - APP_ENTRY_TL_MAC_802_15_4_Init");
+	//APP_DBG("RFD MAC APP - APP_ENTRY_TL_MAC_802_15_4_Init");
   Mac_802_15_4_ConfigBuffer.p_Mac_802_15_4_CmdRspBuffer = (uint8_t*)&Mac_802_15_4_CmdBuffer;
   Mac_802_15_4_ConfigBuffer.p_Mac_802_15_4_NotAckBuffer = (uint8_t*)Mac_802_15_4_NotifRspEvtBuffer;
   TL_MAC_802_15_4_Init( &Mac_802_15_4_ConfigBuffer );
@@ -224,7 +224,7 @@ void APP_ENTRY_TL_MAC_802_15_4_Init(void)
  */
 void APP_ENTRY_ProcessMsgFromRFCoreTask(void)
 {
-	APP_DBG("RFD MAC APP - APP_ENTRY_ProcessMsgFromRFCoreTask");
+	//APP_DBG("RFD MAC APP - APP_ENTRY_ProcessMsgFromRFCoreTask");
   if (pendingMsgFromRFCore != 0U)
   {
       pendingMsgFromRFCore = 0U;
@@ -235,7 +235,7 @@ void APP_ENTRY_ProcessMsgFromRFCoreTask(void)
 /* Received trace buffer from M0 */
 void TL_TRACES_EvtReceived( TL_EvtPacket_t * hcievt )
 {
-	APP_DBG("RFD MAC APP - TL_TRACES_EvtReceived");
+	//APP_DBG("RFD MAC APP - TL_TRACES_EvtReceived");
 #if(CFG_DEBUG_TRACE != 0)
   /* Call write/print function using DMA from dbg_trace */
   /* - Cast to TL_AsynchEvt_t* to get "real" payload (without Sub Evt code 2bytes),
@@ -474,7 +474,7 @@ static void RxCpltCallback(void)
 
 static void UartCmdExecute(void)
 {
-	APP_DBG("RFD MAC APP - UartCmdExecute");
+	//APP_DBG("RFD MAC APP - UartCmdExecute");
   /* Parse received CommandString */
   if(strcmp((char const*)CommandString, "SW1") == 0)
   {

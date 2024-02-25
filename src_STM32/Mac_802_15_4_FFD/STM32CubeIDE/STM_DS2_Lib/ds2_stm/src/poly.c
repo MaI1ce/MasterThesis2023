@@ -16,8 +16,6 @@
 #include "rand.h"
 #include "reduce.h"
 
-#include "stm_rng.h"
-
 
 //#include "elapsed_time.h"
 #ifndef ELAPSED_TIME_H_
