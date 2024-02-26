@@ -36,8 +36,6 @@
 
 #define DEMO_CHANNEL 20
 
-#define DS2_ID 0x1
-
 #define DATA_FROM_NODE "DATA FROM NODE\0"
 #define DATA "HELLO COORDINATOR\0"
 
@@ -59,7 +57,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
 
-DS2_packet msg_buffer = {0};
+DS2_Packet g_msg_buffer = {0};
 ////////////////////////////////////////////////////////////////////////
 static uint8_t rfBuffer[256];
 
@@ -229,12 +227,12 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
     BSP_LED_On(LED2);
 
-    msg_buffer.src_node_id = DS2_ID;
-    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
-    msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
-    msg_buffer.packet_length = 4;
+    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
+    g_msg_buffer.packet_length = 4;
 
-    APP_RFD_MAC_802_15_4_SendData((const char*)&msg_buffer, 4);
+    APP_RFD_MAC_802_15_4_SendData((const char*)&g_msg_buffer, 4);
 }
 
 void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
@@ -415,80 +413,83 @@ uint8_t xorSign( const char * pmessage, uint8_t message_len)
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 {
 	APP_DBG("DS2 - KYEGEN START");
-	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+	memset((char*)&g_msg_buffer, 1, sizeof(g_msg_buffer));
 
-    msg_buffer.src_node_id = DS2_NODE_ID;
-    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
-    msg_buffer.msg_code = DS2_Pi_COMMIT;
-    msg_buffer.packet_length = sizeof(msg_buffer);
+    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.msg_code = DS2_Pi_COMMIT;
+    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_COMMIT_SIZE; //send g_i - size 64 byte
+    g_msg_buffer.data_offset = 0;
 
-    for(int i = 0; i < 1; i++){ //send g_i - size 64 byte
-    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+    memset((char*)&g_msg_buffer.data, 1, DS2_Pi_COMMIT_SIZE);
 
-    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
-
-    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
-    }
-
+    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
 	APP_DBG("DS2 - KYEGEN STAGE 1");
-	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 
-    msg_buffer.src_node_id = DS2_NODE_ID;
-    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
-    msg_buffer.msg_code = DS2_Pi_VALUE;
-    msg_buffer.packet_length = sizeof(msg_buffer);
+    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.msg_code = DS2_Pi_VALUE;
+    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_VALUE_SIZE;
 
-    for(int i = 0; i < 1; i++){ //send rho_i - size 16 byte
-    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+    memset((char*)&g_msg_buffer.data, 2, DS2_Pi_VALUE_SIZE);
+    g_msg_buffer.data_offset = 0;
 
-    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
-
-    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
-    }
+    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
 	APP_DBG("DS2 - KYEGEN STAGE 2");
-	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 
-    msg_buffer.src_node_id = DS2_NODE_ID;
-    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
-    msg_buffer.msg_code = DS2_Ti_COMMIT;
-    msg_buffer.packet_length = sizeof(msg_buffer);
+    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.msg_code = DS2_Ti_COMMIT;
+    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Ti_COMMIT_SIZE;
 
-    for(int i = 0; i < 1; i++){ //send gt_i - size 64 byte
-    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+    memset((char*)&g_msg_buffer.data, 3, DS2_Ti_COMMIT_SIZE);
+    g_msg_buffer.data_offset = 0;
 
-    	memset((char*)&msg_buffer.data, i, sizeof(msg_buffer.data));
-
-    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
-    }
+    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 {
 	APP_DBG("DS2 - KYEGEN STAGE 3");
-	memset((char*)&msg_buffer, 0, sizeof(msg_buffer));
+	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+	int i = 0;
 
-    msg_buffer.src_node_id = DS2_NODE_ID;
-    msg_buffer.dst_node_id = CENTRAL_NODE_ID;
-    msg_buffer.msg_code = DS2_Ti_VALUE;
-    msg_buffer.packet_length = sizeof(msg_buffer);
+    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.msg_code = DS2_Ti_VALUE;
+    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+    g_msg_buffer.data_offset = 0;
+    uint8_t packet_num = DS2_Ti_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
+    uint8_t last_data_len = DS2_Ti_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
 
-    for(int i = 0; i < 6; i++){ //send t_i - size 352 byte
-    	msg_buffer.data_offset = i * MAX_DATA_LEN;
+    for(i = 0; i < packet_num; i++){
+    	g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
 
-    	memset((char*)&msg_buffer.data[0], i, sizeof(msg_buffer.data));
+    	memset((char*)g_msg_buffer.data, i, (DS2_MAX_DATA_LEN * 4));
 
-    	APP_RFD_MAC_802_15_4_SendData((char*)&msg_buffer, sizeof(msg_buffer));
+    	APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    }
+
+    if(last_data_len > 0){
+    	g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+
+    	memset((char*)g_msg_buffer.data, i, last_data_len);
+
+    	APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
     }
 }
 
@@ -501,7 +502,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 static void APP_RFD_MAC_802_15_4_DS2_Abort(void)
 {
 	APP_DBG("DS2 DATA ERROR - JOB ABORTED");
-	APP_DBG("DS2 ERROR CODE : %d", msg_buffer.msg_code);
+	APP_DBG("DS2 ERROR CODE : %d", g_msg_buffer.msg_code);
 
 }
 

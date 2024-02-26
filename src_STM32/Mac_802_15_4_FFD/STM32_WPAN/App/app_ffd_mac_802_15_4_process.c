@@ -192,11 +192,9 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
 
   memcpy(&g_DataInd_rx,pDataInd,sizeof(MAC_dataInd_t));
-  DS2_packet *packet_ptr = (DS2_packet *)pDataInd->msduPtr;
+  DS2_Packet *packet_ptr = (DS2_Packet *)pDataInd->msduPtr;
   // Check validity of the received Message extracting associated 
   // simple xor signature
-  //APP_DBG("RECEIVED DATA - %s", pDataInd->msduPtr);
-  //UTIL_SEQ_SetTask( 1<< CFG_TASK_DATA_ECHO, CFG_SCH_PRIO_0 );
   if (!checkMsgXorSignature((char const *)(pDataInd->msduPtr),
                            pDataInd->msdu_length-1,
                            pDataInd->msduPtr[pDataInd->msdu_length-1],
@@ -212,7 +210,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 				APP_DBG("DS2 DATA ERROR - MSG IS TOO SHORT");
 			}
 			else {
-				if((packet_ptr->dst_node_id == 0xff)||(packet_ptr->dst_node_id == CENTRAL_NODE_ID)){
+				if((packet_ptr->dst_node_id == DS2_BROADCAST_ID)||(packet_ptr->dst_node_id == DS2_COORDINATOR_ID)){
 					switch(packet_ptr->msg_code){
 					case DS2_COORDINATOR_HELLO:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_NEW_CONNECTION, CFG_SCH_PRIO_0 );
@@ -236,11 +234,14 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 					case DS2_Ri_VALUE:
 						break;
 
-					case DS2_Zi_VALUE:
+					case DS2_Zi_1_VALUE:
+						break;
+
+					case DS2_Zi_2_VALUE:
 						break;
 
 					default :
-						APP_DBG("DS2 DATA ERROR - JOB ABORTED");
+						//APP_DBG("DS2 DATA ERROR - JOB ABORTED");
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_ABORT, CFG_SCH_PRIO_0 );
 						break;
 					}

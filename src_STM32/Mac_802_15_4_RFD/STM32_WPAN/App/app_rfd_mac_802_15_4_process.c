@@ -58,7 +58,7 @@
 /* Public variables ----------------------------------------------------------*/
 
 extern MAC_associateCnf_t g_MAC_associateCnf;
-
+MAC_dataInd_t      g_DataInd_rx;
 /*
 * Init
 */
@@ -175,8 +175,8 @@ MAC_Status_t APP_MAC_mlmeStartCnfCb( const  MAC_startCnf_t * pStartCnf )
 
 MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
-	DS2_packet *packet_ptr = (DS2_packet*)pDataInd->msduPtr;
-    //APP_DBG("COORD : RECEIVE DATA : %s ", (char const *) pDataInd->msduPtr);
+	  memcpy(&g_DataInd_rx,pDataInd,sizeof(MAC_dataInd_t));
+	  DS2_Packet *packet_ptr = (DS2_Packet *)pDataInd->msduPtr;
 	if (packet_ptr != NULL){
 		if(packet_ptr->packet_length < 4){
 			APP_DBG("DS2 DATA ERROR - MSG IS TOO SHORT");
@@ -187,20 +187,19 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 				case DS2_COORDINATOR_HELLO_ACK:
 					APP_DBG("DS2 COORDINATOR CONNECTION - OK");
 					break;
+				case DS2_COORDINATOR_READY_RESET:
+					APP_DBG("DS2 - COORDINATOR READY");
+					break;
 				case DS2_Pi_COMMIT_ACK:
-					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Pi_VALUE_ACK :
-					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_2, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Ti_COMMIT_ACK :
-					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_3, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Ti_VALUE_ACK :
-					memcpy((char*)&msg_buffer, (char*)packet_ptr, packet_ptr->packet_length);
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
 					break;
 
@@ -210,11 +209,13 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 				case DS2_Ri_VALUE_ACK:
 					break;
 
-				case DS2_Zi_VALUE_ACK:
+				case DS2_Zi_1_VALUE_ACK:
+					break;
+
+				case DS2_Zi_2_VALUE_ACK:
 					break;
 
 				default :
-					APP_DBG("DS2 DATA ERROR - JOB ABORTED");
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_ABORT, CFG_SCH_PRIO_0 );
 					break;
 				}

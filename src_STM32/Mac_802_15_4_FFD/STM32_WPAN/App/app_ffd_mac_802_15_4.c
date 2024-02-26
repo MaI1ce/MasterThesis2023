@@ -60,8 +60,13 @@ static uint8_t xorSign( const char * pmessage, uint8_t message_len);
 
 
 
-static uint8_t active_parties[DS2_MAX_PARTY_NUM+1] = {0};
-static DS2_packet msg_buffer = {0};
+static DS2_Party 	g_Parties[DS2_MAX_PARTY_NUM] = {0};
+static uint16_t 	g_packet_cnt[DS2_MAX_PARTY_NUM] = {0};
+static DS2_Packet 	g_msg_buffer = {0};
+
+static uint8_t 		g_rho[SEED_BYTES] = {0xAA};
+
+static uint8_t	 	g_AppState = DS2_IDLE;
 
 static uint16_t     g_panId             = 0x1AAA;
 static uint16_t     g_coordShortAddr    = 0x1122;
@@ -330,7 +335,7 @@ void APP_FFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode)
 }
 
 
-void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_packet* data)
+void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
 {
   MAC_Status_t MacStatus = MAC_ERROR;
 
@@ -348,7 +353,7 @@ void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_packet* data)
   DataReq.ack_Tx = TRUE;
   DataReq.GTS_Tx = FALSE;
   memcpy(&rfBuffer,(uint8_t*)data,data_len);
-  rfBuffer[data_len] = xorSign((uint8_t*)data,data_len);
+  rfBuffer[data_len] = xorSign((char*)data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
   DataReq.msdu_length = data_len;
   DataReq.security_level = 0x00;
@@ -490,112 +495,242 @@ static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 {
 	APP_DBG("DS2 ABORT");
 
-    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-    msg_buffer.dst_node_id = 0xff;
-    msg_buffer.msg_code = DS2_ABORT;
-    msg_buffer.packet_length = 4;
+	memset(g_Parties, 0, sizeof(g_Parties));
+	memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+
+	g_AppState = DS2_IDLE;
+
+    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+    g_msg_buffer.msg_code = DS2_ABORT;
+    g_msg_buffer.packet_length = 4;
 
     for(int i = 0; i < 1; i++){
-    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
+    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
     }
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 1");
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
 
-	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+	switch(g_AppState){
+	case DS2_READY:
+		APP_DBG("DS2 - KYEGEN STAGE 1");
+		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
+		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+	case DS2_KEYGEN_STAGE_1_IDLE:
 
-    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-    msg_buffer.dst_node_id = 0xff;
-    msg_buffer.msg_code = DS2_Pi_COMMIT_ACK;
-    msg_buffer.packet_length = 4;
+		memcpy(g_Parties[src_id].pi_commit, (uint8_t*)packet_ptr->data, DS2_Pi_COMMIT_SIZE);
+		g_Parties[src_id].status |= DS2_Pi_COMMIT_FLAG;
 
-    for(int i = 0; i < 1; i++){
-    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
-    }
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Pi_COMMIT_FLAG);
+		}
 
+		if(ready_flag)
+		{
+		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		    g_msg_buffer.dst_node_id = 0xff;
+		    g_msg_buffer.msg_code = DS2_Pi_COMMIT_ACK;
+		    g_msg_buffer.packet_length = 4;
+
+		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		    g_AppState = DS2_KEYGEN_STAGE_1_END;
+		}
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FORM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 2");
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
 
-	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_1_END:
+		APP_DBG("DS2 - KYEGEN STAGE 2");
+		g_AppState = DS2_KEYGEN_STAGE_2_IDLE;
+		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+	case DS2_KEYGEN_STAGE_2_IDLE:
 
-    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-    msg_buffer.dst_node_id = 0xff;
-    msg_buffer.msg_code = DS2_Pi_VALUE_ACK;
-    msg_buffer.packet_length = sizeof(DS2_packet);
+		memcpy(g_Parties[src_id].pi_val, (uint8_t*)packet_ptr->data, DS2_Pi_VALUE_SIZE);
+		g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
 
-    for(int i = 0; i < 1; i++){
-    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
-    }
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Pi_VALUE_FLAG);
+		}
+
+		if(ready_flag)
+		{
+			//rho = H(rho_i)
+
+		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		    g_msg_buffer.dst_node_id = 0xff;
+		    g_msg_buffer.msg_code = DS2_Pi_VALUE_ACK;
+		    g_msg_buffer.packet_length = DS2_HEADER_LEN + SEED_BYTES;
+		    g_msg_buffer.data_offset = 0;
+		    memcpy(g_msg_buffer.data, g_rho, SEED_BYTES);
+
+		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		    g_AppState = DS2_KEYGEN_STAGE_2_END;
+		}
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 2 TASK TRIGGERED FORM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 3");
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
 
-	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_2_END:
+		APP_DBG("DS2 - KYEGEN STAGE 3");
+		g_AppState = DS2_KEYGEN_STAGE_3_IDLE;
+		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+	case DS2_KEYGEN_STAGE_3_IDLE:
 
-    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-    msg_buffer.dst_node_id = 0xff;
-    msg_buffer.msg_code = DS2_Ti_COMMIT_ACK;
-    msg_buffer.packet_length = sizeof(DS2_packet);
+		memcpy(g_Parties[src_id].ti_commit, (uint8_t*)packet_ptr->data, DS2_Ti_COMMIT_SIZE);
+		g_Parties[src_id].status |= DS2_Ti_COMMIT_FLAG ;
 
-    for(int i = 0; i < 1; i++){
-    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
-    }
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Ti_COMMIT_FLAG);
+		}
+
+		if(ready_flag)
+		{
+		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		    g_msg_buffer.dst_node_id = 0xff;
+		    g_msg_buffer.msg_code = DS2_Ti_COMMIT_ACK;
+		    g_msg_buffer.packet_length = 4;
+
+		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		    g_AppState = DS2_KEYGEN_STAGE_3_END;
+		}
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 3 TASK TRIGGERED FORM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 {
-	APP_DBG("DS2 - KYEGEN FINAL");
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
+	uint32_t offset = packet_ptr->data_offset;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
-    msg_buffer.src_node_id = CENTRAL_NODE_ID;
-    msg_buffer.dst_node_id = 0xff;
-    msg_buffer.msg_code = DS2_Ti_VALUE_ACK;
-    msg_buffer.packet_length = sizeof(DS2_packet);
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_3_END:
+		APP_DBG("DS2 - KYEGEN FINAL");
+		g_AppState = DS2_KEYGEN_FINAL_IDLE;
+		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+	case DS2_KEYGEN_FINAL_IDLE:
 
-    for(int i = 0; i < 1; i++){
-    	APP_FFD_MAC_802_15_4_SendData(0XFFFF, &msg_buffer);
-    }
+		g_packet_cnt[src_id]++;
+		memcpy((g_Parties[src_id].ti_val+offset), (uint8_t*)packet_ptr->data, data_size);
+
+		//all packets from node src_id were received
+		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
+			g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
+		}
+
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Pi_VALUE_FLAG);
+		}
+
+		if(ready_flag)
+		{
+			//t1 = sum(ti)
+
+		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		    g_msg_buffer.dst_node_id = 0xff;
+		    g_msg_buffer.msg_code = DS2_Ti_VALUE_ACK;
+		    g_msg_buffer.packet_length = 4;
+		    /*
+		    g_msg_buffer.packet_length = DS2_HEADER_LEN + SEED_BYTES;
+		    g_msg_buffer.data_offset = 0;
+		    memcpy(g_msg_buffer.data, g_rho, SEED_BYTES);
+		    */
+		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		    g_AppState = DS2_KEYGEN_FINAL_END;
+		}
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN FINAL TASK TRIGGERED FORM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 {
-	DS2_packet *packet_ptr_rx = (DS2_packet *)g_DataInd_rx.msduPtr;
+	DS2_Packet *packet_ptr_rx = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint16_t dst_addr = 0;
 	memcpy((uint8_t*)&dst_addr, g_DataInd_rx.src_address.a_short_addr, 0x2);
 	uint8_t id = packet_ptr_rx->src_node_id;
 
-	APP_DBG("DS2 received COORDINATOR HELLO - ADDR:%d ID:%d", dst_addr, id);
-	msg_buffer.src_node_id = CENTRAL_NODE_ID;
-	msg_buffer.dst_node_id = id;
-	msg_buffer.packet_length = 4;
+	APP_DBG("DS2 - COORDINATOR HELLO - NODE ADDR:%d ID:%d", dst_addr, id);
+	g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+	g_msg_buffer.dst_node_id = id;
+	g_msg_buffer.packet_length = 4;
 
 	if(id >= DS2_MAX_PARTY_NUM){
-		msg_buffer.msg_code = DS2_ERROR_INVALID_NODE_ID;
+		g_msg_buffer.msg_code = DS2_ERROR_INVALID_NODE_ID;
 	}
 	else {
-		if(active_parties[id] == 0){
-			active_parties[id] = 1;
-			msg_buffer.msg_code = DS2_COORDINATOR_HELLO_ACK;
+		if(g_Parties[id].status == 0){
+			g_Parties[id].status |= DS2_PARTY_ACTIVE;
+			g_msg_buffer.msg_code = DS2_COORDINATOR_HELLO_ACK;
 		}
 		else {
-			msg_buffer.msg_code = DS2_ERROR_NODE_ID_ALREADY_IN_USE;
+			g_msg_buffer.msg_code = DS2_ERROR_NODE_ID_ALREADY_IN_USE;
 		}
 	}
 
-	APP_FFD_MAC_802_15_4_SendData(dst_addr, &msg_buffer);
+	//send ACK to node
+	APP_FFD_MAC_802_15_4_SendData(dst_addr, &g_msg_buffer);
+
+	// check if all nodes ready
+	uint32_t ready_flag = 0xFFFFFFFF;
+	for(int i = 1; i < sizeof(g_Parties); i++){
+		ready_flag &= (g_Parties[id].status & DS2_PARTY_ACTIVE);
+	}
+
+	if(ready_flag){
+		APP_DBG("DS2 - COORDINATOR READY !");
+		g_AppState = DS2_READY;
+		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+		g_msg_buffer.msg_code = DS2_COORDINATOR_READY_RESET,
+		g_msg_buffer.packet_length = 4;
+		//send READY
+		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+	}
 /*
 	if(msg_buffer.msg_code > DS2_ABORT)
 	{
 		MAC_disassociateReq_t DisAssocReq = {0};
 		MAC_Status_t MacStatus = MAC_ERROR;
 
-		APP_DBG("RFD MAC APP - DISASSOCIATING ...");
+		APP_DBG("DS2 - ERROR: NODE_ID_ALREADY_IN_USE");
+		APP_DBG("FFD MAC APP - DISASSOCIATING ...");
 		DisAssocReq.device_addr_mode = g_SHORT_ADDR_MODE_c;
 		memcpy(DisAssocReq.a_device_PAN_id,&g_panId,0x02);
 		memcpy(DisAssocReq.device_address.a_short_addr,(uint8_t)&dst_addr,0x02);
@@ -604,10 +739,10 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 		DisAssocReq.security_level = 0x00;
 		MacStatus = MAC_MLMEDisassociateReq( &DisAssocReq );
 		if ( MAC_SUCCESS != MacStatus ) {
-		    APP_DBG("RFD MAC APP - DISASSOCIATION ERROR");
+		    APP_DBG("FFD MAC APP - DISASSOCIATION ERROR");
 		    return;
 		}
-		APP_DBG("RFD MAC APP - DISASSOCIATION ERROR");
+		APP_DBG("FFD MAC APP - DISASSOCIATION - OK");
 	}*/
 }
 

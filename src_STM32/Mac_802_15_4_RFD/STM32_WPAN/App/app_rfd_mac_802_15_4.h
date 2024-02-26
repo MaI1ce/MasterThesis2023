@@ -186,9 +186,6 @@ void APP_RFD_parseClientReqResCmd ( const char * CommandString  );
 
 /////////////////////////////////
 
-#define DS2_NODE_ID 0x1
-extern DS2_packet msg_buffer;
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

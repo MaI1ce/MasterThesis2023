@@ -186,7 +186,7 @@ void APP_FFD_postMacInfCnfNot(const char * buf);
 
 void APP_FFD_parseClientReqResCmd ( const char * CommandString  );
 
-void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_packet* data);
+void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data);
 
 #ifdef __cplusplus
 } /* extern "C" */
