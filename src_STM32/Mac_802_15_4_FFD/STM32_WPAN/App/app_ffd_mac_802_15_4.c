@@ -53,6 +53,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void);
+static void APP_FFD_MAC_802_15_4_DS2_Reset(void);
 
 void APP_FFD_MAC_802_15_4_SendEcho(void);
 
@@ -118,6 +119,7 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_NEW_CONNECTION, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_NewConnection);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_RESET, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Reset);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_1, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
@@ -350,16 +352,16 @@ void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
 
   uint8_t data_len = data->packet_length;
   DataReq.msdu_handle = g_dataHandle++;
-  DataReq.ack_Tx = TRUE;
+  DataReq.ack_Tx = FALSE;
   DataReq.GTS_Tx = FALSE;
   memcpy(&rfBuffer,(uint8_t*)data,data_len);
   rfBuffer[data_len] = xorSign((char*)data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
-  DataReq.msdu_length = data_len;
+  DataReq.msdu_length = data_len+1;
   DataReq.security_level = 0x00;
   MacStatus = MAC_MCPSDataReq( &DataReq );
   if ( MAC_SUCCESS != MacStatus ) {
-    APP_DBG("RFD MAC - Data Req Fails\0");
+    APP_DBG("FFD MAC - Data Req Fails\0");
     return;
   }
   UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
@@ -491,14 +493,19 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
  * @{
  */
 
-static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
+static void APP_FFD_MAC_802_15_4_DS2_Reset(void)
 {
-	APP_DBG("DS2 ABORT");
-
 	memset(g_Parties, 0, sizeof(g_Parties));
 	memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
 
 	g_AppState = DS2_IDLE;
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
+{
+	APP_DBG("DS2 ABORT");
+
+	APP_FFD_MAC_802_15_4_DS2_Reset();
 
     g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
     g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
@@ -647,12 +654,12 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 
 		//all packets from node src_id were received
 		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
-			g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
+			g_Parties[src_id].status |= DS2_Ti_VALUE_FLAG ;
 		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
-			ready_flag &= (g_Parties[i].status & DS2_Pi_VALUE_FLAG);
+			ready_flag &= (g_Parties[i].status & DS2_Ti_VALUE_FLAG);
 		}
 
 		if(ready_flag)

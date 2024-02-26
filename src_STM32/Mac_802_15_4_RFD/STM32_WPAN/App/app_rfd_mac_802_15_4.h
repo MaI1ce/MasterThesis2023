@@ -172,7 +172,7 @@ void APP_RFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode);
 
 void APP_RFD_MAC_802_15_4_SetupTask(void);
 
-void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len);
+void APP_RFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data);
 
 void APP_RFD_MAC_802_15_4_NodeSrvTask(void);
 void APP_RFD_MAC_802_15_4_NodeDataTask(void);

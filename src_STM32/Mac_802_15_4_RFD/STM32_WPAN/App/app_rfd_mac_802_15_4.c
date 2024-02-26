@@ -232,15 +232,12 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
     g_msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
     g_msg_buffer.packet_length = 4;
 
-    APP_RFD_MAC_802_15_4_SendData((const char*)&g_msg_buffer, 4);
+    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
 }
 
-void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
+void APP_RFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
 {
-	//APP_DBG("RFD MAC APP - APP_RFD_MAC_802_15_4_SendData");
   MAC_Status_t MacStatus = MAC_ERROR;
-
-  uint16_t broadcast = 0xffff;
 
   BSP_LED_On(LED3);
   MAC_dataReq_t DataReq;
@@ -249,14 +246,14 @@ void APP_RFD_MAC_802_15_4_SendData(const char * data, uint8_t data_len)
   DataReq.dst_addr_mode = g_SHORT_ADDR_MODE_c;
 
   memcpy(DataReq.a_dst_PAN_id,&g_panId,0x02);
-  //memcpy(DataReq.dst_address.a_short_addr,&g_coordShortAddr,0x02);
-  memcpy(DataReq.dst_address.a_short_addr,&broadcast,0x02);
+  memcpy(DataReq.dst_address.a_short_addr,(uint8_t*)&dst_addr,0x02);
 
+  uint8_t data_len = data->packet_length;
   DataReq.msdu_handle = g_dataHandle++;
-  DataReq.ack_Tx = TRUE;
+  DataReq.ack_Tx = FALSE;
   DataReq.GTS_Tx = FALSE;
-  memcpy(&rfBuffer,data,data_len);
-  rfBuffer[data_len] = xorSign(data,data_len);
+  memcpy(&rfBuffer,(uint8_t*)data,data_len);
+  rfBuffer[data_len] = xorSign((char*)data,data_len);
   DataReq.msduPtr = (uint8_t*) rfBuffer;
   DataReq.msdu_length = data_len+1;
   DataReq.security_level = 0x00;
@@ -410,6 +407,17 @@ uint8_t xorSign( const char * pmessage, uint8_t message_len)
  * @{
  */
 
+static void APP_RFD_MAC_802_15_4_DS2_SendKeyGen_Start(void)
+{
+	g_msg_buffer.src_node_id = DS2_NODE_ID;
+	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+	g_msg_buffer.msg_code = DS2_KEYGEN_START;
+	g_msg_buffer.packet_length = 4;
+	APP_RFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+	APP_RFD_MAC_802_15_4_DS2_KeyGen_Start();
+}
+
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 {
 	APP_DBG("DS2 - KYEGEN START");
@@ -423,7 +431,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 
     memset((char*)&g_msg_buffer.data, 1, DS2_Pi_COMMIT_SIZE);
 
-    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
 }
 
 
@@ -440,7 +448,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
     memset((char*)&g_msg_buffer.data, 2, DS2_Pi_VALUE_SIZE);
     g_msg_buffer.data_offset = 0;
 
-    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
 }
 
 
@@ -457,7 +465,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
     memset((char*)&g_msg_buffer.data, 3, DS2_Ti_COMMIT_SIZE);
     g_msg_buffer.data_offset = 0;
 
-    APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
 }
 
 
@@ -480,7 +488,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 
     	memset((char*)g_msg_buffer.data, i, (DS2_MAX_DATA_LEN * 4));
 
-    	APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    	APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
     }
 
     if(last_data_len > 0){
@@ -489,7 +497,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 
     	memset((char*)g_msg_buffer.data, i, last_data_len);
 
-    	APP_RFD_MAC_802_15_4_SendData((char*)&g_msg_buffer, g_msg_buffer.packet_length);
+    	APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
     }
 }
 

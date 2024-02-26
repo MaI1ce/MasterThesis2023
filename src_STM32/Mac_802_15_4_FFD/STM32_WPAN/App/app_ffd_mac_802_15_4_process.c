@@ -212,6 +212,9 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 			else {
 				if((packet_ptr->dst_node_id == DS2_BROADCAST_ID)||(packet_ptr->dst_node_id == DS2_COORDINATOR_ID)){
 					switch(packet_ptr->msg_code){
+					case DS2_KEYGEN_START_TASK:
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET, CFG_SCH_PRIO_0 );
+						break;
 					case DS2_COORDINATOR_HELLO:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_NEW_CONNECTION, CFG_SCH_PRIO_0 );
 						break;
@@ -228,6 +231,9 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
 						break;
 
+					case DS2_SIGN_START_TASK:
+						break;
+
 					case DS2_Fi_COMMIT:
 						break;
 
@@ -238,6 +244,9 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						break;
 
 					case DS2_Zi_2_VALUE:
+						break;
+
+					case DS2_VERIFY_START_TASK:
 						break;
 
 					default :
