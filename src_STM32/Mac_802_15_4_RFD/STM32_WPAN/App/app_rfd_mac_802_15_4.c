@@ -34,6 +34,13 @@
 #include "shci.h"
 #include "stm_logging.h"
 
+////////////////////////////////////
+#include "stm_rng.h"
+#include "commit.h"
+#include "fips202.h"
+#include "poly.h"
+///////////////////////////////////
+
 #define DEMO_CHANNEL 20
 
 #define DATA_FROM_NODE "DATA FROM NODE\0"
@@ -44,11 +51,15 @@
 
 uint8_t xorSign( const char * pmessage, uint8_t message_len);
 
+extern MAC_dataInd_t      g_DataInd_rx;
+
 
 static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode);
 static void APP_RFD_MAC_802_15_4_Config(void);
 
 ////////////////////////////////////////////////////////////////////////
+static void APP_RFD_MAC_802_15_4_DS2_Reset(void);
+
 static void APP_RFD_MAC_802_15_4_DS2_Abort(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void);
@@ -57,9 +68,27 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
 
-DS2_Packet g_msg_buffer = {0};
+
 ////////////////////////////////////////////////////////////////////////
-static uint8_t rfBuffer[256];
+uint8_t	 			g_AppState = DS2_IDLE;
+static uint8_t 		rfBuffer[256];
+static DS2_Packet 	g_msg_buffer = {0};
+//private key
+static uint8_t 		private_seed[SEED_BYTES] = {0};
+static poly_t 		t0[K] = {0};
+static poly_t 		s1[L];
+static poly_t 		s2[K];
+
+static uint8_t		tr[SEED_BYTES] = {0};
+//public key
+static uint8_t 		g_rho[SEED_BYTES] = {0};
+static poly_t		t1[K] = {0};
+static poly_t		t[K] = {0};
+static poly_t		A[K][L] = {0};
+
+static uint8_t 		t1_packed[DS2_Ti_VALUE_SIZE] = {0};
+
+static uint16_t 	g_packet_cnt = 0;
 
 static uint16_t     g_panId             = 0x1AAA;
 static uint16_t     g_coordShortAddr    = 0x1122;
@@ -71,7 +100,7 @@ static uint8_t      g_channel_page      = 0x00;
 MAC_callbacks_t macCbConfig ;
 MAC_associateCnf_t g_MAC_associateCnf;
 
-
+static DS2_Party g_DS2_Data = {0};
 
 __IO ITStatus CertifOutputPeripheralReady = SET;
 
@@ -420,98 +449,266 @@ static void APP_RFD_MAC_802_15_4_DS2_SendKeyGen_Start(void)
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 {
-	APP_DBG("DS2 - KYEGEN START");
-	memset((char*)&g_msg_buffer, 1, sizeof(g_msg_buffer));
+	switch(g_AppState){
+	case DS2_READY:
+		APP_DBG("DS2 - KYEGEN START");
+		APP_RFD_MAC_802_15_4_DS2_Reset();
 
-    g_msg_buffer.src_node_id = DS2_NODE_ID;
-    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
-    g_msg_buffer.msg_code = DS2_Pi_COMMIT;
-    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_COMMIT_SIZE; //send g_i - size 64 byte
-    g_msg_buffer.data_offset = 0;
+		uint32_t* seed_ptr = (uint32_t*)g_DS2_Data.pi_val;
 
-    memset((char*)&g_msg_buffer.data, 1, DS2_Pi_COMMIT_SIZE);
+		//generate pi
+		for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
+		{
+			RNG_GenerateRandomInt(seed_ptr);
+			seed_ptr++;
+		}
+		// generate pi commit
+		h1(g_DS2_Data.pi_val, DS2_NODE_ID, g_DS2_Data.pi_commit);
 
-    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.msg_code = DS2_Pi_COMMIT;
+		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_COMMIT_SIZE; //send g_i - size 64 byte
+		g_msg_buffer.data_offset = 0;
+
+		memcpy((uint8_t*)g_msg_buffer.data, g_DS2_Data.pi_commit, DS2_Pi_COMMIT_SIZE);
+
+		APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 1");
-	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_1_IDLE:
+		APP_DBG("DS2 - KYEGEN STAGE 1");
+		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 
-    g_msg_buffer.src_node_id = DS2_NODE_ID;
-    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
-    g_msg_buffer.msg_code = DS2_Pi_VALUE;
-    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_VALUE_SIZE;
+		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.msg_code = DS2_Pi_VALUE;
+		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_VALUE_SIZE;
 
-    memset((char*)&g_msg_buffer.data, 2, DS2_Pi_VALUE_SIZE);
-    g_msg_buffer.data_offset = 0;
+		memcpy((uint8_t*)g_msg_buffer.data, g_DS2_Data.pi_val, DS2_Pi_VALUE_SIZE);
+		g_msg_buffer.data_offset = 0;
 
-    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		g_AppState = DS2_KEYGEN_STAGE_1_END;
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 2");
-	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_1_END:
+		APP_DBG("DS2 - KYEGEN STAGE 2");
+		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+		DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 
-    g_msg_buffer.src_node_id = DS2_NODE_ID;
-    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
-    g_msg_buffer.msg_code = DS2_Ti_COMMIT;
-    g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Ti_COMMIT_SIZE;
+		//save result rho
+		memcpy(g_rho, (uint8_t*)packet_ptr->data, SEED_BYTES);
 
-    memset((char*)&g_msg_buffer.data, 3, DS2_Ti_COMMIT_SIZE);
-    g_msg_buffer.data_offset = 0;
+		uint8_t x = xorSign((char*)g_rho, sizeof(g_rho));
+		uint32_t* ptr = (uint32_t*)g_rho;
+	    APP_DBG("DS2 - R:%d",x);
+	    APP_DBG("DS2 - R:%d%d%d%d",ptr[0], ptr[1],ptr[2],ptr[3]);
 
-    APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		//generate A
+		poly_uniform(g_rho, K * L, &A[0][0]);
+
+		//generate private seed
+		uint32_t* seed_ptr = private_seed;
+		for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
+		{
+			RNG_GenerateRandomInt(seed_ptr);
+			seed_ptr++;
+		}
+		//generate private key
+		poly_eta(private_seed, 0, L, s1);
+		poly_eta(private_seed, L, K, s2);
+
+		// Compute ti = (A | I) * s_1 + s2
+		poly_ntt(s1, L);
+		poly_product(A, s1, t1);
+		poly_reduce(t1, K);
+		poly_invntt_tomont(t1, K);
+
+		poly_add(t1, s2, K, t1);
+		poly_addq(t1, K);
+		poly_power2round(t1, K, t0);
+
+		poly_pack(T1_BITS, t1, K, g_DS2_Data.ti_val);
+
+		//generate ti commit
+		h2(g_DS2_Data.ti_val, DS2_NODE_ID, g_DS2_Data.ti_commit);
+
+		//send commit ti
+		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.msg_code = DS2_Ti_COMMIT;
+		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Ti_COMMIT_SIZE;
+
+		memcpy((char*)&g_msg_buffer.data, g_DS2_Data.ti_commit, DS2_Ti_COMMIT_SIZE);
+		g_msg_buffer.data_offset = 0;
+
+		APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		g_AppState = DS2_KEYGEN_STAGE_2_END;
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 2 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 {
-	APP_DBG("DS2 - KYEGEN STAGE 3");
-	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
-	int i = 0;
+	switch(g_AppState){
+	case DS2_KEYGEN_STAGE_2_END:
+		APP_DBG("DS2 - KYEGEN STAGE 3");
+		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+		int i = 0;
 
-    g_msg_buffer.src_node_id = DS2_NODE_ID;
-    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
-    g_msg_buffer.msg_code = DS2_Ti_VALUE;
-    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
-    g_msg_buffer.data_offset = 0;
-    uint8_t packet_num = DS2_Ti_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
-    uint8_t last_data_len = DS2_Ti_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
+		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.msg_code = DS2_Ti_VALUE;
+		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+		g_msg_buffer.data_offset = 0;
+		uint8_t packet_num = DS2_Ti_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
+		uint8_t last_data_len = DS2_Ti_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
 
-    for(i = 0; i < packet_num; i++){
-    	g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+		for(i = 0; i < packet_num; i++){
+			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
 
-    	memset((char*)g_msg_buffer.data, i, (DS2_MAX_DATA_LEN * 4));
+			memcpy((char*)g_msg_buffer.data, &g_DS2_Data.ti_val[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
 
-    	APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
-    }
+			APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		}
 
-    if(last_data_len > 0){
-    	g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
-    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+		if(last_data_len > 0){
+			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+			g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
 
-    	memset((char*)g_msg_buffer.data, i, last_data_len);
+			memcpy((char*)g_msg_buffer.data, &g_DS2_Data.ti_val[g_msg_buffer.data_offset], last_data_len);
 
-    	APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
-    }
+			APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+		}
+		g_AppState = DS2_KEYGEN_STAGE_3_END;
+		break;
+	default:
+		APP_DBG("DS2 - ERROR: KYEGEN STAGE 3 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		break;
+	}
 }
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 {
-	APP_DBG("DS2 - KYEGEN FINAL");
+
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint32_t offset = packet_ptr->data_offset;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
+
+	uint8_t x = 0;
+
+	switch(g_AppState){
+		case DS2_KEYGEN_STAGE_3_END:
+			APP_DBG("DS2 - KYEGEN FINAL");
+			g_AppState = DS2_KEYGEN_FINAL_IDLE;
+			g_packet_cnt = 0;
+		case DS2_KEYGEN_FINAL_IDLE:
+
+			g_packet_cnt++;
+			memcpy(&t1_packed[offset], (uint8_t*)packet_ptr->data, data_size);
+			APP_DBG("DS2 - PACKET: %d SIZE: %d OFFSET: %d", g_packet_cnt, data_size, offset);
+
+		    x = xorSign((char*)&t1_packed[offset], data_size);
+		    APP_DBG("DS2 - T:%d",x);
+			//all packets from node src_id were received
+			if(g_packet_cnt*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
+
+				//unpack t1
+				poly_unpack(T1_BITS, t1_packed, K, 0, t);
+
+				//calculate tr
+			    keccak_state_t state;
+			    keccak_init(&state);
+			    shake128_absorb(&state, g_rho, SEED_BYTES);
+			    shake128_absorb(&state, (uint8_t*) t, K * sizeof(poly_t));
+			    shake128_finalize(&state);
+			    shake128_squeeze(&state, SEED_BYTES, tr);
+
+			    x = xorSign(t1_packed, sizeof(t1_packed));
+			    APP_DBG("DS2 - T1:%d",x);
+
+			    x = xorSign((char*)g_rho, sizeof(g_rho));
+			    APP_DBG("DS2 - R:%d",x);
+
+			    uint8_t x = xorSign((char*)tr, sizeof(tr));
+			    APP_DBG("DS2 - TR:%d",x);
+
+			    g_AppState = DS2_READY;
+			}
+			break;
+		default:
+			APP_DBG("DS2 - ERROR: KYEGEN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+			break;
+		}
+
+}
+
+static void APP_RFD_MAC_802_15_4_DS2_Reset(void)
+{
+	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+	memset(t1, 0, sizeof(t1));
+	memset(t0, 0, sizeof(t0));
+	memset(s1, 0, sizeof(s1));
+	memset(s2, 0, sizeof(s2));
+	memset(t, 0, sizeof(t));
+	memset(tr, 0, sizeof(tr));
+	memset(g_rho, 0 , sizeof(g_rho));
+	memset(private_seed, 0 , sizeof(private_seed));
+	memset(A, 0 , sizeof(A));
+	g_packet_cnt = 0;
+	g_AppState = DS2_IDLE;
 
 }
 
 static void APP_RFD_MAC_802_15_4_DS2_Abort(void)
 {
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	APP_DBG("DS2 DATA ERROR - JOB ABORTED");
-	APP_DBG("DS2 ERROR CODE : %d", g_msg_buffer.msg_code);
-
+	switch(packet_ptr->msg_code){
+	case DS2_ABORT:
+		APP_DBG("DS2 ERROR CODE : %d", packet_ptr->msg_code);
+		break;
+	case DS2_ERROR_INVALID_NODE_ID:
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_INVALID_NODE_ID", packet_ptr->msg_code);
+		break;
+	case DS2_ERROR_NODE_ID_ALREADY_IN_USE:
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_NODE_ID_ALREADY_IN_USE", packet_ptr->msg_code);
+		break;
+	case DS2_ERROR_Ti_COMMIT:
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_Ti_COMMIT", packet_ptr->msg_code);
+		break;
+	case DS2_ERROR_Pi_COMMIT:
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_Pi_COMMIT", packet_ptr->msg_code);
+		break;
+	case DS2_ERROR_Fi_COMMIT:
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_Fi_COMMIT", packet_ptr->msg_code);
+		break;
+	}
+	APP_RFD_MAC_802_15_4_DS2_Reset();
 }
 
 /**

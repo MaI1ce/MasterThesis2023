@@ -56,7 +56,7 @@
 /* Private function prototypes -----------------------------------------------*/
 
 /* Public variables ----------------------------------------------------------*/
-
+extern uint8_t	 	g_AppState;
 extern MAC_associateCnf_t g_MAC_associateCnf;
 MAC_dataInd_t      g_DataInd_rx;
 /*
@@ -192,6 +192,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 					break;
 				case DS2_COORDINATOR_READY_RESET:
 					APP_DBG("DS2 - COORDINATOR READY");
+					g_AppState = DS2_READY;
 					break;
 				case DS2_Pi_COMMIT_ACK:
 					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
