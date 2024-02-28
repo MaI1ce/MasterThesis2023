@@ -41,6 +41,7 @@
 #include "stm_logging.h"
 
 #include "stm_rng.h"
+#include "elapsed_time.h"
 
 #define HOST_SYS_EVTCODE                (0xFFU)
 #define HOST_SYS_SUBEVTCODE_BASE        (0x9200U)
@@ -108,8 +109,6 @@ static void APPE_UserEvtRx(void * pPayload);
 
 void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
 {
-	  uint32_t rand_num = 0;
-	  HAL_StatusTypeDef status;
 	//APP_DBG("RFD MAC APP - APP_ENTRY_Init");
   /**
    * The Standby mode should not be entered before the initialization is over
@@ -120,10 +119,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
   HW_UART_Init(CFG_CLI_UART);
   RxUART_Init();
   appe_Tl_Init(); /* Initialize all transport layers */
-
-
-  status = RNG_GenerateRandomInt(&rand_num);
-  APP_DBG("status %ld - error code %ld - val %ld\n\r",status, hrng.ErrorCode, rand_num);
+  elapsed_time_init();
   BSP_LED_On(LED4);
   /**
    * From now, the application is waiting for the ready event ( VS_HCI_C2_Ready )

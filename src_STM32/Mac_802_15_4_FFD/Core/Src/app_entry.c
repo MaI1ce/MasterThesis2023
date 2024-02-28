@@ -38,6 +38,7 @@
 #include "dbg_trace.h"
 
 #include "stm_logging.h"
+#include "elapsed_time.h"
 
 #define HOST_SYS_EVTCODE                (0xFFU)
 #define HOST_SYS_SUBEVTCODE_BASE        (0x9200U)
@@ -105,6 +106,7 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
   Led_Init();
   appe_Tl_Init(); /* Initialize all transport layers */
   MX_USB_Device_Init();
+  elapsed_time_init();
   /**
    * From now, the application is waiting for the ready event ( VS_HCI_C2_Ready )
    * received on the system channel before starting the BLE Stack

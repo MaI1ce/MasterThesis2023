@@ -37,11 +37,18 @@
 #include "commit.h"
 #include "fips202.h"
 #include "poly.h"
+#include "elapsed_time.h"
 ////////////////////////////////////////
 
 
-#define DEMO_CHANNEL 20
+#define DEMO_CHANNEL 			20
 
+#define TIMER_KEYGEN_START 		0
+#define TIMER_KEYGEN_STAGE_1 	1
+#define TIMER_KEYGEN_STAGE_2 	2
+#define TIMER_KEYGEN_STAGE_3 	3
+#define TIMER_KEYGEN_FINAL		4
+#define TIMER_KEYGEN_TOTAL		5
 
 MAC_associateInd_t g_MAC_associateInd;
 
@@ -558,9 +565,11 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 
 	switch(g_AppState){
 	case DS2_READY:
-		APP_DBG("DS2 - KYEGEN STAGE 1");
 		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+		APP_DBG("DS2 - KYEGEN STAGE 1");
+		elapsed_time_start(TIMER_KEYGEN_TOTAL);
+		elapsed_time_start(TIMER_KEYGEN_STAGE_1);
 	case DS2_KEYGEN_STAGE_1_IDLE:
 
 		memcpy(g_Parties[src_id].pi_commit, (uint8_t*)packet_ptr->data, DS2_Pi_COMMIT_SIZE);
@@ -598,7 +607,10 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_1_END:
+		elapsed_time_stop(TIMER_KEYGEN_STAGE_1);
+		APP_DBG("DS2 TIMER - KYEGEN STAGE 1 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_1));
 		APP_DBG("DS2 - KYEGEN STAGE 2");
+		elapsed_time_start(TIMER_KEYGEN_STAGE_2);
 		g_AppState = DS2_KEYGEN_STAGE_2_IDLE;
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
 	case DS2_KEYGEN_STAGE_2_IDLE:
@@ -625,13 +637,19 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		{
 			uint32_t* ptr;
 			//rho = H(pi) ????????????????
-			keccak_state_t state;
-			keccak_init(&state);
+			//keccak_state_t state;
+			//keccak_init(&state);
+			//for(int i = 0; i < DS2_MAX_PARTY_NUM; i++)
+			//{
+				//shake128_absorb(&state, g_Parties[0].pi_val, SEED_BYTES);
+			//}
+			//shake128_squeeze(&state, SEED_BYTES, rho);
+
 			for(int i = 0; i < DS2_MAX_PARTY_NUM; i++)
 			{
-				shake256_absorb(&state, g_Parties[i].pi_val, DS2_Pi_VALUE_SIZE);
+				for(int j = 0; j < SEED_BYTES; j++)
+					g_rho[j] += g_Parties[i].pi_val[j];
 			}
-			shake256_squeeze(&state, SEED_BYTES, g_rho);
 
 			//send rho
 		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
@@ -641,11 +659,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		    g_msg_buffer.data_offset = 0;
 
 		    memcpy(g_msg_buffer.data, g_rho, SEED_BYTES);
-
-		    uint8_t x = xorSign((char*)g_rho, sizeof(g_rho));
-		    ptr = (uint32_t*)g_rho;
-		    APP_DBG("DS2 - R:%d",x);
-		    APP_DBG("DS2 - R:%d%d%d%d",ptr[0], ptr[1],ptr[2],ptr[3]);
 
 		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
@@ -665,9 +678,13 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_2_END:
-		APP_DBG("DS2 - KYEGEN STAGE 3");
 		g_AppState = DS2_KEYGEN_STAGE_3_IDLE;
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+
+		elapsed_time_stop(TIMER_KEYGEN_STAGE_2);
+		APP_DBG("DS2 TIMER - KYEGEN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_2));
+		APP_DBG("DS2 - KYEGEN STAGE 3");
+		elapsed_time_start(TIMER_KEYGEN_STAGE_3);
 	case DS2_KEYGEN_STAGE_3_IDLE:
 
 		memcpy(g_Parties[src_id].ti_commit, (uint8_t*)packet_ptr->data, DS2_Ti_COMMIT_SIZE);
@@ -708,13 +725,15 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 
 	uint8_t temp_commit[DS2_Ti_COMMIT_SIZE] = {0};
 
-	uint8_t x = 0;
-
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_3_END:
-		APP_DBG("DS2 - KYEGEN FINAL");
 		g_AppState = DS2_KEYGEN_FINAL_IDLE;
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
+
+		elapsed_time_stop(TIMER_KEYGEN_STAGE_3);
+		APP_DBG("DS2 TIMER - KYEGEN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_3));
+		APP_DBG("DS2 - KYEGEN FINAL");
+		elapsed_time_start(TIMER_KEYGEN_FINAL);
 	case DS2_KEYGEN_FINAL_IDLE:
 
 		g_packet_cnt[src_id]++;
@@ -777,9 +796,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    	memcpy(g_msg_buffer.data, &t1_packed[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
 
 		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-
-			    x = xorSign((char*)&t1_packed[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
-			    APP_DBG("DS2 - T:%d",x);
 		    }
 
 		    if(last_data_len > 0){
@@ -789,21 +805,14 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    	memcpy(g_msg_buffer.data, &t1_packed[g_msg_buffer.data_offset], last_data_len);
 
 		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-
-			    x = xorSign((char*)&t1_packed[g_msg_buffer.data_offset], last_data_len);
-			    APP_DBG("DS2 - T:%d",x);
 		    }
 
-		    x = xorSign(t1_packed, sizeof(t1_packed));
-		    APP_DBG("DS2 - T1:%d",x);
-
-		    x = xorSign((char*)g_rho, sizeof(g_rho));
-		    APP_DBG("DS2 - R:%d",x);
-
-		    x = xorSign((char*)tr, sizeof(tr));
-		    APP_DBG("DS2 - TR:%d",x);
-
 		    g_AppState = DS2_READY;
+
+			elapsed_time_stop(TIMER_KEYGEN_FINAL);
+			elapsed_time_stop(TIMER_KEYGEN_TOTAL);
+			APP_DBG("DS2 TIMER - KYEGEN STAGE FINAL:%ld",elapsed_time_max(TIMER_KEYGEN_FINAL));
+			APP_DBG("DS2 TIMER - KYEGEN STAGE TOTAL:%ld",elapsed_time_max(TIMER_KEYGEN_TOTAL));
 		}
 		break;
 	default:

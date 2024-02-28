@@ -39,12 +39,17 @@
 #include "commit.h"
 #include "fips202.h"
 #include "poly.h"
+#include "elapsed_time.h"
 ///////////////////////////////////
 
-#define DEMO_CHANNEL 20
+#define DEMO_CHANNEL 			20
 
-#define DATA_FROM_NODE "DATA FROM NODE\0"
-#define DATA "HELLO COORDINATOR\0"
+#define TIMER_KEYGEN_START 		0
+#define TIMER_KEYGEN_STAGE_1 	1
+#define TIMER_KEYGEN_STAGE_2 	2
+#define TIMER_KEYGEN_STAGE_3 	3
+#define TIMER_KEYGEN_FINAL		4
+#define TIMER_KEYGEN_TOTAL		5
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -451,6 +456,10 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 {
 	switch(g_AppState){
 	case DS2_READY:
+
+		elapsed_time_start(TIMER_KEYGEN_TOTAL);
+		elapsed_time_start(TIMER_KEYGEN_START);
+
 		APP_DBG("DS2 - KYEGEN START");
 		APP_RFD_MAC_802_15_4_DS2_Reset();
 
@@ -487,7 +496,11 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_1_IDLE:
+		elapsed_time_stop(TIMER_KEYGEN_START);
+		APP_DBG("DS2 TIMER - KYEGEN START TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_START));
 		APP_DBG("DS2 - KYEGEN STAGE 1");
+		elapsed_time_start(TIMER_KEYGEN_STAGE_1);
+
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 
 		g_msg_buffer.src_node_id = DS2_NODE_ID;
@@ -512,17 +525,17 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_1_END:
+
+		elapsed_time_stop(TIMER_KEYGEN_STAGE_1);
+		APP_DBG("DS2 TIMER - KYEGEN STAGE 1 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_1));
 		APP_DBG("DS2 - KYEGEN STAGE 2");
+		elapsed_time_start(TIMER_KEYGEN_STAGE_2);
+
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 		DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 
 		//save result rho
 		memcpy(g_rho, (uint8_t*)packet_ptr->data, SEED_BYTES);
-
-		uint8_t x = xorSign((char*)g_rho, sizeof(g_rho));
-		uint32_t* ptr = (uint32_t*)g_rho;
-	    APP_DBG("DS2 - R:%d",x);
-	    APP_DBG("DS2 - R:%d%d%d%d",ptr[0], ptr[1],ptr[2],ptr[3]);
 
 		//generate A
 		poly_uniform(g_rho, K * L, &A[0][0]);
@@ -576,7 +589,11 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 {
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_2_END:
+		elapsed_time_stop(TIMER_KEYGEN_STAGE_2);
+		APP_DBG("DS2 TIMER - KYEGEN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_2));
 		APP_DBG("DS2 - KYEGEN STAGE 3");
+		elapsed_time_start(TIMER_KEYGEN_STAGE_3);
+
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 		int i = 0;
 
@@ -619,21 +636,20 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 	uint32_t offset = packet_ptr->data_offset;
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
-	uint8_t x = 0;
-
 	switch(g_AppState){
 		case DS2_KEYGEN_STAGE_3_END:
-			APP_DBG("DS2 - KYEGEN FINAL");
 			g_AppState = DS2_KEYGEN_FINAL_IDLE;
 			g_packet_cnt = 0;
+
+			elapsed_time_stop(TIMER_KEYGEN_STAGE_3);
+			APP_DBG("DS2 TIMER - KYEGEN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_3));
+			APP_DBG("DS2 - KYEGEN FINAL");
+			elapsed_time_start(TIMER_KEYGEN_FINAL);
 		case DS2_KEYGEN_FINAL_IDLE:
 
 			g_packet_cnt++;
 			memcpy(&t1_packed[offset], (uint8_t*)packet_ptr->data, data_size);
 			APP_DBG("DS2 - PACKET: %d SIZE: %d OFFSET: %d", g_packet_cnt, data_size, offset);
-
-		    x = xorSign((char*)&t1_packed[offset], data_size);
-		    APP_DBG("DS2 - T:%d",x);
 			//all packets from node src_id were received
 			if(g_packet_cnt*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
 
@@ -648,16 +664,12 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 			    shake128_finalize(&state);
 			    shake128_squeeze(&state, SEED_BYTES, tr);
 
-			    x = xorSign(t1_packed, sizeof(t1_packed));
-			    APP_DBG("DS2 - T1:%d",x);
-
-			    x = xorSign((char*)g_rho, sizeof(g_rho));
-			    APP_DBG("DS2 - R:%d",x);
-
-			    uint8_t x = xorSign((char*)tr, sizeof(tr));
-			    APP_DBG("DS2 - TR:%d",x);
-
 			    g_AppState = DS2_READY;
+
+				elapsed_time_stop(TIMER_KEYGEN_FINAL);
+				elapsed_time_stop(TIMER_KEYGEN_TOTAL);
+				APP_DBG("DS2 TIMER - KYEGEN STAGE FINAL:%ld",elapsed_time_max(TIMER_KEYGEN_FINAL));
+				APP_DBG("DS2 TIMER - KYEGEN STAGE TOTALL:%ld",elapsed_time_max(TIMER_KEYGEN_TOTAL));
 			}
 			break;
 		default:
