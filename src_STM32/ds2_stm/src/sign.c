@@ -14,7 +14,7 @@
 int8_t sign(const party_t *party, const uint8_t *msg, size_t msg_len, sign_t *sig) {
     uint8_t seed[SEED_BYTES];
     uint32_t nonce = 0;
-    poly_t ck[K][TC_COLS];
+    poly_t ck[2][TC_COLS];
     poly_t y1[L], y2[K], y1_hat[L];
     poly_t w[K];
     poly_t f[N_PARTIES][K][2];

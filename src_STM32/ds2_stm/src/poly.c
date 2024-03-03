@@ -16,6 +16,8 @@
 #include "rand.h"
 #include "reduce.h"
 
+#include "stm_rng.h"
+
 
 //#include "elapsed_time.h"
 #ifndef ELAPSED_TIME_H_
@@ -432,36 +434,7 @@ void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, ui
 }
 
 
-void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][K])
+void poly_gen_commit(const uint8_t *msg, size_t msg_len, const uint8_t tr[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][2])
 {
-    int8_t bound_exceeded = 0;
 
-    poly_t r_kj = {0};
-    poly_t ck_ik = {0};
-    uint32_t nonce = 0;
-
-    memset(f, 0, K*K*_N);
-
-    for(size_t k = 0; k < TC_COLS; k++) {
-    	nonce = 0;
-    	for (size_t j = 0; j < K; j++) {
-			//generate r[j][k]
-    		do {
-    			nonce++;
-    			sample_normal_from_seed(r_seed, j*TC_COLS+k+nonce, 0, TC_S, _N, r_kj.coeffs);
-    		} while(!poly_check_norm(r_ij, 1, TC_B));
-
-    		for(size_t i = 0; i < K; i++) {
-
-        		//generate ck[i][k]
-        		poly_uniform(ck_seed, 1, i*TC_COLS+k, (poly_t*) &ck_ik);
-
-        		// f[i][j] += r[j][k] + ck[i][k]
-    			for(size_t n = 0; n < _N; n++)
-    			    f[i][j].coeffs[n] += montgomery_reduce((int64_t) ck_ik.coeffs[n] * r_kj.coeffs[n]);
-    		}
-    	}
-    }
-    poly_reduce(f, K*K);
-    poly_invntt_tomont(f, K*K);
 }

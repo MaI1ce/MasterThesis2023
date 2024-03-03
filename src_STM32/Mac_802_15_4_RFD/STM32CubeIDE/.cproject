@@ -94,15 +94,9 @@
 							<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec.1168488339" name="MCU Output Converter Motorola S-rec with symbols" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.objcopy.symbolsrec"/>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1257326225.1781805490" name="sign.c" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/src/sign.c" toolsToInvoke="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.2110136695.1224906439">
-						<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.2110136695.1224906439" name="MCU GCC Compiler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.2110136695"/>
-					</fileInfo>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1257326225.1861194664" name="gen.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/gen.h" toolsToInvoke=""/>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1257326225.337138678" name="sign.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/sign.h" toolsToInvoke=""/>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.1257326225.1597977475" name="verify.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/verify.h" toolsToInvoke=""/>
 					<sourceEntries>
 						<entry excluding="STM_DS2_Lib|DS2_source|STM_RNG_Lib" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-						<entry excluding="ds2_stm/src/sign.c|ds2_stm/src/gen.c|ds2_stm/inc/gen.h|ds2_stm/inc/sign.h|ds2_stm/inc/verify.h|ds2_stm/src/verify.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_DS2_Lib"/>
+						<entry excluding="ds2_stm/src/gen.c|ds2_stm/src/sign.c|ds2_stm/src/verify.c|ds2_stm/inc/gen.h|ds2_stm/inc/verify.h|ds2_stm/inc/sign.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_DS2_Lib"/>
 						<entry excluding="stm32wbxx_hal_rng.c|stm32wbxx_hal_rng.h|stm32wbxx_ll_rng.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_RNG_Lib"/>
 					</sourceEntries>
 				</configuration>

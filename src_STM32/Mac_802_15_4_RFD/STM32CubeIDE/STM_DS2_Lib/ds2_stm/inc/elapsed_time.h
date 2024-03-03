@@ -12,7 +12,7 @@
 #ifndef ELAPSED_TIME_H_
 #define ELAPSED_TIME_H_
 
-#define  ELAPSED_TIME_MAX_SECTIONS  10
+#define  ELAPSED_TIME_MAX_SECTIONS  15
 
 #define TB_START(i) elapsed_time_start((i))
 #define TB_END(i) elapsed_time_stop((i))

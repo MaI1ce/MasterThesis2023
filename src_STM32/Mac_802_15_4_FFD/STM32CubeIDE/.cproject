@@ -38,6 +38,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/App}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/Target}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_DS2_Lib/ds2_stm/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_RNG_Lib}&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.1549041427" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -78,6 +79,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/App}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/Target}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_DS2_Lib/ds2_stm/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_RNG_Lib}&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1482436755" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -107,12 +109,9 @@
 					</folderInfo>
 					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.822367624.1365430349" name="stm32wbxx_hal_pcd.h" rcbsApplicability="disable" resourcePath="STM_USB_Lib/Driver/stm32wbxx_hal_pcd.h" toolsToInvoke=""/>
 					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.822367624.424954543" name="stm32wbxx_hal_pcd_ex.h" rcbsApplicability="disable" resourcePath="STM_USB_Lib/Driver/stm32wbxx_hal_pcd_ex.h" toolsToInvoke=""/>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.822367624.1385507676" name="gen.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/gen.h" toolsToInvoke=""/>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.822367624.1051183959" name="sign.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/sign.h" toolsToInvoke=""/>
-					<fileInfo id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.debug.822367624.1839159925" name="verify.h" rcbsApplicability="disable" resourcePath="STM_DS2_Lib/ds2_stm/inc/verify.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="STM_DS2_Lib|STM_EXTI_Lib|STM_USB_Lib" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-						<entry excluding="ds2_stm/inc/gen.h|ds2_stm/inc/sign.h|ds2_stm/inc/verify.h|ds2_stm/src/gen.c|ds2_stm/src/sign.c|ds2_stm/src/verify.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_DS2_Lib"/>
+						<entry excluding="STM_RNG_Lib|STM_DS2_Lib|STM_EXTI_Lib|STM_USB_Lib" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="ds2_stm/src/gen.c|ds2_stm/src/sign.c|ds2_stm/src/verify.c|ds2_stm/inc/gen.h|ds2_stm/inc/sign.h|ds2_stm/inc/verify.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_DS2_Lib"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_USB_Lib"/>
 					</sourceEntries>
 				</configuration>
@@ -156,6 +155,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/App}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/Target}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_DS2_Lib/ds2_stm/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_RNG_Lib}&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.381453950" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
 							</tool>
@@ -191,6 +191,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/App}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_USB_Lib/USB_Device/Target}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_DS2_Lib/ds2_stm/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/STM_RNG_Lib}&quot;"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.169814758" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -219,7 +220,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="STM_DS2_Lib|STM_EXTI_Lib|STM_USB_Lib" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="STM_RNG_Lib|STM_DS2_Lib|STM_EXTI_Lib|STM_USB_Lib" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_DS2_Lib"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="STM_USB_Lib"/>
 					</sourceEntries>

@@ -1,0 +1,29 @@
+/*
+		    uint8_t packet_num = DS2_Fi_COMMIT_SIZE / (DS2_MAX_DATA_LEN * 4);
+		    uint8_t last_data_len = DS2_Fi_COMMIT_SIZE % (DS2_MAX_DATA_LEN * 4);
+
+
+		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+		    g_msg_buffer.msg_code = DS2_Fi_COMMIT_ACK;
+		    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+
+		    int j = 0;
+
+		    for(j = 0; j < packet_num; j++){
+		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
+
+		    	memcpy(g_msg_buffer.data, &f_packed[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
+
+		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		    }
+
+		    if(last_data_len > 0){
+		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
+		    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+
+		    	memcpy(g_msg_buffer.data, &f_packed[g_msg_buffer.data_offset], last_data_len);
+
+		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		    }
+*/

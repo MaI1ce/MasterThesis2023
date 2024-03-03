@@ -65,6 +65,4 @@ void poly_pack(uint8_t valid_bits, const poly_t *poly, size_t polys_count, uint8
 
 void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, uint8_t is_signed, poly_t *poly);
 
-void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][K]);
-
 #endif

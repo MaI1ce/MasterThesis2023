@@ -51,7 +51,7 @@ void h3(const uint8_t *msg, size_t msg_len, const uint8_t tr[SEED_BYTES], poly_t
     shake256_finalize(&state);
     shake256_squeeze(&state, SEED_BYTES, seed);
 
-    poly_uniform(seed, 2 * TC_COLS, 0, (poly_t*) ck);
+    poly_uniform(seed, 2 * TC_COLS, (poly_t*) ck);
 }
 
 // Returns 0 on success
@@ -61,6 +61,7 @@ int8_t commit(const poly_t *x, const poly_t A[2][TC_COLS], const poly_t r[TC_COL
     poly_product2(A, r, f);
     poly_reduce(f, 2);
     poly_invntt_tomont(f, 2);
+
     poly_add(&f[1], x, 1, &f[1]);
 
     return 0;

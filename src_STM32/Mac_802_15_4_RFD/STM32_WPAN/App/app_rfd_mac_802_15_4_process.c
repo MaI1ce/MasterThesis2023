@@ -185,7 +185,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 			if((packet_ptr->dst_node_id == DS2_NODE_ID)||(packet_ptr->dst_node_id == DS2_BROADCAST_ID)){
 				switch(packet_ptr->msg_code){
 				case DS2_KEYGEN_START_TASK:
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_START, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_START, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_COORDINATOR_HELLO_ACK:
 					APP_DBG("DS2 COORDINATOR CONNECTION - OK");
@@ -195,19 +195,20 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 					g_AppState = DS2_READY;
 					break;
 				case DS2_Pi_COMMIT_ACK:
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Pi_VALUE_ACK :
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_2, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_STAGE_2, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Ti_COMMIT_ACK :
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_STAGE_3, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_STAGE_3, CFG_SCH_PRIO_0 );
 					break;
 				case DS2_Ti_VALUE_ACK :
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
 					break;
 
 				case DS2_SIGN_START_TASK:
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_START, CFG_SCH_PRIO_0 );
 					break;
 
 				case DS2_Fi_COMMIT_ACK:
@@ -226,7 +227,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 					break;
 
 				default :
-					UTIL_SEQ_SetTask( 1<< CFG_TASK_APP_ABORT, CFG_SCH_PRIO_0 );
+					UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_ABORT, CFG_SCH_PRIO_0 );
 					break;
 				}
 			} else {

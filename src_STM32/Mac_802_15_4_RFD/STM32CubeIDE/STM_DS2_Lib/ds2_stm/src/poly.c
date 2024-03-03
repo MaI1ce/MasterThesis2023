@@ -107,7 +107,7 @@ void poly_copy(const poly_t *poly, size_t polys_count, poly_t *copy) {
         copy[i] = poly[i];
 }
 
-void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *poly) {
+void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, size_t nonce, poly_t *poly) {
     TB_START(POLY_UNIFORM_INDEX)
 
     keccak_state_t state;
@@ -119,7 +119,7 @@ void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *po
         keccak_init(&state);
 
         shake128_absorb(&state, seed, SEED_BYTES);
-        shake128_absorb_nonce(&state, (uint32_t) i);
+        shake128_absorb_nonce(&state, (uint32_t) i+nonce);
 
         shake128_finalize(&state);
 
@@ -431,4 +431,39 @@ void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, ui
             offset = next_offset;
         }
     }
+}
+
+
+void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][K])
+{
+    int8_t bound_exceeded = 0;
+
+    poly_t r_kj = {0};
+    poly_t ck_ik = {0};
+    uint32_t nonce = 0;
+
+    memset(f, 0, K*K*_N);
+
+    for(size_t k = 0; k < TC_COLS; k++) {
+    	nonce = 0;
+    	for (size_t j = 0; j < K; j++) {
+			//generate r[j][k]
+    		do {
+    			nonce++;
+    			sample_normal_from_seed(r_seed, j*TC_COLS+k+nonce, 0, TC_S, _N, r_kj.coeffs);
+    		} while(!poly_check_norm(r_ij, 1, TC_B));
+
+    		for(size_t i = 0; i < K; i++) {
+
+        		//generate ck[i][k]
+        		poly_uniform(ck_seed, 1, i*TC_COLS+k, (poly_t*) &ck_ik);
+
+        		// f[i][j] += r[j][k] + ck[i][k]
+    			for(size_t n = 0; n < _N; n++)
+    			    f[i][j].coeffs[n] += montgomery_reduce((int64_t) ck_ik.coeffs[n] * r_kj.coeffs[n]);
+    		}
+    	}
+    }
+    poly_reduce(f, K*K);
+    poly_invntt_tomont(f, K*K);
 }

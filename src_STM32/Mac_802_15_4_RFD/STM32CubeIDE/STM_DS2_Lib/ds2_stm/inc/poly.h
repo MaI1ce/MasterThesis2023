@@ -35,7 +35,7 @@ void poly_product2(const poly_t a[2][TC_COLS], const poly_t b[TC_COLS], poly_t c
 
 void poly_copy(const poly_t *poly, size_t polys_count, poly_t *copy);
 
-void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *poly);
+void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, size_t nonce, poly_t *poly);
 
 void poly_eta(const uint8_t seed[SEED_BYTES], uint32_t nonce, size_t polys_count, poly_t *poly);
 
@@ -64,5 +64,7 @@ uint8_t poly_check_norm(const poly_t *poly, size_t polys_count, double bound);
 void poly_pack(uint8_t valid_bits, const poly_t *poly, size_t polys_count, uint8_t *data);
 
 void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, uint8_t is_signed, poly_t *poly);
+
+void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][K]);
 
 #endif
