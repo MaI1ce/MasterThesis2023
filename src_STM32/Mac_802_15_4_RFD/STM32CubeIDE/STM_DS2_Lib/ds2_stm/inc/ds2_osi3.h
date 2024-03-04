@@ -38,6 +38,7 @@ typedef enum {
 	DS2_ERROR_Pi_COMMIT = 0x03 | DS2_ABORT,
 	DS2_ERROR_Ti_COMMIT = 0x04 | DS2_ABORT,
 	DS2_ERROR_Fi_COMMIT = 0x05 | DS2_ABORT,
+	DS2_ERROR_Zi_REJECT = 0X06 | DS2_ABORT,
 
 	DS2_UNKNOWN_ERROR = 0xff
 }DS2_msg_codes;
@@ -48,8 +49,8 @@ typedef enum {
 #define DS2_Ti_VALUE_FLAG 		(1U << DS2_Ti_VALUE)
 #define DS2_Fi_COMMIT_FLAG 		(1U << DS2_Fi_COMMIT)
 #define DS2_Ri_VALUE_FLAG 		(1U << DS2_Ri_VALUE)
-#define DS2_Zi_1_VALUE_FLAG 	(1U << DS2_Ri_VALUE)
-#define DS2_Zi_2_VALUE_FLAG 	(1U << DS2_Ri_VALUE)
+#define DS2_Zi_1_VALUE_FLAG 	(1U << DS2_Zi_1_VALUE)
+#define DS2_Zi_2_VALUE_FLAG 	(1U << DS2_Zi_2_VALUE)
 #define DS2_PARTY_ACTIVE   		0x80000000
 
 
@@ -105,6 +106,7 @@ typedef enum {
 	DS2_SIGN_STAGE_3_END,
 	DS2_SIGN_FINAL_IDLE,
 	DS2_SIGN_FINAL_END,
+	DS2_SIGN_REJECTED,
 }DS2_State;
 
 typedef struct {

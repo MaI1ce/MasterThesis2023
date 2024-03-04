@@ -35,7 +35,7 @@ void poly_product2(const poly_t a[2][TC_COLS], const poly_t b[TC_COLS], poly_t c
 
 void poly_copy(const poly_t *poly, size_t polys_count, poly_t *copy);
 
-void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *poly);
+void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, size_t nonce, poly_t *poly);
 
 void poly_eta(const uint8_t seed[SEED_BYTES], uint32_t nonce, size_t polys_count, poly_t *poly);
 

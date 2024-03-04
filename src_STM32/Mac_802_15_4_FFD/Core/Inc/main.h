@@ -39,6 +39,8 @@ extern "C" {
 #include "dbg_trace.h"
 #include "stm_logging.h"
 
+#include "app_ffd_mac_802_15_4.h"
+
 void Error_Handler(void);
 void SystemClock_Config( void );
 

@@ -451,7 +451,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     		do {
     			nonce++;
     			sample_normal_from_seed(r_seed, j*TC_COLS+k+nonce, 0, TC_S, _N, r_kj.coeffs);
-    		} while(!poly_check_norm(r_ij, 1, TC_B));
+    		} while(!poly_check_norm(&r_kj, 1, TC_B));
 
     		for(size_t i = 0; i < K; i++) {
 

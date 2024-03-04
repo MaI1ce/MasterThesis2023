@@ -74,12 +74,14 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
+static void APP_FFD_MAC_802_15_4_DS2_Sign_Start(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void);
 
-static void APP_FFD_MAC_802_15_4_DS2_Reset(void);
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void);
+static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void);
 
 void APP_FFD_MAC_802_15_4_SendEcho(void);
 
@@ -97,10 +99,13 @@ static poly_t		t1[K] = {0};
 static poly_t		A[K][L] = {0};
 static uint8_t		tr[SEED_BYTES] = {0};
 
+static uint32_t 	iterations = 0;
 static poly_t		Commit[K][K] = {0};
 static uint8_t		c[SEED_BYTES] = {0};
 static uint8_t 		ck_seed[SEED_BYTES] = {0};
 static poly_t		poly_c = {0};
+static poly_t		z1[L] = {0};
+static poly_t		z2[K] = {0};
 
 static uint8_t	 	g_AppState = DS2_IDLE;
 
@@ -154,13 +159,14 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_NEW_CONNECTION, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_NewConnection);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_ABORT, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Abort);
-  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_RESET, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Reset);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_RESET, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset);
 
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_1, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_FINAL, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_KeyGen_Final);
 
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_START, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Start);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_1, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3);
@@ -534,8 +540,10 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
  * @{
  */
 
-static void APP_FFD_MAC_802_15_4_DS2_Reset(void)
+static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void)
 {
+	 APP_FFD_MAC_802_15_4_DS2_Sign_Reset();
+
 	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 	memset(g_Parties, 0, sizeof(g_Parties));
 	memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
@@ -543,14 +551,31 @@ static void APP_FFD_MAC_802_15_4_DS2_Reset(void)
 	memset(tr, 0, sizeof(tr));
 	memset(g_rho, 0 , sizeof(g_rho));
 
-	g_AppState = DS2_IDLE;
+	g_AppState = DS2_READY;
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void)
+{
+	memset(Commit, 0, sizeof(Commit));
+	memset(c, 0, sizeof(c));
+	memset(&poly_c, 0, sizeof(poly_c));
+	memset(ck_seed, 0, sizeof(ck_seed));
+	memset(z1, 0, sizeof(z1));
+	memset(z2, 0 , sizeof(z2));
+
+	for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+		g_Parties[i].status &= (~DS2_Fi_COMMIT_FLAG);
+		g_Parties[i].status &= (~DS2_Ri_VALUE_FLAG);
+		g_Parties[i].status &= (~DS2_Zi_1_VALUE_FLAG);
+		g_Parties[i].status &= (~DS2_Zi_2_VALUE_FLAG);
+	}
+
+	g_AppState = DS2_READY;
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 {
 	APP_DBG("DS2 ABORT");
-
-	APP_FFD_MAC_802_15_4_DS2_Reset();
 
 	switch(g_ERROR_code){
 	case DS2_ABORT:
@@ -571,6 +596,10 @@ static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 	case DS2_ERROR_Fi_COMMIT:
 		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_Fi_COMMIT", g_ERROR_code);
 		break;
+	case DS2_ERROR_Zi_REJECT:
+		APP_FFD_MAC_802_15_4_DS2_Sign_Reset();
+		APP_DBG("DS2 ERROR CODE : %d - DS2_ERROR_Zi_REJECT", g_ERROR_code);
+		return;
 	}
 
     g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
@@ -581,6 +610,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
     for(int i = 0; i < 1; i++){
     	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
     }
+
+	APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset();
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
@@ -660,7 +691,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 
 		if(ready_flag)
 		{
-			uint32_t* ptr;
 			//rho = H(pi)
 			keccak_state_t state;
 			keccak_init(&state);
@@ -849,6 +879,16 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 }
 
 //////////////////////////////////////////////////
+static void APP_FFD_MAC_802_15_4_DS2_Sign_Start(void)
+{
+	APP_FFD_MAC_802_15_4_DS2_Sign_Reset();
+	g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+	g_msg_buffer.msg_code = DS2_SIGN_START_TASK;
+	g_msg_buffer.packet_length = 4;
+	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+}
+
 
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 {
@@ -857,7 +897,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 	uint32_t offset = packet_ptr->data_offset;
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
-	poly_t fi[k][k] = {0};
+	poly_t fi[K][K] = {0};
 	uint8_t f_packed[DS2_Fi_COMMIT_SIZE] = {0};
 
 	static char msg[] = "test message\0";
@@ -896,9 +936,9 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 			}
 			poly_freeze(Commit, K*K);
 
-			poly_pack(TC_L, F, K*K, f_packed);
+			poly_pack(TC_L, Commit, K*K, f_packed);
 
-	        // H(com, msg, pk)
+	        //c = H(com, msg, pk)
 		    keccak_state_t state;
 	        keccak_init(&state);
 		    shake256_absorb(&state, msg, msg_len);
@@ -925,36 +965,6 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
 		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
-		    //send c
-	        /*
-		    uint8_t packet_num = DS2_Fi_COMMIT_SIZE / (DS2_MAX_DATA_LEN * 4);
-		    uint8_t last_data_len = DS2_Fi_COMMIT_SIZE % (DS2_MAX_DATA_LEN * 4);
-
-
-		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
-		    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
-		    g_msg_buffer.msg_code = DS2_Fi_COMMIT_ACK;
-		    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
-
-		    int j = 0;
-
-		    for(j = 0; j < packet_num; j++){
-		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
-
-		    	memcpy(g_msg_buffer.data, &f_packed[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
-
-		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		    }
-
-		    if(last_data_len > 0){
-		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
-		    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
-
-		    	memcpy(g_msg_buffer.data, &f_packed[g_msg_buffer.data_offset], last_data_len);
-
-		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		    }
-*/
 			g_AppState = DS2_SIGN_STAGE_1_END;
 
 		}
@@ -969,6 +979,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 {
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
 	switch(g_AppState){
 	case DS2_SIGN_STAGE_1_END:
@@ -980,13 +991,26 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
 	case DS2_SIGN_STAGE_2_IDLE:
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
-		g_msg_buffer.msg_code = DS2_Zi_1_VALUE_ACK;
-		g_msg_buffer.packet_length = 4;
-		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		memcpy(&g_Parties[src_id].ri_val, (uint8_t*)packet_ptr->data, data_size);
+		//all packets from node src_id were received
+		g_Parties[src_id].status |= DS2_Ri_VALUE_FLAG ; ;
 
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Ri_VALUE_FLAG);
+		}
 
+		if(ready_flag)
+		{
+			g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+			g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+			g_msg_buffer.msg_code = DS2_Ri_VALUE_ACK;
+			g_msg_buffer.packet_length = 4;
+			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+			g_AppState = DS2_SIGN_STAGE_2_END;
+
+		}
 		break;
 	default:
 		APP_DBG("DS2 - ERROR: SIGN STAGE 2 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
@@ -998,6 +1022,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 {
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
+	uint32_t offset = packet_ptr->data_offset;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
 	switch(g_AppState){
 	case DS2_SIGN_STAGE_2_END:
@@ -1010,13 +1036,32 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 		elapsed_time_start(TIMER_SIGN_STAGE_3);
 	case DS2_SIGN_STAGE_3_IDLE:
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
-		g_msg_buffer.msg_code = DS2_Zi_2_VALUE_ACK;
-		g_msg_buffer.packet_length = 4;
-		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
+		g_packet_cnt[src_id]++;
+		memcpy(&g_Parties[src_id].zi_1_val[offset], (uint8_t*)packet_ptr->data, data_size);
+		APP_DBG("DS2 - ID: %d PACKET: %d SIZE: %d OFFSET: %d",src_id, g_packet_cnt[src_id], data_size, offset);
 
+		//all packets from node src_id were received
+		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Zi_1_VALUE_SIZE){
+			g_Parties[src_id].status |= DS2_Zi_1_VALUE_FLAG ; ;
+		}
+
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Zi_1_VALUE_FLAG);
+		}
+
+		if(ready_flag)
+		{
+
+			g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+			g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+			g_msg_buffer.msg_code = DS2_Zi_1_VALUE_ACK;
+			g_msg_buffer.packet_length = 4;
+			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		g_AppState = DS2_SIGN_STAGE_3_END;
+		}
 		break;
 	default:
 		APP_DBG("DS2 - ERROR: SIGN STAGE 3 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
@@ -1031,6 +1076,13 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 	uint32_t offset = packet_ptr->data_offset;
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
+	poly_t z1_temp[L] = {0};
+	poly_t z2_temp[K] = {0};
+	poly_t t1_temp[K] = {0};
+	poly_t w_temp[K] = {0};
+	poly_t F1[K][K] = {0};
+	poly_t F2[K][K] = {0};
+
 	switch(g_AppState){
 	case DS2_SIGN_STAGE_3_END:
 		g_AppState = DS2_SIGN_FINAL_IDLE;
@@ -1042,17 +1094,97 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 		elapsed_time_start(TIMER_SIGN_FINAL);
 	case DS2_SIGN_FINAL_IDLE:
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
-		g_msg_buffer.msg_code = DS2_Ri_VALUE_ACK;
-		g_msg_buffer.packet_length = 4;
-		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		g_packet_cnt[src_id]++;
+		memcpy(&g_Parties[src_id].zi_2_val[offset], (uint8_t*)packet_ptr->data, data_size);
+		APP_DBG("DS2 - ID: %d PACKET: %d SIZE: %d OFFSET: %d",src_id, g_packet_cnt[src_id], data_size, offset);
+
+		//all packets from node src_id were received
+		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Zi_2_VALUE_SIZE){
+			g_Parties[src_id].status |= DS2_Zi_2_VALUE_FLAG ; ;
+		}
+
+		uint32_t ready_flag = 0xFFFFFFFF;
+		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+			ready_flag &= (g_Parties[i].status & DS2_Zi_2_VALUE_FLAG);
+		}
+
+		if(ready_flag)
+		{
+			uint8_t rej = 0;
+			for(int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
+	            poly_unpack(TC_L, g_Parties[i].zi_1_val, L, 0, z1_temp);
+	            poly_unpack(TC_L, g_Parties[i].zi_2_val, K, 0, z2_temp);
+
+	            poly_center(z1_temp, L);
+	            poly_center(z2_temp, K);
+
+	            //check norm
+	            //if (!poly_check_norm(z1_received, L, B) || !poly_check_norm(z2_received, K, B)) {
+	            //    printf("COULD NOT CHECK NORM\n");
+	            //}
+
+	            poly_add(z1, z1_temp, L, z1);
+	            poly_add(z2, z2_temp, K, z2);
+
+	            // w = Az1 - ct1 * 2^D
+	            poly_unpack(T1_BITS, g_Parties[i].ti_val, K, 0, t1_temp);
+	            // t1 * 2^D
+	            poly_const_mul(t1_temp, 1 << D, K, t1_temp);
+
+	            poly_ntt(z1_temp, L);
+	            poly_ntt(t1_temp, K);
+
+	            poly_product(A, z1_temp, w_temp);
+	            poly_mul_pointwise(t1_temp, &poly_c, K, t1_temp);
+
+	            poly_reduce(w_temp, K);
+	            poly_reduce(t1_temp, K);
+
+	            poly_invntt_tomont(w_temp, K);
+	            poly_invntt_tomont(t1_temp, K);
+
+	            poly_sub(w_temp, t1_temp, K, w_temp);
+	            poly_add(w_temp, z2_temp, K, w_temp);
+
+	            poly_freeze(w_temp, K);
+
+	    		// com_i = ck*r + w
+	            poly_unpack(TC_L, g_Parties[i].fi_commit, K*K, 0, F2);
+
+	    		poly_gen_commit(ck_seed, g_Parties[i].ri_val, F1);
+	    		poly_add(&F1[1], w_temp, K, &F1[1]);
+
+	    		poly_freeze((poly_t*)F1, K*K);
+
+	    		//check commitments
+	    		rej = memcmp(F1, F2, sizeof(F1));
+
+	    		if(rej != 0){
+	    			g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+	    			g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+	    			g_msg_buffer.msg_code = DS2_ERROR_Fi_COMMIT;
+	    			g_msg_buffer.packet_length = 4;
+	    			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+	    			return;
+	    		}
+			}
 
 
-		elapsed_time_stop(TIMER_SIGN_FINAL);
-		elapsed_time_stop(TIMER_SIGN_TOTAL);
-		APP_DBG("DS2 TIMER - SIGN STAGE FINAL:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
-		APP_DBG("DS2 TIMER - SIGN STAGE TOTAL:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
+
+			g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+			g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+			g_msg_buffer.msg_code = DS2_Zi_2_VALUE_ACK;
+			g_msg_buffer.packet_length = 4;
+			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+			g_AppState = DS2_READY;
+
+			elapsed_time_stop(TIMER_SIGN_FINAL);
+			elapsed_time_stop(TIMER_SIGN_TOTAL);
+			APP_DBG("DS2 TIMER - SIGN STAGE FINAL:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
+			APP_DBG("DS2 TIMER - SIGN STAGE TOTAL:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
+		}
 		break;
 	default:
 		APP_DBG("DS2 - ERROR: SIGN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);

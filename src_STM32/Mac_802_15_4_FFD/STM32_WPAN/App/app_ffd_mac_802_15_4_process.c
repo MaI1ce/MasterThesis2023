@@ -239,15 +239,15 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_STAGE_1, CFG_SCH_PRIO_0 );
 						break;
 
-					case DS2_Zi_1_VALUE:
+					case DS2_Ri_VALUE:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_STAGE_2, CFG_SCH_PRIO_0 );
 						break;
 
-					case DS2_Zi_2_VALUE:
+					case DS2_Zi_1_VALUE:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_STAGE_3, CFG_SCH_PRIO_0 );
 						break;
 
-					case DS2_Ri_VALUE:
+					case DS2_Zi_2_VALUE:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_FINAL, CFG_SCH_PRIO_0 );
 						break;
 

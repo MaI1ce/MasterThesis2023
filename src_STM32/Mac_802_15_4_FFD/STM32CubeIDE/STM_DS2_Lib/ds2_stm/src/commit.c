@@ -51,7 +51,7 @@ void h3(const uint8_t *msg, size_t msg_len, const uint8_t tr[SEED_BYTES], poly_t
     shake256_finalize(&state);
     shake256_squeeze(&state, SEED_BYTES, seed);
 
-    poly_uniform(seed, 2 * TC_COLS, (poly_t*) ck);
+    poly_uniform(seed, 2 * TC_COLS, 0, (poly_t*) ck);
 }
 
 // Returns 0 on success

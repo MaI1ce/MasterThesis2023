@@ -367,6 +367,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   		  status = CDC_Transmit_FS((uint8_t*)_str, sizeof(_str));
   	  } while(status == USBD_BUSY);
 
+  	UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_START, CFG_SCH_PRIO_0 );
+
       break;
     default:
       break;

@@ -105,7 +105,7 @@ void poly_copy(const poly_t *poly, size_t polys_count, poly_t *copy) {
         copy[i] = poly[i];
 }
 
-void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *poly) {
+void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, size_t nonce, poly_t *poly) {
     TB_START(POLY_UNIFORM_INDEX)
 
     keccak_state_t state;
@@ -117,7 +117,7 @@ void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, poly_t *po
         keccak_init(&state);
 
         shake128_absorb(&state, seed, SEED_BYTES);
-        shake128_absorb_nonce(&state, (uint32_t) i);
+        shake128_absorb_nonce(&state, (uint32_t) i+nonce);
 
         shake128_finalize(&state);
 
@@ -449,7 +449,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     		do {
     			nonce++;
     			sample_normal_from_seed(r_seed, j*TC_COLS+k+nonce, 0, TC_S, _N, r_kj.coeffs);
-    		} while(!poly_check_norm(r_ij, 1, TC_B));
+    		} while(!poly_check_norm(&r_kj, 1, TC_B));
 
     		for(size_t i = 0; i < K; i++) {
 
