@@ -1061,6 +1061,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
 		g_AppState = DS2_SIGN_STAGE_3_END;
+
 		}
 		break;
 	default:
@@ -1165,6 +1166,11 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 	    			g_msg_buffer.msg_code = DS2_ERROR_Fi_COMMIT;
 	    			g_msg_buffer.packet_length = 4;
 	    			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+	    			elapsed_time_stop(TIMER_SIGN_FINAL);
+	    			elapsed_time_stop(TIMER_SIGN_TOTAL);
+	    			APP_DBG("DS2 TIMER - SIGN STAGE FINAL:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
+	    			APP_DBG("DS2 TIMER - SIGN STAGE TOTAL:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
 
 	    			return;
 	    		}
