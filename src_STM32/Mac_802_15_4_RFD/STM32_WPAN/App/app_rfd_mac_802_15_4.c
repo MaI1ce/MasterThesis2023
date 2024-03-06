@@ -62,7 +62,7 @@
 /* Private function prototypes -----------------------------------------------*/
 
 
-uint8_t xorSign( const char * pmessage, uint8_t message_len);
+uint8_t xorSign( const char * pmessage, uint32_t message_len);
 
 extern MAC_dataInd_t      g_DataInd_rx;
 
@@ -460,7 +460,7 @@ static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
   * @retval Message Signature
   */
 
-uint8_t xorSign( const char * pmessage, uint8_t message_len)
+uint8_t xorSign( const char * pmessage, uint32_t message_len)
 {
   uint8_t seed = 0x00;
   for (uint8_t i=0x00;i<message_len;i++)
@@ -499,7 +499,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 		elapsed_time_start(TIMER_KEYGEN_TOTAL);
 		elapsed_time_start(TIMER_KEYGEN_START);
 
-		APP_DBG("DS2 - KYEGEN START");
+		//APP_DBG("DS2 - KYEGEN START");
 		APP_RFD_MAC_802_15_4_DS2_KeyGen_Reset();
 
 		uint32_t* seed_ptr = (uint32_t*)g_DS2_Data.pi_val;
@@ -513,6 +513,12 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 		// generate pi commit
 		h1(g_DS2_Data.pi_val, DS2_NODE_ID, g_DS2_Data.pi_commit);
 
+        uint8_t pix = xorSign((char*)g_DS2_Data.pi_val, sizeof(g_DS2_Data.pi_val));
+        APP_DBG("RFD DS2 - KEYGEN - pi = rand() = %ld", pix);
+
+        uint8_t gix = xorSign((char*)g_DS2_Data.pi_commit, sizeof(g_DS2_Data.pi_commit));
+        APP_DBG("RFD DS2 - KEYGEN - gi = h1(pi) = %ld", gix);
+
 		g_msg_buffer.src_node_id = DS2_NODE_ID;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 		g_msg_buffer.msg_code = DS2_Pi_COMMIT;
@@ -525,7 +531,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }
@@ -536,8 +542,8 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_1_IDLE:
 		elapsed_time_stop(TIMER_KEYGEN_START);
-		APP_DBG("DS2 TIMER - KYEGEN START TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_START));
-		APP_DBG("DS2 - KYEGEN STAGE 1");
+		APP_DBG("RFD DS2 TIMER - KYEGEN START TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_START));
+		//APP_DBG("DS2 - KYEGEN STAGE 1");
 		elapsed_time_start(TIMER_KEYGEN_STAGE_1);
 
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -554,7 +560,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		g_AppState = DS2_KEYGEN_STAGE_1_END;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: KYEGEN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }
@@ -568,8 +574,8 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 	case DS2_KEYGEN_STAGE_1_END:
 
 		elapsed_time_stop(TIMER_KEYGEN_STAGE_1);
-		APP_DBG("DS2 TIMER - KYEGEN STAGE 1 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_1));
-		APP_DBG("DS2 - KYEGEN STAGE 2");
+		APP_DBG("RFD DS2 TIMER - KYEGEN STAGE 1 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_1));
+		//APP_DBG("DS2 - KYEGEN STAGE 2");
 		elapsed_time_start(TIMER_KEYGEN_STAGE_2);
 
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -581,18 +587,28 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		//generate A
 		poly_uniform(g_rho, K * L, 0, &A[0][0]);
 
+
+		uint8_t rhox =  xorSign((char*)g_rho, sizeof(g_rho));
+		APP_DBG("RFD DS2 - KEYGEN -  rho = h(p0, p1, ... pi) = %ld", rhox);
+
+		//uint8_t Ax =  xorSign((char*)&A[0][0], sizeof(A));
+		//APP_DBG("RFD DS2 - KEYGEN -  A = H(rho) = %ld", Ax);
+
 		//generate private seed
+		uint8_t flag = 0;
 		uint32_t* seed_ptr = (uint32_t*)private_seed;
 		for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
 		{
-			RNG_GenerateRandomInt(seed_ptr);
+			flag |= RNG_GenerateRandomInt(seed_ptr);
 			seed_ptr++;
 		}
+		APP_DBG("RAND = %ld", flag);
+
 		//generate private key
 		poly_eta(private_seed, 0, L, s1);
 		poly_eta(private_seed, L, K, s2);
 
-		// Compute ti = (A | I) * s_1 + s2
+		// Compute ti = (A | I) * s_1 + s_2
 		poly_copy(s1, L, s1_);
 
 		poly_ntt(s1_, L);
@@ -609,6 +625,12 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		//generate ti commit
 		h2(g_DS2_Data.ti_val, DS2_NODE_ID, g_DS2_Data.ti_commit);
 
+		//uint8_t t1x =  xorSign((char*)g_DS2_Data.ti_val, sizeof(g_DS2_Data.ti_val));
+		//APP_DBG("RFD DS2 - KEYGEN - ti = (A | I) * s_1 + s_2 = %ld", t1x);
+
+		uint8_t gtix =  xorSign((char*)g_DS2_Data.ti_commit, sizeof(g_DS2_Data.ti_commit));
+		APP_DBG("RFD DS2 - KEYGEN - gti = h2(ti) = %ld", gtix);
+
 		//send commit ti
 		g_msg_buffer.src_node_id = DS2_NODE_ID;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
@@ -622,7 +644,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		g_AppState = DS2_KEYGEN_STAGE_2_END;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: KYEGEN STAGE 2 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: KYEGEN STAGE 2 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }
@@ -633,8 +655,8 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_2_END:
 		elapsed_time_stop(TIMER_KEYGEN_STAGE_2);
-		APP_DBG("DS2 TIMER - KYEGEN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_2));
-		APP_DBG("DS2 - KYEGEN STAGE 3");
+		APP_DBG("RFD DS2 TIMER - KYEGEN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_2));
+		//APP_DBG("DS2 - KYEGEN STAGE 3");
 		elapsed_time_start(TIMER_KEYGEN_STAGE_3);
 
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -667,7 +689,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 		g_AppState = DS2_KEYGEN_STAGE_3_END;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: KYEGEN STAGE 3 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: KYEGEN STAGE 3 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }
@@ -687,38 +709,44 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 			g_packet_cnt = 0;
 
 			elapsed_time_stop(TIMER_KEYGEN_STAGE_3);
-			APP_DBG("DS2 TIMER - KYEGEN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_3));
-			APP_DBG("DS2 - KYEGEN FINAL");
+			APP_DBG("RFD DS2 TIMER - KYEGEN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_3));
+			//APP_DBG("DS2 - KYEGEN FINAL");
 			elapsed_time_start(TIMER_KEYGEN_FINAL);
 		case DS2_KEYGEN_FINAL_IDLE:
 
 			g_packet_cnt++;
 			memcpy(&t1_packed[offset], (uint8_t*)packet_ptr->data, data_size);
-			APP_DBG("DS2 - PACKET: %d SIZE: %d OFFSET: %d", g_packet_cnt, data_size, offset);
+			//APP_DBG("DS2 - PACKET: %d SIZE: %d OFFSET: %d", g_packet_cnt, data_size, offset);
 			//all packets from node src_id were received
 			if(g_packet_cnt*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
 
 				//unpack t1
 				poly_unpack(T1_BITS, t1_packed, K, 0, t);
 
+				//uint8_t t1x =  xorSign((char*)t, sizeof(t));
+				//APP_DBG("RFD DS2 - KEYGEN - t1 = sum(t0, t1, ... ti) = %ld", t1x);
+
 				//calculate tr
 			    keccak_state_t state;
 			    keccak_init(&state);
 			    shake128_absorb(&state, g_rho, SEED_BYTES);
-			    shake128_absorb(&state, (uint8_t*) t, K * sizeof(poly_t));
+			    shake128_absorb(&state, (uint8_t*) t, sizeof(t));
 			    shake128_finalize(&state);
 			    shake128_squeeze(&state, SEED_BYTES, tr);
+
+			    uint8_t trx =  xorSign((char*)tr, sizeof(tr));
+			    APP_DBG("RFD DS2 - KEYGEN - tr = h(rho, t1) = %ld", trx);
 
 			    g_AppState = DS2_READY;
 
 				elapsed_time_stop(TIMER_KEYGEN_FINAL);
 				elapsed_time_stop(TIMER_KEYGEN_TOTAL);
-				APP_DBG("DS2 TIMER - KYEGEN STAGE FINAL:%ld",elapsed_time_max(TIMER_KEYGEN_FINAL));
-				APP_DBG("DS2 TIMER - KYEGEN STAGE TOTALL:%ld",elapsed_time_max(TIMER_KEYGEN_TOTAL));
+				APP_DBG("RFD DS2 TIMER - KYEGEN STAGE FINAL:%ld",elapsed_time_max(TIMER_KEYGEN_FINAL));
+				APP_DBG("RFD DS2 TIMER - KYEGEN STAGE TOTALL:%ld",elapsed_time_max(TIMER_KEYGEN_TOTAL));
 			}
 			break;
 		default:
-			APP_DBG("DS2 - ERROR: KYEGEN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+			APP_DBG("RFD DS2 - ERROR: KYEGEN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 			break;
 		}
 }
@@ -756,30 +784,40 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)//FIX ME
 		iterations++;
 		elapsed_time_start(TIMER_SIGN_START);
 
-		APP_DBG("DS2 - SIGN START");
+		//APP_DBG("DS2 - SIGN START");
 		g_AppState = DS2_SIGN_START_IDLE;
 
 	case DS2_SIGN_START_IDLE:
 		//generate r and y seed
 		y_seed_ptr = (uint32_t*)y_seed;
 		r_seed_ptr = (uint32_t*)r_seed;
+		uint8_t rand_res = 0;
 		for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
 		{
-			RNG_GenerateRandomInt(y_seed_ptr);
+			rand_res |= RNG_GenerateRandomInt(y_seed_ptr);
 			y_seed_ptr++;
 
-			RNG_GenerateRandomInt(r_seed_ptr);
+			rand_res |= RNG_GenerateRandomInt(r_seed_ptr);
 			r_seed_ptr++;
 		}
-		APP_DBG("DS2 - SIGN SEED R AND Y GENERATED");
+
+		APP_DBG("RFD DS2 -- SIGN -- RAND = %ld", rand_res);
 
 	    keccak_state_t state;
+	    keccak_init(&state);
 	    shake256_absorb(&state, msg, msg_len);
 	    shake256_absorb(&state, tr, SEED_BYTES);
 	    shake256_finalize(&state);
 	    shake256_squeeze(&state, SEED_BYTES, ck_seed);
 
-	    APP_DBG("DS2 - SIGN SEED CK GENERATED");
+	    uint8_t yx =  xorSign((char*)y_seed, sizeof(y_seed));
+	    APP_DBG("RFD DS2 -- SIGN -- y_seed = rand() = %ld", yx);
+
+	    uint8_t rx =  xorSign((char*)r_seed, sizeof(r_seed));
+	    APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
+
+	    uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
+	    APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
 
 		//generate y1 and y2
 		poly_normal(y_seed, nonce_y1, SIGMA, L, y1);
@@ -787,7 +825,6 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)//FIX ME
 		poly_normal(y_seed, nonce_y2, SIGMA, K, y2);
 		nonce_y2 += K;
 
-		APP_DBG("DS2 - SIGN NONCE Y GENERATED %ld, %ld",nonce_y1, nonce_y2);
 
 		// Compute w_n = (A | I) * y_n
 		poly_copy(y1, L, y1_);
@@ -800,7 +837,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)//FIX ME
 		poly_add(w, y2, K, w);
 		poly_freeze(w, K);
 
-		APP_DBG("DS2 - SIGN w_n = (A | I) * y_n");
+	    //uint8_t wx =  xorSign((char*)w, sizeof(w));
+	    APP_DBG("RFD DS2 -- SIGN -- w_n = (A | I) * y_n = %ld", w[1].coeffs[_N-1]);
 
 		// com_i = ck*r + w
 		poly_gen_commit(ck_seed, r_seed, Fi);
@@ -810,7 +848,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)//FIX ME
 
 		poly_pack(TC_L, (poly_t*) Fi, K * K, g_DS2_Data.fi_commit);
 
-		APP_DBG("DS2 - SIGN com_i = ck*r + w");
+	    //uint8_t fx =  xorSign((char*)g_DS2_Data.fi_commit, sizeof(g_DS2_Data.fi_commit));
+	    APP_DBG("RFD DS2 -- SIGN -- com_i = ck*r + w = %ld", g_DS2_Data.fi_commit[DS2_Fi_COMMIT_SIZE-1]);
 
 
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -844,7 +883,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)//FIX ME
 		g_AppState = DS2_SIGN_START_END;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: SIGN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: SIGN STAGE 1 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }
@@ -857,13 +896,15 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 	poly_t cs1[L] = {0};
 	poly_t cs2[K] = {0};
 
+	poly_t t0_[K] = {0};
+
 	switch(g_AppState){
 	case DS2_SIGN_START_END:
 		g_AppState = DS2_SIGN_STAGE_1_IDLE;
 		g_packet_cnt = 0;
 		elapsed_time_stop(TIMER_SIGN_START);
-		APP_DBG("DS2 TIMER - SIGN START TIMER:%ld",elapsed_time_max(TIMER_SIGN_START));
-		APP_DBG("DS2 - SIGN STAGE 1");
+		APP_DBG("RFD DS2 TIMER - SIGN START TIMER:%ld",elapsed_time_max(TIMER_SIGN_START));
+		//APP_DBG("DS2 - SIGN STAGE 1");
 		elapsed_time_start(TIMER_SIGN_STAGE_1);
 
 	case DS2_SIGN_STAGE_1_IDLE:
@@ -871,6 +912,9 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
 		memcpy(c, (uint8_t*)packet_ptr->data, data_size);
 		poly_challenge(c, &poly_c);
+
+	    uint8_t cx =  xorSign((char*)c, sizeof(c));
+	    APP_DBG("RFD DS2 -- SIGN -- c = H(com, msg, pk) = %ld", cx);
 
         // z_n = c * s_n + y_n
         poly_copy(s1, L, cs1);
@@ -894,6 +938,21 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
         rej = poly_reject(z1, z2, cs1, cs2);
 
+    	poly_copy(t0, K, t0_);
+    	poly_ntt(t0_, K);
+    	poly_mul_pointwise(t0_, &poly_c, K, t0_);
+
+    	poly_reduce(t0_, K);
+    	poly_invntt_tomont(t0_, K);
+
+    	poly_sub(z2, t0_, K, z2);
+
+        poly_center(z1, L);
+        poly_center(z2, K);
+
+        //check norm
+        //rej = !poly_check_norm(sig->z1, L, B) || !poly_check_norm(sig->z2, K, B);
+
         if(rej){
         	APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
 
@@ -910,6 +969,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
     		APP_DBG("DS2 - SIGN STAGE 2 REJECTED");
     		return;
         } else {
+
     		g_msg_buffer.src_node_id = DS2_NODE_ID;
     		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
     		g_msg_buffer.msg_code = DS2_Ri_VALUE;
@@ -943,6 +1003,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 	    poly_addq(z1, L);
 	    poly_pack(TC_L, z1, L, g_DS2_Data.zi_1_val);
 
+	    APP_DBG("RFD DS2 -- SIGN -- z1 = cs1 + y1 = %ld", z1[0].coeffs[0]);
+
 
 	    uint8_t packet_num = DS2_Zi_1_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
 	    uint8_t last_data_len = DS2_Zi_1_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
@@ -953,7 +1015,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 	    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
 
 	    int j = 0;
-	    APP_DBG("DS2 - SIGN STAGE 2 send z1");
+	    //APP_DBG("DS2 - SIGN STAGE 2 send z1");
 	    for(j = 0; j < packet_num; j++){
 	    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
 
@@ -961,7 +1023,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 
 	    	APP_RFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 	    }
-	    APP_DBG("DS2 - SIGN STAGE 2 send z1 last");
+	    //APP_DBG("DS2 - SIGN STAGE 2 send z1 last");
 	    if(last_data_len > 0){
 	    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
 	    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
@@ -986,8 +1048,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 	switch(g_AppState){
 	case DS2_SIGN_STAGE_2_END:
 		elapsed_time_stop(TIMER_SIGN_STAGE_2);
-		APP_DBG("DS2 TIMER - SIGN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_2));
-		APP_DBG("DS2 - SIGN STAGE 3");
+		APP_DBG("RFD DS2 TIMER - SIGN STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_2));
+		APP_DBG("RFD DS2 - SIGN STAGE 3");
 		elapsed_time_start(TIMER_SIGN_STAGE_3);
 		g_AppState = DS2_SIGN_STAGE_3_IDLE;
 		g_packet_cnt = 0;
@@ -995,7 +1057,10 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 
 	    poly_addq(z2, K);
 	    poly_pack(TC_L, z2, L, g_DS2_Data.zi_2_val);
+	    APP_DBG("RFD DS2 -- SIGN -- z2 = cs2 + y2 = %ld", z2[0].coeffs[0]);
 
+	    APP_DBG("RFD DS2 -- SIGN -- ti[0] = %ld", t1[0].coeffs[0]);
+	    APP_DBG("RFD DS2 -- SIGN -- A[0] = %ld", A[0][0].coeffs[0]);
 
 	    uint8_t packet_num = DS2_Zi_2_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
 	    uint8_t last_data_len = DS2_Zi_2_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
@@ -1046,22 +1111,22 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Final(void)
 		g_packet_cnt = 0;
 
 		elapsed_time_stop(TIMER_SIGN_STAGE_3);
-		APP_DBG("DS2 TIMER - SIGN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_3));
-		APP_DBG("DS2 - SIGN FINAL");
+		APP_DBG("RFD DS2 TIMER - SIGN STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_3));
+		//APP_DBG("RFD DS2 - SIGN FINAL");
 		elapsed_time_start(TIMER_SIGN_FINAL);
 	case DS2_SIGN_FINAL_IDLE:
 
 		elapsed_time_stop(TIMER_SIGN_FINAL);
 		elapsed_time_stop(TIMER_SIGN_TOTAL);
-		APP_DBG("DS2 TIMER - SIGN STAGE FINAL:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
+		APP_DBG("RFD DS2 TIMER - SIGN STAGE FINAL:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
 		//APP_DBG("DS2 TIMER - SIGN STAGE TOTAL:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
 
-		APP_DBG("DS2 - SIGN ITERATIONS TOTAL:%ld",iterations);
+		APP_DBG("RFD DS2 - SIGN ITERATIONS TOTAL:%ld",iterations);
 
 		g_AppState = DS2_READY;
 		break;
 	default:
-		APP_DBG("DS2 - ERROR: SIGN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		APP_DBG("RFD DS2 - ERROR: SIGN FINAL TASK TRIGGERED FROM BAD STATE %d", g_AppState);
 		break;
 	}
 }

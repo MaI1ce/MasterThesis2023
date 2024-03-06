@@ -17,9 +17,15 @@ void RNG_IRQHandler(void)
 
 #include "stm_rng.h"
 
+#include "fips202.h"
+
 RNG_HandleTypeDef hrng;
 
 extern void Error_Handler(void);
+
+static uint32_t master_seed[MASTER_SEED_LEN];
+
+static keccak_state_t state;
 
 void RNG_Init(void)
 {
@@ -30,12 +36,25 @@ void RNG_Init(void)
     Error_Handler();
   }
 
+  keccak_init(&state);
+
+  for(int i = 0; i < MASTER_SEED_LEN; i++)
+  {
+	  HAL_RNG_GenerateRandomNumber(&hrng, &master_seed[i]);
+	  shake256_absorb_nonce(&state, master_seed[i]);
+  }
+
+  //keccak_init(&state);
+  //shake256_absorb(&state, (uint8_t*)master_seed, sizeof(master_seed));
+  shake256_finalize(&state);
 }
 
 
 HAL_StatusTypeDef RNG_GenerateRandomInt(uint32_t *rand_num)
 {
+	//shake256_squeeze(&state, sizeof(uint32_t), (uint8_t*)rand_num);
 	return HAL_RNG_GenerateRandomNumber(&hrng, rand_num);
+	//return HAL_OK;
 }
 
 /**

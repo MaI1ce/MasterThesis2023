@@ -15,6 +15,8 @@ extern RNG_HandleTypeDef hrng;
 
 void RNG_Init(void);
 
+#define MASTER_SEED_LEN 16
+
 HAL_StatusTypeDef RNG_GenerateRandomInt(uint32_t *rand_num);
 
 
