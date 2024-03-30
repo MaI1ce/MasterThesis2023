@@ -42,3 +42,19 @@ void USB_LP_IRQHandler(void)
 #include "usbd_cdc_if.h"
 
 5) Init USB - MX_USB_Device_Init();
+
+define 
+
+static int8_t CDC_Receive_FS (uint8_t* Buf, uint32_t *Len)
+{
+    // Process Len bytes from Buf
+    YOUR_CODE_HERE
+
+    // Set the RX buffer
+    USBD_CDC_SetRxBuffer(hUsbDevice_0, &Buf[0]);
+    
+    // Ready to receive the next packet
+    USBD_CDC_ReceivePacket(hUsbDevice_0);
+
+    return USBD_OK ;
+}

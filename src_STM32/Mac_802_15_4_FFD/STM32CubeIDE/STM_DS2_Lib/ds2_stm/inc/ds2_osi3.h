@@ -112,8 +112,8 @@ typedef enum {
 
 typedef struct {
 	uint8_t packet_length;
-	uint8_t src_node_id;
 	uint8_t dst_node_id;
+	uint8_t src_node_id;
 	uint8_t msg_code;
 	uint32_t data_offset;
 	uint32_t data[DS2_MAX_DATA_LEN];

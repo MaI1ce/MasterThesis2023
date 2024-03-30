@@ -59,6 +59,10 @@
 #define TIMER_SIGN_FINAL		10
 #define TIMER_SIGN_TOTAL		11
 
+#define TIMER_SIGN_COMMIT		13
+
+#define TIMER_PACKET_SEND		14
+
 MAC_associateInd_t g_MAC_associateInd;
 
 
@@ -388,6 +392,7 @@ void APP_FFD_MAC_802_15_4_Error(uint32_t ErrId, uint32_t ErrCode)
 
 void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
 {
+  elapsed_time_start(TIMER_PACKET_SEND);
   MAC_Status_t MacStatus = MAC_ERROR;
 
   BSP_LED_On(LED3);
@@ -416,6 +421,7 @@ void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
   UTIL_SEQ_WaitEvt( 1U << CFG_EVT_DATA_DATA_CNF );
   BSP_LED_Off(LED3);
   //APP_DBG("RFD MAC APP - DATA CNF Received\0");
+  elapsed_time_stop(TIMER_PACKET_SEND);
 }
 
 void APP_FFD_MAC_802_15_4_SendEcho(void)
@@ -572,6 +578,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void)
 		g_Parties[i].status &= (~DS2_Zi_2_VALUE_FLAG);
 	}
 
+	elapsed_time_clr(TIMER_PACKET_SEND);
 	g_AppState = DS2_READY;
 }
 
@@ -701,7 +708,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 				UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_ABORT, CFG_SCH_PRIO_0 );
 				return;
 			}
-
+			//get_rho
 			//rho = H(pi)
 			keccak_state_t state;
 			keccak_init(&state);
@@ -844,6 +851,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 				return;
 			}
 
+			//get_t1
 			//t1 = sum(ti)
 			for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
 				poly_unpack(T1_BITS, g_Parties[i].ti_val, K, 0, temp_ti);
@@ -863,7 +871,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    uint8_t packet_num = DS2_Ti_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
 		    uint8_t last_data_len = DS2_Ti_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
 
-		    poly_pack(T1_BITS, t1, K, t1_packed);
+		    //poly_pack(T1_BITS, t1, K, t1_packed);
 
 		    elapsed_time_stop(TIMER_KEYGEN_FINAL);
 
@@ -880,26 +888,11 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
 		    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
 		    g_msg_buffer.msg_code = DS2_Ti_VALUE_ACK;
-		    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+		    g_msg_buffer.packet_length = DS2_HEADER_LEN + sizeof(tr);
+		    g_msg_buffer.data_offset = 0;
+		    memcpy(g_msg_buffer.data, &tr, sizeof(tr));
 
-		    int j = 0;
-
-		    for(j = 0; j < packet_num; j++){
-		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
-
-		    	memcpy(g_msg_buffer.data, &t1_packed[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
-
-		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		    }
-
-		    if(last_data_len > 0){
-		    	g_msg_buffer.data_offset = j * (DS2_MAX_DATA_LEN * 4);
-		    	g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
-
-		    	memcpy(g_msg_buffer.data, &t1_packed[g_msg_buffer.data_offset], last_data_len);
-
-		    	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		    }
+		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
 		    g_AppState = DS2_READY;
 
@@ -911,6 +904,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    APP_DBG("FFD DS2 - KYEGEN - STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_STAGE_3));
 		    APP_DBG("FFD DS2 - KYEGEN - STAGE 4 TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_FINAL));
 		    APP_DBG("FFD DS2 - KYEGEN - TOTAL   TIMER:%ld",elapsed_time_max(TIMER_KEYGEN_TOTAL));
+		    APP_DBG("FFD DS2 - KYEGEN - PACKET  TIMER:%ld",elapsed_time_max(TIMER_PACKET_SEND));
 		}
 		break;
 	default:
@@ -976,7 +970,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 			elapsed_time_start(TIMER_SIGN_STAGE_1);
 			//commit = sum(f_i)
 			for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
-				poly_unpack(TC_L, g_Parties[src_id].fi_commit, K*K, 0, (poly_t*)fi);
+				poly_unpack(TC_L, g_Parties[i].fi_commit, K*K, 0, (poly_t*)fi);
 				poly_add((poly_t*)Commit, (poly_t*)fi, K*K, (poly_t*)Commit);
 #ifdef DS2_DEBUG
 			    APP_DBG("FFD DS2 -- SIGN -- com_[%d] = ck*ri + wi = %ld",i, fi[1][1].coeffs[_N-1]);
@@ -1218,10 +1212,12 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 #ifdef DS2_DEBUG
 	            APP_DBG("FFD DS2 -- SIGN -- OPEN COMMITMENT com_i ...");
 #endif
+	            elapsed_time_start(TIMER_SIGN_COMMIT);
 	    		poly_gen_commit(ck_seed, g_Parties[i].ri_val, (poly_t*)F1);
 	    		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, K, (poly_t*)&F1[1]);
 
 	    		poly_freeze((poly_t*)F1, K*K);
+	    		elapsed_time_stop(TIMER_SIGN_COMMIT);
 
 #ifdef DS2_DEBUG
 	            APP_DBG("FFD DS2 -- SIGN -- w[%ld] = Az_i - ct0_i*2^D = %ld", i, w_temp[1].coeffs[_N-1]);
@@ -1261,6 +1257,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 			APP_DBG("FFD DS2 -- SIGN -- STAGE 3 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_3));
 			APP_DBG("FFD DS2 -- SIGN -- STAGE 4 TIMER:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
 			APP_DBG("FFD DS2 -- SIGN -- TOTAL   TIMER:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
+			APP_DBG("FFD DS2 -- SIGN -- COMMIT  TIMER:%ld",elapsed_time_max(TIMER_SIGN_COMMIT));
+			APP_DBG("FFD DS2 -- SIGN -- PACKET  TIMER:%ld",elapsed_time_max(TIMER_PACKET_SEND));
 		}
 		break;
 	default:

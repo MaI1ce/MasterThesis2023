@@ -458,7 +458,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
         		//generate ck[i][k]
         		poly_uniform(ck_seed, 1, i*TC_COLS+k, (poly_t*) &ck_ik);
 
-        		// f[i][j] += r[j][k] + ck[i][k]
+        		// f[i][j] += r[j][k] * ck[i][k]
     			for(size_t n = 0; n < _N; n++)
     			    f[i][j].coeffs[n] += montgomery_reduce((int64_t) ck_ik.coeffs[n] * r_kj.coeffs[n]);
     		}
