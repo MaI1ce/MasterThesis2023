@@ -8,8 +8,11 @@ signer  = ds2.ds2_host()
 
 print("ds2_host party number: ", signer.get_parties_num())
 
-msg_str = "0"*64
+#pi_val = b'\x01'*64
 
-msg = bytes(msg_str.encode("ascii"))
+#signer.set_pi_val(0, pi_val)
 
-signer.set_pi_commit(0,msg)
+
+rho, CPU_cycles = signer.get_rho()
+
+print(CPU_cycles, len(rho), rho)
