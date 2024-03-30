@@ -12,11 +12,19 @@ extern "C" {
 #include "./inc/ds2_osi3_conf.h"
 }
 
+#define __WINDOWS__
+
 class DS2Exception : public std::exception {
 private:
 	std::string err_msg;
+
 public:
-	DS2Exception(const char *msg): err_msg(msg) {}
+	uint64_t exec_time;
+	uint32_t err_code;
+
+	DS2Exception(uint32_t code, const char *msg): err_code(code), err_msg(msg), exec_time(0) {}
+
+	DS2Exception(uint32_t code, const char* msg, uint64_t timestamp) : err_code(code),  err_msg(msg), exec_time(timestamp) {}
 
 
 	const char* what() const noexcept {
@@ -121,6 +129,8 @@ struct ds2_host {
 public:
 	uint32_t party_num; // = DS2_MAX_PARTY_NUM
 
+	std::string msg;
+
 	ds2_host():
 		party_num(DS2_MAX_PARTY_NUM),
 		rho{ 0 },
@@ -133,7 +143,8 @@ public:
 		poly_c{ 0 },
 		z1{ 0 },
 		z2{ 0 },
-		ck{ 0 }
+		ck{ 0 },
+		msg(std::string())
 	{}
 
 	uint32_t get_party_num() { return party_num; }
@@ -151,6 +162,14 @@ public:
 
 	void set_ri_val(uint32_t party_id, const std::string& val);
 
+	std::string get_rho(uint64_t& timestamp);
+
+	std::string get_tr(uint64_t& timestamp);
+
+	std::string get_c(uint64_t& timestamp);
+
+	std::string get_signature(uint64_t& timestamp);
+
 	bool is_flag_ready(uint32_t flag);
 	void reset();
 
@@ -159,20 +178,21 @@ private:
 
 // Public key
 	uint8_t		rho[SEED_BYTES];
-	poly_t		t1[K];
-	poly_t		A[K][L];
+	poly_t		t1[_K];
+	poly_t		A[_K][_L];
 	uint8_t		tr[SEED_BYTES];
 
 // Signature
 	uint8_t		c[SEED_BYTES];
 	poly_t		poly_c;
-	poly_t		z1[L];
-	poly_t		z2[K];
+	poly_t		z1[_L];
+	poly_t		z2[_K];
 	uint8_t		r[DS2_MAX_PARTY_NUM][DS2_Ri_VALUE_SIZE];
 
 // Current commitment key
 	uint8_t 	ck_seed[SEED_BYTES];
-	poly_t		ck[K][TC_COLS];
+	poly_t		ck[_K][TC_COLS];
+	poly_t		ri[_K][TC_COLS];
 };
 
 #endif

@@ -29,7 +29,7 @@ void poly_ntt(poly_t *poly, size_t polys_count);
 
 void poly_invntt_tomont(poly_t *poly, size_t polys_count);
 
-void poly_product(const poly_t a[K][L], const poly_t b[L], poly_t c[K]);
+void poly_product(const poly_t a[_K][_L], const poly_t b[_L], poly_t c[_K]);
 
 void poly_product2(const poly_t a[2][TC_COLS], const poly_t b[TC_COLS], poly_t c[2]);
 
@@ -57,7 +57,7 @@ void poly_power2round(poly_t *r1, size_t polys_count, poly_t *r0);
 
 void poly_decompose(poly_t *r1, size_t polys_count, poly_t *r0);
 
-uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L], const poly_t cs2[K]);
+uint8_t poly_reject(const poly_t z1[_L], const poly_t z2[_K], const poly_t cs1[_L], const poly_t cs2[_K]);
 
 uint8_t poly_check_norm(const poly_t *poly, size_t polys_count, double bound);
 
@@ -65,6 +65,6 @@ void poly_pack(uint8_t valid_bits, const poly_t *poly, size_t polys_count, uint8
 
 void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, uint8_t is_signed, poly_t *poly);
 
-void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][K]);
+void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][_K]);
 
 #endif

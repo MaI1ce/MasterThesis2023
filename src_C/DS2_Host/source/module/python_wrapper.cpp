@@ -16,9 +16,11 @@ PYBIND11_MODULE(ds2, handle) {
 					Master Thesis 2024 ";
 
 	py::register_exception<DS2Exception>(handle, "DS2Exception");
+		//.def("err_code", [](const DS2Exception& self) {return self.err_code; });
 
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
+		.def("translate_exception", [](ds2_host& self, const DS2Exception& e) {return e.err_code; })
 		.def("get_parties_num", &ds2_host::get_party_num)
 		.def("set_pi_commit", &ds2_host::set_pi_commit)
 		.def("set_ti_commit", &ds2_host::set_ti_commit)
@@ -26,8 +28,44 @@ PYBIND11_MODULE(ds2, handle) {
 		.def("set_pi_val", &ds2_host::set_pi_val)
 		.def("set_ti_val", &ds2_host::set_ti_val)
 		.def("set_ri_val", &ds2_host::set_ri_val)
-		.def("set_zi_1_val", &ds2_host::set_zi_1_val)
 		.def("set_zi_2_val", &ds2_host::set_zi_2_val)
+		.def("set_zi_1_val", &ds2_host::set_zi_1_val)
+		.def("set_msg",
+			[](ds2_host& self, std::string& msg) {
+				self.msg = msg;
+			})
+		.def("get_msg",
+			[](ds2_host& self) {
+				return py::bytes(self.msg);
+			},
+			py::return_value_policy::take_ownership)
+		.def("get_rho",
+			[](ds2_host& self) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(py::bytes(self.get_rho(timestamp)));
+				rl.append(timestamp);
+				return rl;
+			}, 
+			py::return_value_policy::take_ownership)
+		.def("get_tr",
+			[](ds2_host& self) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(py::bytes(self.get_tr(timestamp)));
+				rl.append(timestamp);
+				return rl;
+			},
+			py::return_value_policy::take_ownership)
+		.def("get_signature",
+			[](ds2_host& self) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(py::bytes(self.get_signature(timestamp)));
+				rl.append(timestamp);
+				return rl;
+			},
+			py::return_value_policy::take_ownership)
 		.def("reset", &ds2_host::reset)
 		.def("is_flag_ready", &ds2_host::is_flag_ready);
 }
