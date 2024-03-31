@@ -223,6 +223,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 			timestamp = get_cycles() - timestamp;//finish
 			char errormsg[80] = { 0 };
 			std::sprintf(errormsg, "Commitment check failed for node ID %d", i);
+			err_code = DS2_ERROR_Fi_COMMIT;
 			throw DS2Exception(DS2_ERROR_Fi_COMMIT, errormsg, timestamp);
 		}
 	}
@@ -272,10 +273,13 @@ bool ds2_host::is_flag_ready(uint32_t flag)
 
 void ds2_host::set_pi_commit(uint32_t party_id, const std::string& commit)
 {
-	if (party_id >= party_num) 
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
 	if (commit.size() != DS2_Pi_COMMIT_SIZE) {
+		err_code = DS2_ERROR_Pi_COMMIT;
 		throw DS2Exception(DS2_ERROR_Pi_COMMIT, "pi_commit has bad buffer size");
 	}
 	else {
@@ -289,10 +293,13 @@ void ds2_host::set_pi_val(uint32_t party_id, const std::string& val)
 {
 	uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = { 0 };
 
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
-	if (val.size() != DS2_Pi_COMMIT_SIZE) {
+	if (val.size() != DS2_Pi_VALUE_SIZE) {
+		err_code = DS2_ERROR_Pi_COMMIT;
 		throw DS2Exception(DS2_ERROR_Pi_COMMIT, "pi_val has bad buffer size");
 	}
 	else {
@@ -301,17 +308,22 @@ void ds2_host::set_pi_val(uint32_t party_id, const std::string& val)
 	}
 
 	h1(parties[party_id].pi_val, party_id, temp_commit);
-	if (memcmp(temp_commit, parties[party_id].pi_commit, DS2_Pi_COMMIT_SIZE) != 0)
+	if (memcmp(temp_commit, parties[party_id].pi_commit, DS2_Pi_COMMIT_SIZE) != 0) {
+		err_code = DS2_ERROR_Pi_COMMIT;
 		throw DS2Exception(DS2_ERROR_Pi_COMMIT, "pi value do not correspond to provided pi_commit");
+	}
 
 }
 
 void ds2_host::set_ti_commit(uint32_t party_id, const std::string& commit)
 {
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
-	if (commit.size() != DS2_Pi_COMMIT_SIZE) {
+	if (commit.size() != DS2_Ti_COMMIT_SIZE) {
+		err_code = DS2_ERROR_Ti_COMMIT;
 		throw DS2Exception(DS2_ERROR_Ti_COMMIT, "ti_commit has bad buffer size");
 	}
 	else {
@@ -325,10 +337,13 @@ void ds2_host::set_ti_val(uint32_t party_id, const std::string& val)
 {
 	uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = { 0 };
 
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
-	if (val.size() != DS2_Ti_COMMIT_SIZE) {
+	if (val.size() != DS2_Ti_VALUE_SIZE) {
+		err_code = DS2_ERROR_Ti_COMMIT;
 		throw DS2Exception(DS2_ERROR_Ti_COMMIT, "ti_val has bad buffer size");
 	}
 	else {
@@ -337,17 +352,22 @@ void ds2_host::set_ti_val(uint32_t party_id, const std::string& val)
 	}
 
 	h2(parties[party_id].ti_val, party_id, temp_commit);
-	if (memcmp(temp_commit, parties[party_id].ti_commit, DS2_Ti_COMMIT_SIZE) != 0)
+	if (memcmp(temp_commit, parties[party_id].ti_commit, DS2_Ti_COMMIT_SIZE) != 0) {
+		err_code = DS2_ERROR_Ti_COMMIT;
 		throw DS2Exception(DS2_ERROR_Ti_COMMIT, "ti value do not correspond to provided ti_commit");
+	}
 
 }
 
 void ds2_host::set_fi_commit(uint32_t party_id, const std::string& commit)
 {
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
 	if (commit.size() != DS2_Fi_COMMIT_SIZE) {
+		err_code = DS2_ERROR_Fi_COMMIT;
 		throw DS2Exception(DS2_ERROR_Fi_COMMIT, "fi_commit has bad buffer size");
 	}
 	else {
@@ -359,10 +379,13 @@ void ds2_host::set_fi_commit(uint32_t party_id, const std::string& commit)
 
 void ds2_host::set_zi_1_val(uint32_t party_id, const std::string& val)
 {
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
 	if (val.size() != DS2_Zi_1_VALUE_SIZE) {
+		err_code = DS2_ERROR_Zi_REJECT;
 		throw DS2Exception(DS2_ERROR_Zi_REJECT, "zi_1_val has bad buffer size");
 	}
 	else {
@@ -375,10 +398,13 @@ void ds2_host::set_zi_1_val(uint32_t party_id, const std::string& val)
 
 void ds2_host::set_zi_2_val(uint32_t party_id, const std::string& val)
 {
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
 	if (val.size() != DS2_Zi_2_VALUE_SIZE) {
+		err_code = DS2_ERROR_Zi_REJECT;
 		throw DS2Exception(DS2_ERROR_Zi_REJECT, "zi_2_val has bad buffer size");
 	}
 	else {
@@ -391,10 +417,13 @@ void ds2_host::set_zi_2_val(uint32_t party_id, const std::string& val)
 void ds2_host::set_ri_val(uint32_t party_id, const std::string& val)
 {
 
-	if (party_id >= party_num)
+	if (party_id >= party_num) {
+		err_code = DS2_ERROR_INVALID_NODE_ID;
 		throw DS2Exception(DS2_ERROR_INVALID_NODE_ID, "party_id exceeds max allowed number of parties!");
+	}
 
 	if (val.size() != DS2_Ri_VALUE_SIZE) {
+		err_code = DS2_ERROR_Fi_COMMIT;
 		throw DS2Exception(DS2_ERROR_Fi_COMMIT, "ri_val has bad buffer size");
 	}
 	else {

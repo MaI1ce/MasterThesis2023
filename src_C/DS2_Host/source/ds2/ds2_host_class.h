@@ -131,7 +131,10 @@ public:
 
 	std::string msg;
 
+	uint32_t err_code;
+
 	ds2_host():
+		err_code(0),
 		party_num(DS2_MAX_PARTY_NUM),
 		rho{ 0 },
 		t1{ 0 },

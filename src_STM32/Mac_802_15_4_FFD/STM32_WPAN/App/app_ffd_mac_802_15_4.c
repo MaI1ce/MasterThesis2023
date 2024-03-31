@@ -38,6 +38,7 @@
 #include "elapsed_time.h"
 #include "fips202.h"
 #include "poly.h"
+#include "usbd_cdc_if.h"
 ////////////////////////////////////////
 
 
@@ -86,6 +87,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void);
 
+static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void);
+
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void);
 
@@ -93,6 +96,8 @@ void APP_FFD_MAC_802_15_4_SendEcho(void);
 
 static uint8_t xorSign( const char * pmessage, uint32_t message_len);
 
+extern uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+extern uint32_t UserRxBufferFS_len;
 
 static uint8_t 		g_ERROR_code = 0;
 static DS2_Party 	g_Parties[DS2_MAX_PARTY_NUM] = {0};
@@ -177,6 +182,8 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_2, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_FINAL, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Final);
+
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU, APP_FFD_MAC_802_15_4_DS2_USB_Transfer);
   /* Configuration MAC 802_15_4 */
   APP_FFD_MAC_802_15_4_Config();
 
@@ -547,6 +554,75 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 /** @defgroup APP FFD private function prototypes
  * @{
  */
+static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void)
+{
+	uint8_t msg_code = UserRxBufferFS[0];
+	uint8_t *data = UserRxBufferFS+1;
+
+	UserRxBufferFS_len -= 1;
+
+	 APP_DBG("FFD DS2 - USB RX CALLBACK - CODE %d", msg_code);
+
+	if(msg_code >= DS2_ABORT){
+		g_ERROR_code = msg_code;
+		APP_FFD_MAC_802_15_4_DS2_Abort();
+		return;
+	}
+
+
+	switch(msg_code){
+	case DS2_KEYGEN_START_TASK: case DS2_SIGN_START_TASK:
+
+		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+		g_msg_buffer.msg_code = msg_code;
+		g_msg_buffer.packet_length = 4;
+		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		switch(msg_code){
+		case DS2_KEYGEN_START_TASK:
+			APP_DBG("FFD DS2 - USB RX CALLBACK - START KEYGEN");
+			break;
+		case DS2_SIGN_START_TASK:
+			APP_DBG("FFD DS2 - USB RX CALLBACK - START SIGN");
+			break;
+		}
+
+
+		break;
+	case DS2_Pi_VALUE_ACK: case DS2_Ti_VALUE_ACK:
+	case DS2_Fi_COMMIT_ACK: case DS2_Zi_2_VALUE_ACK:
+		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+		int i = 0;
+
+		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+		g_msg_buffer.msg_code = msg_code;
+		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+		g_msg_buffer.data_offset = 0;
+		uint8_t packet_num = UserRxBufferFS_len / (DS2_MAX_DATA_LEN * 4);
+		uint8_t last_data_len = UserRxBufferFS_len % (DS2_MAX_DATA_LEN * 4);
+
+		for(i = 0; i < packet_num; i++){
+			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+
+			memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
+
+			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		}
+
+		if(last_data_len > 0){
+			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+			g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+
+			memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], last_data_len);
+
+			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+		}
+		break;
+	}
+
+
+}
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void)
 {
@@ -628,6 +704,8 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
 
+	uint8_t usb_buffer[DS2_Pi_COMMIT_SIZE+3] = {0};
+
 	switch(g_AppState){
 	case DS2_READY:
 		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
@@ -641,6 +719,23 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		memcpy(g_Parties[src_id].pi_commit, packet_ptr->data, DS2_Pi_COMMIT_SIZE);
 		g_Parties[src_id].status |= DS2_Pi_COMMIT_FLAG;
 
+		memcpy(usb_buffer+3, packet_ptr->data, DS2_Pi_COMMIT_SIZE);
+
+		usb_buffer[0] = DS2_Pi_COMMIT;
+		usb_buffer[1] = src_id;
+		usb_buffer[2] = DS2_Pi_COMMIT_SIZE;
+
+		uint8_t status = 0;
+		do {
+			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer)); //sizeof(usb_buffer)
+		} while(status == USBD_BUSY);
+
+		if(status != USBD_OK){
+			g_ERROR_code = DS2_UNKNOWN_ERROR;
+			APP_FFD_MAC_802_15_4_DS2_Abort();
+			return;
+		}
+
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
 			ready_flag &= (g_Parties[i].status & DS2_Pi_COMMIT_FLAG);
@@ -648,6 +743,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 
 		if(ready_flag)
 		{
+
 #ifdef DS2_DEBUG
 
 	        uint8_t gix = xorSign((char*)g_Parties[src_id].pi_commit, sizeof(g_Parties[src_id].pi_commit));
@@ -674,6 +770,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
+	uint8_t usb_buffer[DS2_Pi_VALUE_SIZE+3] = {0};
 
 	static uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = {0};
 
@@ -682,13 +779,30 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		g_AppState = DS2_KEYGEN_STAGE_2_IDLE;
 		memset(g_packet_cnt, 0, sizeof(g_packet_cnt));
 #ifdef DS2_DEBUG
-		APP_DBG("RFD DS2 - KEYGEN - STAGE 2");
+		APP_DBG("FFD DS2 - KEYGEN - STAGE 2");
 #endif
 	case DS2_KEYGEN_STAGE_2_IDLE:
 		//save pi value
 		memcpy(g_Parties[src_id].pi_val, packet_ptr->data, DS2_Pi_VALUE_SIZE);
 
 		g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
+
+		memcpy(usb_buffer+3, packet_ptr->data, DS2_Pi_VALUE_SIZE);
+
+		usb_buffer[0] = DS2_Pi_VALUE;
+		usb_buffer[1] = src_id;
+		usb_buffer[2] = DS2_Pi_VALUE_SIZE;
+
+		uint8_t status = 0;
+		do {
+			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
+		} while(status == USBD_BUSY);
+
+		if(status != USBD_OK){
+			g_ERROR_code = DS2_UNKNOWN_ERROR;
+			APP_FFD_MAC_802_15_4_DS2_Abort();
+			return;
+		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -697,6 +811,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 
 		if(ready_flag)
 		{
+/*
 			elapsed_time_start(TIMER_KEYGEN_STAGE_2);
 			//compute commitment
 			h1(g_Parties[src_id].pi_val, src_id, temp_commit);
@@ -746,7 +861,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		    memcpy(g_msg_buffer.data, g_rho, SEED_BYTES);
 
 		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-
+*/
 		    g_AppState = DS2_KEYGEN_STAGE_2_END;
 		}
 		break;
@@ -761,6 +876,8 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
 
+	uint8_t usb_buffer[DS2_Ti_COMMIT_SIZE+3] = {0};
+
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_2_END:
 		g_AppState = DS2_KEYGEN_STAGE_3_IDLE;
@@ -773,6 +890,23 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 
 		memcpy(g_Parties[src_id].ti_commit, (uint8_t*)packet_ptr->data, DS2_Ti_COMMIT_SIZE);
 		g_Parties[src_id].status |= DS2_Ti_COMMIT_FLAG ;
+
+		memcpy(usb_buffer+3, packet_ptr->data, DS2_Ti_COMMIT_SIZE);
+
+		usb_buffer[0] = DS2_Ti_COMMIT;
+		usb_buffer[1] = src_id;
+		usb_buffer[2] = DS2_Ti_COMMIT_SIZE;
+
+		uint8_t status = 0;
+		do {
+			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
+		} while(status == USBD_BUSY);
+
+		if(status != USBD_OK){
+			g_ERROR_code = DS2_UNKNOWN_ERROR;
+			APP_FFD_MAC_802_15_4_DS2_Abort();
+			return;
+		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -808,6 +942,8 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 	uint32_t offset = packet_ptr->data_offset;
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
+	uint8_t usb_buffer[DS2_Ti_VALUE_SIZE+3] = {0};
+
 	poly_t temp_ti[K] = {0};
 	uint8_t t1_packed[DS2_Ti_VALUE_SIZE] = {0};
 
@@ -830,6 +966,23 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		//all packets from node src_id were received
 		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
 			g_Parties[src_id].status |= DS2_Ti_VALUE_FLAG ;
+
+			memcpy(usb_buffer+3, g_Parties[src_id].ti_val, DS2_Ti_VALUE_SIZE);
+
+			usb_buffer[0] = DS2_Ti_VALUE;
+			usb_buffer[1] = src_id;
+			usb_buffer[2] = DS2_Ti_VALUE_SIZE;
+
+			uint8_t status = 0;
+			do {
+				status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
+			} while(status == USBD_BUSY);
+
+			if(status != USBD_OK){
+				g_ERROR_code = DS2_UNKNOWN_ERROR;
+				APP_FFD_MAC_802_15_4_DS2_Abort();
+				return;
+			}
 		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -839,6 +992,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 
 		if(ready_flag)
 		{
+/*
 			elapsed_time_start(TIMER_KEYGEN_FINAL);
 
 			h2(g_Parties[src_id].ti_val, src_id, temp_commit);
@@ -893,7 +1047,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    memcpy(g_msg_buffer.data, &tr, sizeof(tr));
 
 		    APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-
+*/
 		    g_AppState = DS2_READY;
 
 		    elapsed_time_stop(TIMER_KEYGEN_TOTAL);
@@ -1312,6 +1466,19 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 		g_msg_buffer.packet_length = 4;
 		//send READY
 		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+		uint8_t status = 0;
+		uint8_t usb_buffer[3] = {DS2_COORDINATOR_HELLO};
+		usb_buffer[1] = id;
+		usb_buffer[2] = 0;
+		do {
+			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
+		} while(status == USBD_BUSY);
+
+		if(status != USBD_OK){
+			g_ERROR_code = DS2_UNKNOWN_ERROR;
+			return;
+		}
 	}
 /*
 	if(msg_buffer.msg_code > DS2_ABORT)

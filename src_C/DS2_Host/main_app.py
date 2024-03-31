@@ -62,6 +62,8 @@ class Sniffer:
     DS2_Zi_2_VALUE_FLAG 	= (1 << DS2_Zi_2_VALUE)
     DS2_PARTY_ACTIVE   		= 0x80000000
 
+    DS2_BROADCAST_ID        = 255
+    DS2_COORDINATOR_ID      = 254
 
     def __init__(self):
         self.root = tk.Tk()
@@ -148,7 +150,11 @@ class Sniffer:
         self.root.mainloop()
         
     def keygen(self):
-        pass
+        msg = bytes([self.DS2_KEYGEN_START_TASK, 0])
+        if self.ser is not None and self.ser.is_open:
+            self.listbox.insert(self.index, "START KEYGEN")
+            self.index += 1
+            self.ser.write(msg)
     
     def sign(self):
         pass
@@ -160,6 +166,12 @@ class Sniffer:
         self.signer.reset()
         self.listbox.insert(self.index, "KEYS ARE DELETED")
         self.index += 1
+        self.keygen_time = 0
+        self.sing_time = 0
+        self.verify_time = 0
+        msg = bytes([self.DS2_ABORT, 0])
+        if self.ser is not None and self.ser.is_open:
+            self.ser.write(msg)
 
     def port_open(self):
         self.listbox.delete(0, tk.END)
@@ -176,6 +188,13 @@ class Sniffer:
         if self.read_thread is not None:
             self.read_thread.join()
             self.read_thread = None
+            if self.ser is not None:
+                #print("port closing ...")
+                self.ser.close()
+                self.listbox.insert(self.index, "port is closed")
+                self.index += 1
+
+            self.ser = None
             self.listbox.insert(self.index, "THREAD STOP")
             self.index += 1
 
@@ -201,7 +220,8 @@ class Sniffer:
     def msg_parser(self, msg:bytes):
         msg_code = msg[0]
         node_id = msg[1]
-        data = msg[2:]
+        data_len = msg[2]
+        data = msg[3:]
         try:
             match msg_code:
                 case self.DS2_COORDINATOR_HELLO:
@@ -209,60 +229,60 @@ class Sniffer:
                     self.index += 1
             
                 case self.DS2_Pi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Pi commit: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Pi commit len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_pi_commit(node_id, data)
                 
                 case self.DS2_Pi_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Pi value: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Pi value len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_pi_val(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Pi_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Pi_VALUE_FLAG):
                         rho, cpu_cycles = self.signer.get_rho()
                         self.keygen_time += cpu_cycles
-                        self.listbox.insert(self.index, "KeyGen: rho value: {}".format(rho))
+                        self.listbox.insert(self.index, "KeyGen: send rho value {} time {}".format(rho, self.keygen_time))
                         self.index += 1
                         self.response(self.DS2_Pi_VALUE_ACK, rho)
                 
                 case self.DS2_Ti_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Ti commit: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Ti commit len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_ti_commit(node_id, data)
                 
                 case self.DS2_Ti_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Ti value: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Ti value len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_ti_val(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Ti_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Ti_VALUE_FLAG):
                         tr, cpu_cycles = self.signer.get_tr()
                         self.keygen_time += cpu_cycles
-                        self.listbox.insert(self.index, "KeyGen: tr value: {}".format(tr))
+                        self.listbox.insert(self.index, "KeyGen: send tr value {} time {}".format(tr, self.keygen_time))
                         self.index += 1
                         self.response(self.DS2_Ti_VALUE_ACK, tr)
                     
                 case self.DS2_Fi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Fi commit: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Fi commit value {}".format(node_id, data))
                     self.index += 1
                     self.signer.set_fi_commit(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Fi_COMMIT_FLAG):
                         sc, cpu_cycles = self.signer.get_c()
                         self.sign_time += cpu_cycles
-                        self.listbox.insert(self.index, "Sign: sc value: {}".format(sc))
+                        self.listbox.insert(self.index, "Sign: send sc value {} time {}".format(sc, self.sign_time))
                         self.index += 1
                         self.response(self.DS2_Fi_COMMIT_ACK, sc)
                     
-                case self.DS2_Ri_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Ri value: {}".format(node_id, data))
+                case self.DS2_Ri_VALUE:
+                    self.listbox.insert(self.index, "Party ID:{} Ri value len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_ri_val(node_id, data)
                     
                 case self.DS2_Zi_1_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_1 value: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Zi_1 value len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_zi_1_val(node_id, data)
 
                 case self.DS2_Zi_2_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_2 value: {}".format(node_id, data))
+                    self.listbox.insert(self.index, "Party ID:{} Zi_2 value len {}".format(node_id, len(data)))
                     self.index += 1
                     self.signer.set_zi_2_val(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Ri_VALUE_FLAG) and \
@@ -270,19 +290,18 @@ class Sniffer:
                         self.signer.is_flag_ready(self.DS2_Zi_2_VALUE_FLAG):
                         signature, cpu_cycles = self.signer.get_signature()
                         self.sign_time += cpu_cycles
-                        self.listbox.insert(self.index, "Sign: signature value: {}".format(signature))
+                        self.listbox.insert(self.index, "Sign: signature value: {}".format(":".join("{:02x}".format(c) for c in signature)))
                         self.index += 1
                         #self.response(self.DS2_Zi_2_VALUE_FLAG)
             
                 case _:
-                    data_str = data.decode('latin-1').replace('\0', '')
-                    self.listbox.insert(self.index, "unknown msg_code:{} node_id:{} data:{}".format(msg_code, node_id, data_str))
+                    self.listbox.insert(self.index, "unknown msg_code:{} len {}".format(msg_code, node_id, len(data)))
                     self.index += 1
                     
         except ds2.DS2Exception as err:
-             self.listbox.insert(self.index, "Error: {} node_id:{}".format(str(err)), node_id) #TODO - paint red
+             self.listbox.insert(self.index, "Error: {} node_id:{}".format(str(err), node_id)) #TODO - paint red
              self.index += 1
-             err_code = self.signer.translate_exception(err)
+             err_code = self.signer.translate_exception()
              self.abort(err_code)
         
 
@@ -299,29 +318,34 @@ class Sniffer:
                 self.index += 1
 
 
-            while self.thread_run:
-                read_len = self.ser.inWaiting()
-                if read_len > 0:
-                    data = self.ser.read(read_len)
-                    self.msg_parser(data)
+                while self.thread_run:
+                    read_len = self.ser.inWaiting()
+                    if read_len > 2:
+                        header = self.ser.read(3)
+                        data_len = header[2]
+                        data = self.ser.read(data_len)
+                        bytes_object = header+data
+                        self.msg_parser(bytes_object)
+                        print(len(bytes_object))
+                        print(":".join("{:02x}".format(c) for c in bytes_object))
 
-                time.sleep(0.1)
-
-            print('LOOP END')
+                    #time.sleep(0.1)
 
         except Exception as err:
             #messagebox.showerror('Error', str(err))
+            print(str(err))
             self.listbox.insert(self.index, str(err))
             self.index += 1
         finally:
-            print('THREAD FINAL')
-            if self.ser is not None:
-                #self.listbox.insert(self.index, "port is closed")
-                #self.index += 1
-                self.ser.close()
-            self.listbox.insert(self.index, "port is closed")
-            self.index += 1
-            self.ser = None
+            pass
+            #print("THREAD FINAL")
+            #if self.ser is not None:
+            #    print("port closing ...")
+            #    self.ser.close()
+            #    self.listbox.insert(self.index, "port is closed")
+            #    self.index += 1
+
+            #self.ser = None
 
 
 if __name__ == "__main__":

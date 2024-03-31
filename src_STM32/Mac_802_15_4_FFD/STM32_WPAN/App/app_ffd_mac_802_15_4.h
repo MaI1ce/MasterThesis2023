@@ -76,6 +76,7 @@ typedef enum
   CFG_TASK_DS2_SIGN_STAGE_2,
   CFG_TASK_DS2_SIGN_STAGE_3,
   CFG_TASK_DS2_SIGN_FINAL,
+  CFG_TASK_DS2_USB_TX,
   CFG_TASK_NBR,  /**< Shall be last in the list */
 } CFG_IdleTask_Id_t;
 

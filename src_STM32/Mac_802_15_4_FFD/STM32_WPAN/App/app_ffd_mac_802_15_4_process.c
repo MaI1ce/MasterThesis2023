@@ -261,7 +261,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						break;
 					}
 				} else {
-					APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID");
+					APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID %d", packet_ptr->dst_node_id);
 				}
 			}
 		}
