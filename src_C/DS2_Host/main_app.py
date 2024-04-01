@@ -145,6 +145,12 @@ class Sniffer:
         sign_controll_frame.grid(row=0, column=3, rowspan=10, sticky="nswe")
         self.main_frame.grid(row=0, column=0, sticky="nswe")
         
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+    def on_closing(self):
+        self.port_close()
+        self.root.destroy()
+
 
     def tk_mainloop(self):
         self.root.mainloop()
@@ -207,21 +213,23 @@ class Sniffer:
         
     def abort(self, err_code:int):
         if self.ser is not None and self.ser.is_open:
-            self.ser.write(err_code.to_bytes(1, 'big'))
+            self.ser.write(err_code.to_bytes(1, 'little'))
             
     def response(self, msg_code, data:bytes=None):
         if self.ser is not None and self.ser.is_open:
-            wr_data = msg_code.to_bytes(1, 'big')
+            #msg_code + node_id
+            wr_data = msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little')
             if data is not None:
                 wr_data += data
-            self.ser.write(wr_data)
+            data_len = len(wr_data)
+            
+            self.ser.write(data_len.to_bytes(4, 'little') + wr_data)
         
         
     def msg_parser(self, msg:bytes):
         msg_code = msg[0]
         node_id = msg[1]
-        data_len = msg[2]
-        data = msg[3:]
+        data = msg[2:]
         try:
             match msg_code:
                 case self.DS2_COORDINATOR_HELLO:
@@ -320,14 +328,13 @@ class Sniffer:
 
                 while self.thread_run:
                     read_len = self.ser.inWaiting()
-                    if read_len > 2:
-                        header = self.ser.read(3)
-                        data_len = header[2]
+                    if read_len > 3:
+                        frame_len = self.ser.read(4)
+                        data_len = int.from_bytes(frame_len, byteprder='little', signed=False)
                         data = self.ser.read(data_len)
-                        bytes_object = header+data
-                        self.msg_parser(bytes_object)
-                        print(len(bytes_object))
-                        print(":".join("{:02x}".format(c) for c in bytes_object))
+                        self.msg_parser(data)
+                        print(data_len)
+                        print(":".join("{:02x}".format(c) for c in data))
 
                     #time.sleep(0.1)
 

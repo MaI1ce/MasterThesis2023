@@ -129,9 +129,9 @@
 #define CFG_HW_LPUART1_DMAMUX_CLK_ENABLE       __HAL_RCC_DMAMUX1_CLK_ENABLE
 #define CFG_HW_LPUART1_DMA_CLK_ENABLE          __HAL_RCC_DMA1_CLK_ENABLE
 #define CFG_HW_LPUART1_TX_DMA_REQ              DMA_REQUEST_LPUART1_TX
-#define CFG_HW_LPUART1_TX_DMA_CHANNEL          DMA1_Channel4
-#define CFG_HW_LPUART1_TX_DMA_IRQn             DMA1_Channel4_IRQn
-#define CFG_HW_LPUART1_DMA_TX_IRQHandler       DMA1_Channel4_IRQHandler
+#define CFG_HW_LPUART1_TX_DMA_CHANNEL          DMA1_Channel2
+#define CFG_HW_LPUART1_TX_DMA_IRQn             DMA1_Channel2_IRQn
+#define CFG_HW_LPUART1_DMA_TX_IRQHandler       DMA1_Channel2_IRQHandler
 #endif
 #endif
 
@@ -142,7 +142,7 @@
 #define CFG_HW_USART1_PREEMPTPRIORITY         0x0F
 #define CFG_HW_USART1_SUBPRIORITY             0
 
-#define CFG_HW_USART1_BAUDRATE                115200
+#define CFG_HW_USART1_BAUDRATE                921600
 #define CFG_HW_USART1_WORDLENGTH              UART_WORDLENGTH_8B
 #define CFG_HW_USART1_STOPBITS                UART_STOPBITS_1
 #define CFG_HW_USART1_PARITY                  UART_PARITY_NONE
@@ -181,6 +181,12 @@
 
 #define CFG_HW_USART1_DMAMUX_CLK_ENABLE       __HAL_RCC_DMAMUX1_CLK_ENABLE
 #define CFG_HW_USART1_DMA_CLK_ENABLE          __HAL_RCC_DMA2_CLK_ENABLE
+
+#define CFG_HW_USART1_RX_DMA_REQ              DMA_REQUEST_USART1_RX
+#define CFG_HW_USART1_RX_DMA_CHANNEL          DMA2_Channel3
+#define CFG_HW_USART1_RX_DMA_IRQn             DMA2_Channel3_IRQn
+#define CFG_HW_USART1_DMA_RX_IRQHandler       DMA2_Channel3_IRQHandler
+
 #define CFG_HW_USART1_TX_DMA_REQ              DMA_REQUEST_USART1_TX
 #define CFG_HW_USART1_TX_DMA_CHANNEL          DMA2_Channel4
 #define CFG_HW_USART1_TX_DMA_IRQn             DMA2_Channel4_IRQn

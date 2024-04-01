@@ -93,9 +93,13 @@ int main(void)
   APP_ENTRY_Init(APPE_FULL);
 
   /* Main Loop  */
+
+  //uint8_t text[] = "UART1 921600 TEST PING\n\r";
   while (1)
   {
     UTIL_SEQ_Run( UTIL_SEQ_DEFAULT );
+
+    //HW_UART_Transmit_DMA(CFG_CLI_UART, text, sizeof(text), NULL);
   }
 }
 

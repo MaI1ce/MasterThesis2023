@@ -66,7 +66,13 @@
 
 MAC_associateInd_t g_MAC_associateInd;
 
+extern UART_HandleTypeDef huart1;
 
+typedef struct {
+	uint32_t length;
+	uint8_t msg_code;
+	uint8_t node_id;
+}serial_frame;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -96,8 +102,13 @@ void APP_FFD_MAC_802_15_4_SendEcho(void);
 
 static uint8_t xorSign( const char * pmessage, uint32_t message_len);
 
-extern uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
-extern uint32_t UserRxBufferFS_len;
+//extern uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+//extern uint32_t UserRxBufferFS_len;
+
+static uint8_t 		UART1_rxBuffer[DS2_Fi_COMMIT_SIZE+sizeof(serial_frame)];
+static uint8_t 		UART1_txBuffer[DS2_Fi_COMMIT_SIZE+sizeof(serial_frame)];
+static serial_frame* tx_ptr = (serial_frame*)UART1_txBuffer;
+static serial_frame* rx_ptr = (serial_frame*)UART1_rxBuffer;
 
 static uint8_t 		g_ERROR_code = 0;
 static DS2_Party 	g_Parties[DS2_MAX_PARTY_NUM] = {0};
@@ -556,12 +567,13 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
  */
 static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void)
 {
-	uint8_t msg_code = UserRxBufferFS[0];
-	uint8_t *data = UserRxBufferFS+1;
 
-	UserRxBufferFS_len -= 1;
+	uint32_t data_len = rx_ptr->length;
+	uint8_t msg_code = rx_ptr->msg_code;
+	//uint8_t node_id = ptr->node_id;
+	uint8_t *data = UART1_rxBuffer+sizeof(serial_frame);
 
-	 APP_DBG("FFD DS2 - USB RX CALLBACK - CODE %d", msg_code);
+	APP_DBG("FFD DS2 - UART RX CALLBACK - MSG CODE %d LEN %d", msg_code, data_len);
 
 	if(msg_code >= DS2_ABORT){
 		g_ERROR_code = msg_code;
@@ -569,21 +581,20 @@ static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void)
 		return;
 	}
 
-
 	switch(msg_code){
 	case DS2_KEYGEN_START_TASK: case DS2_SIGN_START_TASK:
 
 		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID; //node_id
 		g_msg_buffer.msg_code = msg_code;
 		g_msg_buffer.packet_length = 4;
 		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 		switch(msg_code){
 		case DS2_KEYGEN_START_TASK:
-			APP_DBG("FFD DS2 - USB RX CALLBACK - START KEYGEN");
+			APP_DBG("FFD DS2 - UART RX CALLBACK - START KEYGEN");
 			break;
 		case DS2_SIGN_START_TASK:
-			APP_DBG("FFD DS2 - USB RX CALLBACK - START SIGN");
+			APP_DBG("FFD DS2 - UART RX CALLBACK - START SIGN");
 			break;
 		}
 
@@ -599,8 +610,8 @@ static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void)
 		g_msg_buffer.msg_code = msg_code;
 		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
 		g_msg_buffer.data_offset = 0;
-		uint8_t packet_num = UserRxBufferFS_len / (DS2_MAX_DATA_LEN * 4);
-		uint8_t last_data_len = UserRxBufferFS_len % (DS2_MAX_DATA_LEN * 4);
+		uint8_t packet_num = data_len / (DS2_MAX_DATA_LEN * 4);
+		uint8_t last_data_len = data_len % (DS2_MAX_DATA_LEN * 4);
 
 		for(i = 0; i < packet_num; i++){
 			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
@@ -704,8 +715,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
 
-	uint8_t usb_buffer[DS2_Pi_COMMIT_SIZE+3] = {0};
-
 	switch(g_AppState){
 	case DS2_READY:
 		g_AppState = DS2_KEYGEN_STAGE_1_IDLE;
@@ -719,22 +728,15 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		memcpy(g_Parties[src_id].pi_commit, packet_ptr->data, DS2_Pi_COMMIT_SIZE);
 		g_Parties[src_id].status |= DS2_Pi_COMMIT_FLAG;
 
-		memcpy(usb_buffer+3, packet_ptr->data, DS2_Pi_COMMIT_SIZE);
+		///////////////////////
+		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Pi_COMMIT_SIZE);
 
-		usb_buffer[0] = DS2_Pi_COMMIT;
-		usb_buffer[1] = src_id;
-		usb_buffer[2] = DS2_Pi_COMMIT_SIZE;
+		tx_ptr->msg_code = DS2_Pi_COMMIT;
+		tx_ptr->node_id = src_id;
+		tx_ptr->length = DS2_Pi_COMMIT_SIZE + 2;
 
-		uint8_t status = 0;
-		do {
-			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer)); //sizeof(usb_buffer)
-		} while(status == USBD_BUSY);
-
-		if(status != USBD_OK){
-			g_ERROR_code = DS2_UNKNOWN_ERROR;
-			APP_FFD_MAC_802_15_4_DS2_Abort();
-			return;
-		}
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -770,9 +772,8 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 {
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
-	uint8_t usb_buffer[DS2_Pi_VALUE_SIZE+3] = {0};
 
-	static uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = {0};
+	//static uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = {0};
 
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_1_END:
@@ -787,22 +788,15 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 
 		g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
 
-		memcpy(usb_buffer+3, packet_ptr->data, DS2_Pi_VALUE_SIZE);
+		///////////////////////
+		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Pi_VALUE_SIZE);
 
-		usb_buffer[0] = DS2_Pi_VALUE;
-		usb_buffer[1] = src_id;
-		usb_buffer[2] = DS2_Pi_VALUE_SIZE;
+		tx_ptr->msg_code = DS2_Pi_VALUE;
+		tx_ptr->node_id = src_id;
+		tx_ptr->length = DS2_Pi_VALUE_SIZE + 2;
 
-		uint8_t status = 0;
-		do {
-			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
-		} while(status == USBD_BUSY);
-
-		if(status != USBD_OK){
-			g_ERROR_code = DS2_UNKNOWN_ERROR;
-			APP_FFD_MAC_802_15_4_DS2_Abort();
-			return;
-		}
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -876,7 +870,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
 	uint8_t src_id = packet_ptr->src_node_id;
 
-	uint8_t usb_buffer[DS2_Ti_COMMIT_SIZE+3] = {0};
+	//uint8_t usb_buffer[DS2_Ti_COMMIT_SIZE+3] = {0};
 
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_2_END:
@@ -891,22 +885,15 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 		memcpy(g_Parties[src_id].ti_commit, (uint8_t*)packet_ptr->data, DS2_Ti_COMMIT_SIZE);
 		g_Parties[src_id].status |= DS2_Ti_COMMIT_FLAG ;
 
-		memcpy(usb_buffer+3, packet_ptr->data, DS2_Ti_COMMIT_SIZE);
+		///////////////////////
+		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Ti_COMMIT_SIZE);
 
-		usb_buffer[0] = DS2_Ti_COMMIT;
-		usb_buffer[1] = src_id;
-		usb_buffer[2] = DS2_Ti_COMMIT_SIZE;
+		tx_ptr->msg_code = DS2_Ti_COMMIT;
+		tx_ptr->node_id = src_id;
+		tx_ptr->length = DS2_Ti_COMMIT_SIZE + 2;
 
-		uint8_t status = 0;
-		do {
-			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
-		} while(status == USBD_BUSY);
-
-		if(status != USBD_OK){
-			g_ERROR_code = DS2_UNKNOWN_ERROR;
-			APP_FFD_MAC_802_15_4_DS2_Abort();
-			return;
-		}
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -942,12 +929,12 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 	uint32_t offset = packet_ptr->data_offset;
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
-	uint8_t usb_buffer[DS2_Ti_VALUE_SIZE+3] = {0};
+	//uint8_t usb_buffer[DS2_Ti_VALUE_SIZE+3] = {0};
 
-	poly_t temp_ti[K] = {0};
-	uint8_t t1_packed[DS2_Ti_VALUE_SIZE] = {0};
+	//poly_t temp_ti[K] = {0};
+	//uint8_t t1_packed[DS2_Ti_VALUE_SIZE] = {0};
 
-	uint8_t temp_commit[DS2_Ti_COMMIT_SIZE] = {0};
+	//uint8_t temp_commit[DS2_Ti_COMMIT_SIZE] = {0};
 
 	switch(g_AppState){
 	case DS2_KEYGEN_STAGE_3_END:
@@ -967,22 +954,13 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
 			g_Parties[src_id].status |= DS2_Ti_VALUE_FLAG ;
 
-			memcpy(usb_buffer+3, g_Parties[src_id].ti_val, DS2_Ti_VALUE_SIZE);
+			memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Ti_VALUE_SIZE);
 
-			usb_buffer[0] = DS2_Ti_VALUE;
-			usb_buffer[1] = src_id;
-			usb_buffer[2] = DS2_Ti_VALUE_SIZE;
+			tx_ptr->msg_code = DS2_Ti_COMMIT;
+			tx_ptr->node_id = src_id;
+			tx_ptr->length = DS2_Ti_VALUE_SIZE + 2;
 
-			uint8_t status = 0;
-			do {
-				status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
-			} while(status == USBD_BUSY);
-
-			if(status != USBD_OK){
-				g_ERROR_code = DS2_UNKNOWN_ERROR;
-				APP_FFD_MAC_802_15_4_DS2_Abort();
-				return;
-			}
+			HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
 		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -1467,18 +1445,12 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 		//send READY
 		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
 
-		uint8_t status = 0;
-		uint8_t usb_buffer[3] = {DS2_COORDINATOR_HELLO};
-		usb_buffer[1] = id;
-		usb_buffer[2] = 0;
-		do {
-			status = CDC_Transmit_FS(usb_buffer, sizeof(usb_buffer));
-		} while(status == USBD_BUSY);
 
-		if(status != USBD_OK){
-			g_ERROR_code = DS2_UNKNOWN_ERROR;
-			return;
-		}
+		tx_ptr->msg_code = DS2_COORDINATOR_HELLO;
+		tx_ptr->node_id = id;
+		tx_ptr->length = 2;
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+
 	}
 /*
 	if(msg_buffer.msg_code > DS2_ABORT)
@@ -1509,6 +1481,14 @@ static uint8_t xorSign( const char * pmessage, uint32_t message_len)
   for (uint8_t i=0x00;i<message_len;i++)
     seed = (uint8_t)pmessage[i]^seed;
   return seed;
+}
+
+
+
+void UART_RxCpltCallback(void) {
+    UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU);
+    // Restart reception for the next frame
+    HAL_UART_Receive_DMA(&huart1, UART1_rxBuffer, sizeof(UART1_rxBuffer));
 }
 
 /**

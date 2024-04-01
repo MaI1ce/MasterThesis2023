@@ -276,9 +276,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
 	//TODO - ADD DATA PARSER FROM HOST DEVICE
-	memcpy(UserRxBufferFS, Buf, *Len);
-	UserRxBufferFS_len = *Len;
-	UTIL_SEQ_SetTask( 1<< 18, 0 );
+	//memcpy(UserRxBufferFS, Buf, *Len);
+	//UserRxBufferFS_len = *Len;
+	//
 
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
