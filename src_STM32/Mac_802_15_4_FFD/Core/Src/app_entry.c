@@ -54,9 +54,6 @@ extern void APP_FFD_MAC_802_15_4_CoordDataTask(void);
 extern uint8_t g_srvSerReq;
 extern uint8_t g_srvDataReq;
 
-extern void (*HW_huart1RxCb)(void);
-extern void UART_RxCpltCallback(void);
-
 /* Global variables  -------------------------------------------------*/
 char CommandString[C_SIZE_CMD_STRING];
 __IO uint16_t indexReceiveChar = 0U;
@@ -166,6 +163,7 @@ static void APPE_StatusNot( SHCI_TL_CmdStatus_t status )
 
 void APP_ENTRY_Init_FFD(void)
 {
+
 }
 
 /**
@@ -291,10 +289,6 @@ void DbgOutputInit( void )
 {
   HW_UART_Init(CFG_DEBUG_TRACE_UART);
   HW_UART_Init(CFG_CLI_UART);
-  uint8_t text[] = "UART1 921600 TEST PING\n\r";
-  HW_UART_Transmit_DMA(CFG_CLI_UART, text, sizeof(text), NULL);
-  HW_huart1RxCb = UART_RxCpltCallback;
-
 }
 
 /**

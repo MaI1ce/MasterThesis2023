@@ -49,6 +49,9 @@ void USART1_IRQHandler(void);
 #if(CFG_HW_USART1_DMA_TX_SUPPORTED == 1)
 void CFG_HW_USART1_DMA_TX_IRQHandler(void);
 #endif
+#if(CFG_HW_USART1_DMA_RX_SUPPORTED == 1)
+void CFG_HW_USART1_DMA_RX_IRQHandler(void);
+#endif
 #if(CFG_HW_LPUART1_ENABLED == 1)
 void LPUART1_IRQHandler(void);
 #endif

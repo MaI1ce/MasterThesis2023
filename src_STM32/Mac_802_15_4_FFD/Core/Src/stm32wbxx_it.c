@@ -126,7 +126,15 @@ void USART1_IRQHandler(void)
 #if(CFG_HW_USART1_DMA_TX_SUPPORTED == 1)
 void CFG_HW_USART1_DMA_TX_IRQHandler( void )
 {
-  HW_UART_DMA_Interrupt_Handler(hw_uart1);
+  HW_UART_DMA_Interrupt_Handler(hw_uart1, TX);
+}
+#endif
+
+
+#if(CFG_HW_USART1_DMA_RX_SUPPORTED == 1)
+void CFG_HW_USART1_DMA_RX_IRQHandler( void )
+{
+  HW_UART_DMA_Interrupt_Handler(hw_uart1, RX);
 }
 #endif
 
@@ -150,7 +158,7 @@ void LPUART1_IRQHandler(void)
 #if(CFG_HW_LPUART1_DMA_TX_SUPPORTED == 1)
 void CFG_HW_LPUART1_DMA_TX_IRQHandler( void )
 {
-  HW_UART_DMA_Interrupt_Handler(hw_lpuart1);
+  HW_UART_DMA_Interrupt_Handler(hw_lpuart1, TX);
 }
 #endif
 

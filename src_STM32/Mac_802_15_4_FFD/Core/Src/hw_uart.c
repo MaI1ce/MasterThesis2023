@@ -124,11 +124,40 @@
             HAL_NVIC_EnableIRQ(CFG_HW_##__USART_BASE__##_TX_DMA_IRQn);                          \
         } while(0)
 
+#define HW_UART_MSP_RX_DMA_INIT(__HANDLE__, __USART_BASE__)                                     \
+        do{                                                                                     \
+            /* Configure the DMA handler for Transmission process */                            \
+            /* Enable DMA clock */                                                              \
+            CFG_HW_##__USART_BASE__##_DMA_CLK_ENABLE();                                         \
+            /* Enable DMA MUX clock */                                                          \
+            CFG_HW_##__USART_BASE__##_DMAMUX_CLK_ENABLE();                                      \
+                                                                                                \
+            HW_hdma_##__HANDLE__##_rx.Instance                 = CFG_HW_##__USART_BASE__##_RX_DMA_CHANNEL; \
+            HW_hdma_##__HANDLE__##_rx.Init.Request             = CFG_HW_##__USART_BASE__##_RX_DMA_REQ; \
+            HW_hdma_##__HANDLE__##_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;          \
+            HW_hdma_##__HANDLE__##_rx.Init.PeriphInc           = DMA_PINC_DISABLE;              \
+            HW_hdma_##__HANDLE__##_rx.Init.MemInc              = DMA_MINC_ENABLE;               \
+            HW_hdma_##__HANDLE__##_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;           \
+            HW_hdma_##__HANDLE__##_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;           \
+            HW_hdma_##__HANDLE__##_rx.Init.Mode                = DMA_NORMAL;                    \
+            HW_hdma_##__HANDLE__##_rx.Init.Priority            = DMA_PRIORITY_LOW;              \
+                                                                                                \
+            HAL_DMA_Init(&HW_hdma_##__HANDLE__##_rx);                                           \
+                                                                                                \
+            /* Associate the initialized DMA handle to the UART handle */                       \
+            __HAL_LINKDMA(huart, hdmarx, HW_hdma_##__HANDLE__##_rx);                            \
+                                                                                                \
+            /* NVIC configuration for DMA transfer complete interrupt  */                       \
+            HAL_NVIC_SetPriority(CFG_HW_##__USART_BASE__##_RX_DMA_IRQn, CFG_HW_##__USART_BASE__##_DMA_RX_PREEMPTPRIORITY, CFG_HW_##__USART_BASE__##_DMA_RX_SUBPRIORITY); \
+            HAL_NVIC_EnableIRQ(CFG_HW_##__USART_BASE__##_RX_DMA_IRQn);                          \
+        } while(0)
+
 /* Variables ------------------------------------------------------------------*/
 #if (CFG_HW_USART1_ENABLED == 1)
 UART_HandleTypeDef huart1 = {0};
 #if (CFG_HW_USART1_DMA_TX_SUPPORTED == 1)
 DMA_HandleTypeDef HW_hdma_huart1_tx ={0};
+DMA_HandleTypeDef HW_hdma_huart1_rx ={0};
 #endif
 void (*HW_huart1RxCb)(void);
 void (*HW_huart1TxCb)(void);
@@ -343,13 +372,21 @@ void HW_UART_Interrupt_Handler(hw_uart_id_t hw_uart_id)
   return;
 }
 
-void HW_UART_DMA_Interrupt_Handler(hw_uart_id_t hw_uart_id)
+void HW_UART_DMA_Interrupt_Handler(hw_uart_id_t hw_uart_id, hw_uart_rtx_t type)
 {
   switch (hw_uart_id)
   {
 #if (CFG_HW_USART1_DMA_TX_SUPPORTED == 1)
     case hw_uart1:
-      HAL_DMA_IRQHandler(huart1.hdmatx);
+
+    	switch(type){
+    	case TX:
+    		HAL_DMA_IRQHandler(huart1.hdmatx);
+    		break;
+    	case RX:
+    		HAL_DMA_IRQHandler(huart1.hdmarx);
+    		break;
+    	}
       break;
 #endif
 
@@ -361,7 +398,14 @@ void HW_UART_DMA_Interrupt_Handler(hw_uart_id_t hw_uart_id)
 
 #if (CFG_HW_LPUART1_DMA_TX_SUPPORTED == 1)
     case hw_lpuart1:
-      HAL_DMA_IRQHandler(lpuart1.hdmatx);
+    	switch(type){
+    	case TX:
+    		HAL_DMA_IRQHandler(lpuart1.hdmatx);
+    		break;
+    	case RX:
+    		HAL_DMA_IRQHandler(lpuart1.hdmarx);
+    		break;
+    	}
       break;
 #endif
 
@@ -383,6 +427,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
       HW_UART_MSP_UART_INIT( huart1, USART1 );
 #if (CFG_HW_USART1_DMA_TX_SUPPORTED == 1)
       HW_UART_MSP_TX_DMA_INIT( huart1, USART1 );
+#endif
+#if (CFG_HW_USART1_DMA_RX_SUPPORTED == 1)
+      HW_UART_MSP_RX_DMA_INIT( huart1, USART1 );
 #endif
     break;
 #endif

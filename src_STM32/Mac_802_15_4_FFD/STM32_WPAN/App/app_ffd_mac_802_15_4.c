@@ -269,6 +269,12 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 
   APP_DBG("Run FFD MAC 802.15.4 - 2 - FFD Startup");
 
+  uint8_t text[] = "UART1 921600 TEST PING\n\r";
+  uint8_t status = 0xff;
+
+  status = HW_UART_Transmit_DMA(CFG_CLI_UART, text, sizeof(text), NULL);
+  APP_DBG("HW_UART_Transmit_DMA status %d", status);
+
   /* Reset FFD Device */
   /* Reset MAC */
   memset(&ResetReq,0x00,sizeof(MAC_resetReq_t));
