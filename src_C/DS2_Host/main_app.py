@@ -221,7 +221,9 @@ class Sniffer:
             wr_data = msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little')
             if data is not None:
                 wr_data += data
-            data_len = len(wr_data)
+                data_len = len(wr_data)
+            else:
+                data_len = 2
             
             self.ser.write(data_len.to_bytes(4, 'little') + wr_data)
         
@@ -303,7 +305,7 @@ class Sniffer:
                         #self.response(self.DS2_Zi_2_VALUE_FLAG)
             
                 case _:
-                    self.listbox.insert(self.index, "unknown msg_code:{} len {}".format(msg_code, node_id, len(data)))
+                    self.listbox.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
                     self.index += 1
                     
         except ds2.DS2Exception as err:
@@ -330,7 +332,7 @@ class Sniffer:
                     read_len = self.ser.inWaiting()
                     if read_len > 3:
                         frame_len = self.ser.read(4)
-                        data_len = int.from_bytes(frame_len, byteprder='little', signed=False)
+                        data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
                         data = self.ser.read(data_len)
                         self.msg_parser(data)
                         print(data_len)

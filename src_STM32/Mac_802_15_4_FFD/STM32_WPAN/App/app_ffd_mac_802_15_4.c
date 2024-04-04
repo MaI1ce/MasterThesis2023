@@ -93,7 +93,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void);
 
-static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void);
+void UART_RxCpltCallback(void);
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX(void);
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void);
@@ -194,7 +195,7 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_FINAL, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Final);
 
-  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU, APP_FFD_MAC_802_15_4_DS2_USB_Transfer);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU, APP_FFD_MAC_802_15_4_DS2_UART_RX);
   /* Configuration MAC 802_15_4 */
   APP_FFD_MAC_802_15_4_Config();
 
@@ -269,11 +270,11 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 
   APP_DBG("Run FFD MAC 802.15.4 - 2 - FFD Startup");
 
-  uint8_t text[] = "UART1 921600 TEST PING\n\r";
-  uint8_t status = 0xff;
 
-  status = HW_UART_Transmit_DMA(CFG_CLI_UART, text, sizeof(text), NULL);
-  APP_DBG("HW_UART_Transmit_DMA status %d", status);
+	tx_ptr->msg_code = DS2_COORDINATOR_READY_RESET;
+	tx_ptr->node_id = 254;
+	tx_ptr->length = 2;
+	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, NULL);
 
   /* Reset FFD Device */
   /* Reset MAC */
@@ -571,7 +572,7 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 /** @defgroup APP FFD private function prototypes
  * @{
  */
-static void APP_FFD_MAC_802_15_4_DS2_USB_Transfer(void)
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX(void)
 {
 
 	uint32_t data_len = rx_ptr->length;
@@ -741,7 +742,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Pi_COMMIT_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -801,7 +802,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Pi_VALUE_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -898,7 +899,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Ti_COMMIT_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -966,7 +967,7 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 			tx_ptr->node_id = src_id;
 			tx_ptr->length = DS2_Ti_VALUE_SIZE + 2;
 
-			HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+			HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
 		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -1455,7 +1456,8 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 		tx_ptr->msg_code = DS2_COORDINATOR_HELLO;
 		tx_ptr->node_id = id;
 		tx_ptr->length = 2;
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, tx_ptr->length, NULL);
+
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
 
 	}
 /*
@@ -1492,9 +1494,8 @@ static uint8_t xorSign( const char * pmessage, uint32_t message_len)
 
 
 void UART_RxCpltCallback(void) {
-    UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU);
     // Restart reception for the next frame
-    HAL_UART_Receive_DMA(&huart1, UART1_rxBuffer, sizeof(UART1_rxBuffer));
+	HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer, sizeof(UART1_rxBuffer), APP_FFD_MAC_802_15_4_DS2_UART_RX);
 }
 
 /**

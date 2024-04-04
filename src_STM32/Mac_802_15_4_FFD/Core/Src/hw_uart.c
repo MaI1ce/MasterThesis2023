@@ -43,6 +43,13 @@
           HAL_UART_Receive_IT(&(__HANDLE__), p_data, size);                                     \
         } while(0)
 
+#define HW_UART_RX_DMA(__HANDLE__, __USART_BASE__)                                               \
+        do{                                                                                     \
+          HW_##__HANDLE__##RxCb = cb;                                                           \
+          (__HANDLE__).Instance = (__USART_BASE__);                                             \
+          HAL_UART_Receive_DMA(&(__HANDLE__), p_data, size);                                     \
+        } while(0)
+
 #define HW_UART_TX_IT(__HANDLE__, __USART_BASE__)                                               \
         do{                                                                                     \
           HW_##__HANDLE__##TxCb = cb;                                                           \
@@ -208,6 +215,29 @@ void HW_UART_Receive_IT(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size,
 #if (CFG_HW_LPUART1_ENABLED == 1)
     case hw_lpuart1:
       HW_UART_RX_IT(lpuart1, LPUART1);
+      break;
+#endif
+
+    default:
+      break;
+  }
+
+  return;
+}
+
+void HW_UART_Receive_DMA(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size, void (*cb)(void))
+{
+  switch (hw_uart_id)
+  {
+#if (CFG_HW_USART1_ENABLED == 1)
+    case hw_uart1:
+      HW_UART_RX_DMA(huart1, USART1);
+      break;
+#endif
+
+#if (CFG_HW_LPUART1_ENABLED == 1)
+    case hw_lpuart1:
+      HW_UART_RX_DMA(lpuart1, LPUART1);
       break;
 #endif
 
