@@ -100,7 +100,7 @@ uint8_t	 			g_AppState = DS2_IDLE;
 static uint8_t 		rfBuffer[256];
 static DS2_Packet 	g_msg_buffer = {0};
 static DS2_Party 	g_DS2_Data = {0};
-
+static uint8_t		msg_buff[256] = {0};
 
 //private key
 static uint8_t 		private_seed[SEED_BYTES] = {0};
@@ -803,8 +803,10 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 {
 	poly_t y1_[L] = {0};
 
-	static char msg[] = "test message\0";
-	static uint32_t msg_len = sizeof(msg);
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
+	uint32_t offset = packet_ptr->data_offset;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
 	uint32_t* y_seed_ptr;
 	uint32_t* r_seed_ptr;
@@ -819,104 +821,111 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 		elapsed_time_start(TIMER_SIGN_TOTAL);
 
 		g_AppState = DS2_SIGN_START_IDLE;
+		g_packet_cnt = 0;
 
 	case DS2_SIGN_START_IDLE:
 
-		elapsed_time_start(TIMER_SIGN_START);
-		//generate r and y seed
-		y_seed_ptr = (uint32_t*)y_seed;
-		r_seed_ptr = (uint32_t*)r_seed;
-		for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
-		{
-			RNG_GenerateRandomInt(y_seed_ptr);
-			y_seed_ptr++;
+		g_packet_cnt++;
+		memcpy(&msg_buff[offset], (uint8_t*)packet_ptr->data, data_size);
 
-			RNG_GenerateRandomInt(r_seed_ptr);
-			r_seed_ptr++;
+		if(g_packet_cnt == 3) {
+
+			elapsed_time_start(TIMER_SIGN_START);
+			//generate r and y seed
+			y_seed_ptr = (uint32_t*)y_seed;
+			r_seed_ptr = (uint32_t*)r_seed;
+			for(int i = 0; i < (SEED_BYTES / sizeof(uint32_t)); i++)
+			{
+				RNG_GenerateRandomInt(y_seed_ptr);
+				y_seed_ptr++;
+
+				RNG_GenerateRandomInt(r_seed_ptr);
+				r_seed_ptr++;
+			}
+
+			keccak_state_t state;
+			keccak_init(&state);
+			shake256_absorb(&state, msg_buff, 256);
+			shake256_absorb(&state, tr, SEED_BYTES);
+			shake256_finalize(&state);
+			shake256_squeeze(&state, SEED_BYTES, ck_seed);
+
+			//generate y1 and y2
+			poly_normal(y_seed, nonce_y1, SIGMA, L, y1);
+			nonce_y1 += L;
+			poly_normal(y_seed, nonce_y2, SIGMA, K, y2);
+			nonce_y2 += K;
+
+			// Compute w_n = (A | I) * y_n
+			poly_copy(y1, L, y1_);
+			poly_ntt(y1_, L);
+
+			poly_product(A, y1_, w);
+			poly_reduce(w, K);
+			poly_invntt_tomont(w, K);
+
+			poly_add(w, y2, K, w);
+			poly_freeze(w, K);
+
+	#ifdef DS2_DEBUG
+			APP_DBG("RFD DS2 -- SIGN -- GENERATE COMMITMENT com_i ...");
+	#endif
+			elapsed_time_start(TIMER_SIGN_COMMIT);
+			poly_gen_commit(ck_seed, r_seed, Fi);
+			poly_add(&Fi[1], w, K, &Fi[1]);
+
+			poly_freeze((poly_t*)Fi, K*K);
+			elapsed_time_stop(TIMER_SIGN_COMMIT);
+
+			poly_pack(TC_L, (poly_t*) Fi, K * K, g_DS2_Data.fi_commit);
+
+			elapsed_time_stop(TIMER_SIGN_START);
+
+	#ifdef DS2_DEBUG
+			uint8_t yx =  xorSign((char*)y_seed, sizeof(y_seed));
+			APP_DBG("RFD DS2 -- SIGN -- y_seed = rand() = %ld", yx);
+
+			uint8_t rx =  xorSign((char*)r_seed, sizeof(r_seed));
+			APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
+
+			uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
+			APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
+			//uint8_t wx =  xorSign((char*)w, sizeof(w));
+			APP_DBG("RFD DS2 -- SIGN -- w_n = (A | I) * y_n = %ld", w[1].coeffs[_N-1]);
+
+			APP_DBG("RFD DS2 -- SIGN -- com_i = ck*r + w = %ld", Fi[1][1].coeffs[_N-1]);
+	#endif
+
+			memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+			int i = 0;
+
+			g_msg_buffer.src_node_id = DS2_NODE_ID;
+			g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
+			g_msg_buffer.msg_code = DS2_Fi_COMMIT;
+			g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+			g_msg_buffer.data_offset = 0;
+			uint8_t packet_num = DS2_Fi_COMMIT_SIZE / (DS2_MAX_DATA_LEN * 4);
+			uint8_t last_data_len = DS2_Fi_COMMIT_SIZE % (DS2_MAX_DATA_LEN * 4);
+
+			for(i = 0; i < packet_num; i++){
+				g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+
+				memcpy((char*)g_msg_buffer.data, &g_DS2_Data.fi_commit[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
+
+				APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+			}
+
+			if(last_data_len > 0){
+				g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+				g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+
+				memcpy((char*)g_msg_buffer.data, &g_DS2_Data.fi_commit[g_msg_buffer.data_offset], last_data_len);
+
+				APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
+			}
+
+			g_AppState = DS2_SIGN_START_END;
 		}
-
-	    keccak_state_t state;
-	    keccak_init(&state);
-	    shake256_absorb(&state, msg, msg_len);
-	    shake256_absorb(&state, tr, SEED_BYTES);
-	    shake256_finalize(&state);
-	    shake256_squeeze(&state, SEED_BYTES, ck_seed);
-
-		//generate y1 and y2
-		poly_normal(y_seed, nonce_y1, SIGMA, L, y1);
-		nonce_y1 += L;
-		poly_normal(y_seed, nonce_y2, SIGMA, K, y2);
-		nonce_y2 += K;
-
-		// Compute w_n = (A | I) * y_n
-		poly_copy(y1, L, y1_);
-		poly_ntt(y1_, L);
-
-		poly_product(A, y1_, w);
-		poly_reduce(w, K);
-		poly_invntt_tomont(w, K);
-
-		poly_add(w, y2, K, w);
-		poly_freeze(w, K);
-
-#ifdef DS2_DEBUG
-		APP_DBG("RFD DS2 -- SIGN -- GENERATE COMMITMENT com_i ...");
-#endif
-		elapsed_time_start(TIMER_SIGN_COMMIT);
-		poly_gen_commit(ck_seed, r_seed, Fi);
-		poly_add(&Fi[1], w, K, &Fi[1]);
-
-		poly_freeze((poly_t*)Fi, K*K);
-		elapsed_time_stop(TIMER_SIGN_COMMIT);
-
-		poly_pack(TC_L, (poly_t*) Fi, K * K, g_DS2_Data.fi_commit);
-
-		elapsed_time_stop(TIMER_SIGN_START);
-
-#ifdef DS2_DEBUG
-	    uint8_t yx =  xorSign((char*)y_seed, sizeof(y_seed));
-	    APP_DBG("RFD DS2 -- SIGN -- y_seed = rand() = %ld", yx);
-
-	    uint8_t rx =  xorSign((char*)r_seed, sizeof(r_seed));
-	    APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
-
-	    uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
-	    APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
-	    //uint8_t wx =  xorSign((char*)w, sizeof(w));
-	    APP_DBG("RFD DS2 -- SIGN -- w_n = (A | I) * y_n = %ld", w[1].coeffs[_N-1]);
-
-	    APP_DBG("RFD DS2 -- SIGN -- com_i = ck*r + w = %ld", Fi[1][1].coeffs[_N-1]);
-#endif
-
-		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
-		int i = 0;
-
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
-		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
-		g_msg_buffer.msg_code = DS2_Fi_COMMIT;
-		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
-		g_msg_buffer.data_offset = 0;
-		uint8_t packet_num = DS2_Fi_COMMIT_SIZE / (DS2_MAX_DATA_LEN * 4);
-		uint8_t last_data_len = DS2_Fi_COMMIT_SIZE % (DS2_MAX_DATA_LEN * 4);
-
-		for(i = 0; i < packet_num; i++){
-			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
-
-			memcpy((char*)g_msg_buffer.data, &g_DS2_Data.fi_commit[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
-
-			APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
-		}
-
-		if(last_data_len > 0){
-			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
-			g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
-
-			memcpy((char*)g_msg_buffer.data, &g_DS2_Data.fi_commit[g_msg_buffer.data_offset], last_data_len);
-
-			APP_RFD_MAC_802_15_4_SendData(g_coordShortAddr, &g_msg_buffer);
-		}
-
-		g_AppState = DS2_SIGN_START_END;
 		break;
 	default:
 		APP_DBG("RFD DS2 -- SIGN -- ERROR: STAGE 0 TASK TRIGGERED FROM BAD STATE %d", g_AppState);

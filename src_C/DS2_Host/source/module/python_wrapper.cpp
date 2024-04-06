@@ -21,6 +21,7 @@ PYBIND11_MODULE(ds2, handle) {
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
 		.def("translate_exception", [](ds2_host& self) {return self.err_code; })
+		.def("hash_msg", &ds2_host::hash_msg)
 		.def("get_parties_num", &ds2_host::get_party_num)
 		.def("set_pi_commit", &ds2_host::set_pi_commit)
 		.def("set_ti_commit", &ds2_host::set_ti_commit)

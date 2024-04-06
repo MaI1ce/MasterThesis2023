@@ -55,6 +55,18 @@ void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K]
 	poly_invntt_tomont((poly_t*)fi, _K * _K);
 }
 
+std::string ds2_host::hash_msg(const std::string& msg)
+{
+	char msg_hash[256] = { 0 };
+	keccak_state_t state;
+	keccak_init(&state);
+	shake256_absorb(&state, (const uint8_t*)msg.c_str(), msg.size());
+	shake256_finalize(&state);
+	shake256_squeeze(&state, SEED_BYTES, (uint8_t*)msg_hash);
+
+	return std::string(msg_hash);
+}
+
 std::string ds2_host::get_rho(uint64_t& timestamp)
 {
 	timestamp = get_cycles();//start

@@ -169,6 +169,8 @@ public:
 
 	std::string get_tr(uint64_t& timestamp);
 
+	std::string hash_msg(const std::string& msg);
+
 	std::string get_c(uint64_t& timestamp);
 
 	std::string get_signature(uint64_t& timestamp);

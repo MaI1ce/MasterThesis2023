@@ -86,6 +86,8 @@ class Sniffer:
         self.keygen_time = 0
         self.sing_time = 0
         self.verify_time = 0;
+        
+        self.signature = None
 
         self.listbox = tk.Listbox(self.main_frame, width=80, height=30)
         self.listbox.grid(row=0, column=0, rowspan=10, padx=2, pady=2, sticky="nswe")
@@ -169,7 +171,11 @@ class Sniffer:
 
     
     def sign(self):
-        pass
+        msg_text = self.msg_var.get()
+        hmsg = self.signer.hash_msg(msg_text)
+        self.signer.set_msg(hmsg)
+        #self.response(self.DS2_SIGN_START_TASK, hmsg)
+        
     
     def verify(self):
         pass
@@ -311,9 +317,10 @@ class Sniffer:
                     if self.signer.is_flag_ready(self.DS2_Ri_VALUE_FLAG) and \
                         self.signer.is_flag_ready(self.DS2_Zi_1_VALUE_FLAG) and \
                         self.signer.is_flag_ready(self.DS2_Zi_2_VALUE_FLAG):
-                        signature, cpu_cycles = self.signer.get_signature()
+                        self.signature, cpu_cycles = self.signer.get_signature()
                         self.sign_time += cpu_cycles
-                        self.listbox.insert(self.index, "Sign: signature value: {}".format(":".join("{:02x}".format(c) for c in signature)))
+                        print("signature: ", ":".join("{:02x}".format(c) for c in self.signature))
+                        self.listbox.insert(self.index, "Sign: signature value: {}".format(":".join("{:02x}".format(c) for c in self.signature)))
                         self.index += 1
                         #self.response(self.DS2_Zi_2_VALUE_FLAG)
             
