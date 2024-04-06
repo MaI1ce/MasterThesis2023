@@ -646,7 +646,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 
 		APP_DBG("RFD DS2 - KEYGEN - A = H(rho) = %ld", A[1][1].coeffs[_N-1]);
 
-		APP_DBG("RFD DS2 - KEYGEN - ti = (A | I) * s_1 + s_2 = %ld", t1[1].coeffs[_N-1]);
+		APP_DBG("RFD DS2 - KEYGEN - ti = (A | I) * s_1 + s_2 = %ld", g_DS2_Data.ti_val[DS2_Ti_VALUE_SIZE-1]);
 
 		uint8_t gtix =  xorSign((char*)g_DS2_Data.ti_commit, sizeof(g_DS2_Data.ti_commit));
 		APP_DBG("RFD DS2 - KEYGEN - gti = h2(ti) = %ld", gtix);

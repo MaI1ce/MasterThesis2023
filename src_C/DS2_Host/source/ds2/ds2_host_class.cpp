@@ -335,7 +335,7 @@ void ds2_host::set_ti_commit(uint32_t party_id, const std::string& commit)
 
 void ds2_host::set_ti_val(uint32_t party_id, const std::string& val)
 {
-	uint8_t temp_commit[DS2_Pi_COMMIT_SIZE] = { 0 };
+	uint8_t temp_commit[DS2_Ti_COMMIT_SIZE] = { 0 };
 
 	if (party_id >= party_num) {
 		err_code = DS2_ERROR_INVALID_NODE_ID;
@@ -347,7 +347,7 @@ void ds2_host::set_ti_val(uint32_t party_id, const std::string& val)
 		throw DS2Exception(DS2_ERROR_Ti_COMMIT, "ti_val has bad buffer size");
 	}
 	else {
-		memcpy(parties[party_id].ti_val, val.c_str(), DS2_Ti_COMMIT_SIZE);
+		memcpy(parties[party_id].ti_val, val.c_str(), DS2_Ti_VALUE_SIZE);
 		parties[party_id].status |= DS2_Ti_VALUE_FLAG;
 	}
 

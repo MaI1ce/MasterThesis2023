@@ -74,6 +74,8 @@ typedef struct {
 	uint8_t node_id;
 }serial_frame;
 
+#define FRAME_HEADER_SIZE 6
+
 
 /* Private function prototypes -----------------------------------------------*/
 static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode);
@@ -93,8 +95,9 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void);
 
-void UART_RxCpltCallback(void);
-static void APP_FFD_MAC_802_15_4_DS2_UART_RX(void);
+void UART_TxCpltCallback(void);
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD(void);
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA(void);
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void);
 static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void);
@@ -106,8 +109,10 @@ static uint8_t xorSign( const char * pmessage, uint32_t message_len);
 //extern uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 //extern uint32_t UserRxBufferFS_len;
 
-static uint8_t 		UART1_rxBuffer[DS2_Fi_COMMIT_SIZE+sizeof(serial_frame)];
-static uint8_t 		UART1_txBuffer[DS2_Fi_COMMIT_SIZE+sizeof(serial_frame)];
+static uint8_t 		UART1_rxBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
+static uint8_t		UART1_CMD_DATA_Flag = 0; // 0 - CMD;  1 - DATA
+static uint32_t 	UART1_rxBuffer_Len = 0;
+static uint8_t 		UART1_txBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
 static serial_frame* tx_ptr = (serial_frame*)UART1_txBuffer;
 static serial_frame* rx_ptr = (serial_frame*)UART1_rxBuffer;
 
@@ -195,7 +200,7 @@ void APP_FFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_3, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Stage_3);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_FINAL, UTIL_SEQ_RFU,APP_FFD_MAC_802_15_4_DS2_Sign_Final);
 
-  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU, APP_FFD_MAC_802_15_4_DS2_UART_RX);
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_USB_TX, UTIL_SEQ_RFU, APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA);
   /* Configuration MAC 802_15_4 */
   APP_FFD_MAC_802_15_4_Config();
 
@@ -274,7 +279,8 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 	tx_ptr->msg_code = DS2_COORDINATOR_READY_RESET;
 	tx_ptr->node_id = 254;
 	tx_ptr->length = 2;
-	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, NULL);
+	UART1_CMD_DATA_Flag = 0;
+	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 
   /* Reset FFD Device */
   /* Reset MAC */
@@ -572,15 +578,15 @@ static void APP_FFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 /** @defgroup APP FFD private function prototypes
  * @{
  */
-static void APP_FFD_MAC_802_15_4_DS2_UART_RX(void)
-{
-
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD(void){
 	uint32_t data_len = rx_ptr->length;
 	uint8_t msg_code = rx_ptr->msg_code;
-	//uint8_t node_id = ptr->node_id;
-	uint8_t *data = UART1_rxBuffer+sizeof(serial_frame);
+	uint8_t node_id = rx_ptr->node_id;
 
-	APP_DBG("FFD DS2 - UART RX CALLBACK - MSG CODE %d LEN %d", msg_code, data_len);
+	if (data_len > 2){
+		HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer+FRAME_HEADER_SIZE, data_len-2, APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA);
+		return;
+	}
 
 	if(msg_code >= DS2_ABORT){
 		g_ERROR_code = msg_code;
@@ -589,57 +595,90 @@ static void APP_FFD_MAC_802_15_4_DS2_UART_RX(void)
 	}
 
 	switch(msg_code){
-	case DS2_KEYGEN_START_TASK: case DS2_SIGN_START_TASK:
-
-		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID; //node_id
-		g_msg_buffer.msg_code = msg_code;
-		g_msg_buffer.packet_length = 4;
-		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		switch(msg_code){
-		case DS2_KEYGEN_START_TASK:
-			APP_DBG("FFD DS2 - UART RX CALLBACK - START KEYGEN");
-			break;
-		case DS2_SIGN_START_TASK:
-			APP_DBG("FFD DS2 - UART RX CALLBACK - START SIGN");
-			break;
-		}
-
-
+	case DS2_KEYGEN_START_TASK:
+		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - START KEYGEN");
+		UART1_CMD_DATA_Flag = 1;
 		break;
-	case DS2_Pi_VALUE_ACK: case DS2_Ti_VALUE_ACK:
-	case DS2_Fi_COMMIT_ACK: case DS2_Zi_2_VALUE_ACK:
-		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
-		int i = 0;
-
-		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
-		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
-		g_msg_buffer.msg_code = msg_code;
-		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
-		g_msg_buffer.data_offset = 0;
-		uint8_t packet_num = data_len / (DS2_MAX_DATA_LEN * 4);
-		uint8_t last_data_len = data_len % (DS2_MAX_DATA_LEN * 4);
-
-		for(i = 0; i < packet_num; i++){
-			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
-
-			memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
-
-			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		}
-
-		if(last_data_len > 0){
-			g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
-			g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
-
-			memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], last_data_len);
-
-			APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
-		}
+	case DS2_SIGN_START_TASK:
+		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - START SIGN");
+		UART1_CMD_DATA_Flag = 1;
 		break;
+	default:
+		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - UNKNOWN COMMAND");
+		return;
 	}
 
 
+	g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID; //node_id
+	g_msg_buffer.msg_code = msg_code;
+	g_msg_buffer.packet_length = 4;
+	APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+
+	HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer, FRAME_HEADER_SIZE, APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD);
+}
+
+static void APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA(void)
+{
+
+	uint32_t data_len = rx_ptr->length;
+	uint8_t msg_code = rx_ptr->msg_code;
+	//uint8_t node_id = rx_ptr->node_id;
+	uint8_t *data = UART1_rxBuffer+FRAME_HEADER_SIZE;
+
+	if(msg_code >= DS2_ABORT){
+		g_ERROR_code = msg_code;
+		APP_FFD_MAC_802_15_4_DS2_Abort();
+		return;
+	}
+
+	APP_DBG("FFD DS2 - UART RX DATA CALLBACK - MSG CODE %d LEN %d", msg_code, data_len);
+
+	switch(msg_code){
+	case DS2_Pi_VALUE_ACK:
+		break;
+	case DS2_Ti_VALUE_ACK:
+		UART1_CMD_DATA_Flag = 0;
+		break;
+	case DS2_Fi_COMMIT_ACK:
+		break;
+	case DS2_Zi_2_VALUE_ACK:
+		UART1_CMD_DATA_Flag = 0;
+		break;
+	default:
+		APP_DBG("FFD DS2 - UART RX DATA CALLBACK - UNKNOWN COMMAND");
+		return;
+	}
+
+	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
+	int i = 0;
+
+	g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
+	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
+	g_msg_buffer.msg_code = msg_code;
+	g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
+	g_msg_buffer.data_offset = 0;
+	uint8_t packet_num = data_len / (DS2_MAX_DATA_LEN * 4);
+	uint8_t last_data_len = data_len % (DS2_MAX_DATA_LEN * 4);
+
+	for(i = 0; i < packet_num; i++){
+		g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+
+		memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], (DS2_MAX_DATA_LEN * 4));
+
+		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+	}
+
+	if(last_data_len > 0){
+		g_msg_buffer.data_offset = i * (DS2_MAX_DATA_LEN * 4);
+		g_msg_buffer.packet_length = last_data_len + DS2_HEADER_LEN;
+
+		memcpy((char*)g_msg_buffer.data, &data[g_msg_buffer.data_offset], last_data_len);
+
+		APP_FFD_MAC_802_15_4_SendData(0xFFFF, &g_msg_buffer);
+	}
+
+	HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer, FRAME_HEADER_SIZE, APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD);
 }
 
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset(void)
@@ -678,8 +717,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Reset(void)
 
 static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 {
-	APP_DBG("DS2 ABORT");
-
+	UART1_CMD_DATA_Flag = 0;
+	UART_TxCpltCallback();
 	switch(g_ERROR_code){
 	case DS2_ABORT:
 		APP_DBG("FFD FFD DS2 ERROR CODE : %d", g_ERROR_code);
@@ -736,13 +775,19 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		g_Parties[src_id].status |= DS2_Pi_COMMIT_FLAG;
 
 		///////////////////////
-		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Pi_COMMIT_SIZE);
+		memcpy(UART1_txBuffer + FRAME_HEADER_SIZE, packet_ptr->data, DS2_Pi_COMMIT_SIZE);
 
 		tx_ptr->msg_code = DS2_Pi_COMMIT;
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Pi_COMMIT_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
+#ifdef DS2_DEBUG
+
+	        uint8_t gix = xorSign((char*)UART1_txBuffer, 4+tx_ptr->length);
+	        APP_DBG("FFD DS2 - pi_commit[%d] = %ld", src_id, gix);
+#endif
+
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -753,11 +798,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 		if(ready_flag)
 		{
 
-#ifdef DS2_DEBUG
-
-	        uint8_t gix = xorSign((char*)g_Parties[src_id].pi_commit, sizeof(g_Parties[src_id].pi_commit));
-	        APP_DBG("FFD DS2 - KEYGEN - gi = %ld", gix);
-#endif
 
 		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
 		    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
@@ -796,13 +836,21 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		g_Parties[src_id].status |= DS2_Pi_VALUE_FLAG ;
 
 		///////////////////////
-		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Pi_VALUE_SIZE);
+		memcpy(UART1_txBuffer + FRAME_HEADER_SIZE, packet_ptr->data, DS2_Pi_VALUE_SIZE);
 
 		tx_ptr->msg_code = DS2_Pi_VALUE;
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Pi_VALUE_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
+		UART1_CMD_DATA_Flag = 1;
+		UART1_rxBuffer_Len = SEED_BYTES + FRAME_HEADER_SIZE; //expect rho in response
+
+#ifdef DS2_DEBUG
+			uint8_t gix = xorSign((char*)UART1_txBuffer, 4+tx_ptr->length);
+	        APP_DBG("FFD DS2 - pi_val[%d] = %ld", src_id, gix);
+#endif
+
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -893,13 +941,18 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 		g_Parties[src_id].status |= DS2_Ti_COMMIT_FLAG ;
 
 		///////////////////////
-		memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Ti_COMMIT_SIZE);
+		memcpy(UART1_txBuffer + FRAME_HEADER_SIZE, packet_ptr->data, DS2_Ti_COMMIT_SIZE);
 
 		tx_ptr->msg_code = DS2_Ti_COMMIT;
 		tx_ptr->node_id = src_id;
 		tx_ptr->length = DS2_Ti_COMMIT_SIZE + 2;
 
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
+#ifdef DS2_DEBUG
+			uint8_t gix = xorSign((char*)UART1_txBuffer, 4+tx_ptr->length);
+	        APP_DBG("FFD DS2 - ti_commit[%d] = %ld", src_id, gix);
+#endif
+
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, NULL);
 		///////////////////////
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -909,10 +962,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 
 		if(ready_flag)
 		{
-#ifdef DS2_DEBUG
-			uint8_t gtix =  xorSign((char*)g_Parties[src_id].ti_commit, sizeof(g_Parties[src_id].ti_commit));
-			APP_DBG("FFD DS2 - KEYGEN - gti = %ld", gtix);
-#endif
 		    g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
 		    g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
 		    g_msg_buffer.msg_code = DS2_Ti_COMMIT_ACK;
@@ -955,19 +1004,30 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 
 		g_packet_cnt[src_id]++;
 		memcpy(&g_Parties[src_id].ti_val[offset], (uint8_t*)packet_ptr->data, data_size);
-		//APP_DBG("DS2 - ID: %d PACKET: %d SIZE: %d OFFSET: %d",src_id, g_packet_cnt[src_id], data_size, offset);
+		APP_DBG("FFD DS2 - ID: %d PACKET: %d SIZE: %d OFFSET: %d",src_id, g_packet_cnt[src_id], data_size, offset);
 
 		//all packets from node src_id were received
 		if(g_packet_cnt[src_id]*DS2_MAX_DATA_LEN*4 > DS2_Ti_VALUE_SIZE){
 			g_Parties[src_id].status |= DS2_Ti_VALUE_FLAG ;
 
-			memcpy(UART1_txBuffer + sizeof(serial_frame), packet_ptr->data, DS2_Ti_VALUE_SIZE);
 
-			tx_ptr->msg_code = DS2_Ti_COMMIT;
+			memcpy(UART1_txBuffer + FRAME_HEADER_SIZE, g_Parties[src_id].ti_val, DS2_Ti_VALUE_SIZE);
+
+			tx_ptr->msg_code = DS2_Ti_VALUE;
 			tx_ptr->node_id = src_id;
 			tx_ptr->length = DS2_Ti_VALUE_SIZE + 2;
+			UART1_CMD_DATA_Flag = 1;
+			UART1_rxBuffer_Len = SEED_BYTES + FRAME_HEADER_SIZE; //expect tr in response
 
-			HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
+			APP_DBG("FFD DS2 - SEND UART");
+
+#ifdef DS2_DEBUG
+			//uint8_t gix = xorSign((char*)UART1_txBuffer, 4+tx_ptr->length);
+			uint8_t gix = UART1_txBuffer[tx_ptr->length+3];
+	        APP_DBG("FFD DS2 - ti_val[%d] = %ld", src_id, gix);
+#endif
+
+			HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 		}
 
 		uint32_t ready_flag = 0xFFFFFFFF;
@@ -1456,8 +1516,8 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 		tx_ptr->msg_code = DS2_COORDINATOR_HELLO;
 		tx_ptr->node_id = id;
 		tx_ptr->length = 2;
-
-		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_RxCpltCallback);
+		UART1_CMD_DATA_Flag = 0;
+		HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 
 	}
 /*
@@ -1493,9 +1553,8 @@ static uint8_t xorSign( const char * pmessage, uint32_t message_len)
 
 
 
-void UART_RxCpltCallback(void) {
-    // Restart reception for the next frame
-	HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer, sizeof(UART1_rxBuffer), APP_FFD_MAC_802_15_4_DS2_UART_RX);
+void UART_TxCpltCallback(void) {
+	HW_UART_Receive_DMA(CFG_CLI_UART, UART1_rxBuffer, FRAME_HEADER_SIZE,  APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD);
 }
 
 /**

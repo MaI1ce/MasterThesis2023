@@ -11,6 +11,13 @@ sys.path.insert(0, '.\\lib')
 
 import ds2
 
+def xorSign(msg):
+    seed = 0x00
+    for byte in msg:
+        seed = byte^seed;
+    return seed;
+
+
 
 class Sniffer:
     
@@ -156,11 +163,10 @@ class Sniffer:
         self.root.mainloop()
         
     def keygen(self):
-        msg = bytes([self.DS2_KEYGEN_START_TASK, 0])
-        if self.ser is not None and self.ser.is_open:
-            self.listbox.insert(self.index, "START KEYGEN")
-            self.index += 1
-            self.ser.write(msg)
+        self.response(self.DS2_KEYGEN_START_TASK, None)
+        self.listbox.insert(self.index, "START KEYGEN")
+        self.index += 1
+
     
     def sign(self):
         pass
@@ -170,14 +176,12 @@ class Sniffer:
     
     def reset(self):
         self.signer.reset()
-        self.listbox.insert(self.index, "KEYS ARE DELETED")
-        self.index += 1
         self.keygen_time = 0
         self.sing_time = 0
         self.verify_time = 0
-        msg = bytes([self.DS2_ABORT, 0])
-        if self.ser is not None and self.ser.is_open:
-            self.ser.write(msg)
+        self.abort(self.DS2_ABORT)
+        self.listbox.insert(self.index, "KEYS ARE DELETED")
+        self.index += 1
 
     def port_open(self):
         self.listbox.delete(0, tk.END)
@@ -212,20 +216,19 @@ class Sniffer:
         file.close()
         
     def abort(self, err_code:int):
-        if self.ser is not None and self.ser.is_open:
-            self.ser.write(err_code.to_bytes(1, 'little'))
+        self.response(err_code)
             
     def response(self, msg_code, data:bytes=None):
         if self.ser is not None and self.ser.is_open:
             #msg_code + node_id
-            wr_data = msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little')
             if data is not None:
-                wr_data += data
-                data_len = len(wr_data)
+                data_len = len(data) + 2
+                wr_data = data_len.to_bytes(4, 'little') + msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little') + data
             else:
                 data_len = 2
-            
-            self.ser.write(data_len.to_bytes(4, 'little') + wr_data)
+                wr_data = data_len.to_bytes(4, 'little') + msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little')
+            self.ser.write(wr_data)
+            print("send ", ":".join("{:02x}".format(c) for c in wr_data))
         
         
     def msg_parser(self, msg:bytes):
@@ -237,41 +240,51 @@ class Sniffer:
                 case self.DS2_COORDINATOR_HELLO:
                     self.listbox.insert(self.index, "Party ID:{} connected".format(node_id))
                     self.index += 1
+
+                case self.DS2_COORDINATOR_READY_RESET:
+                    self.listbox.insert(self.index, "Coordinator ready !!!")
+                    self.index += 1
             
                 case self.DS2_Pi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Pi commit len {}".format(node_id, len(data)))
+                    gix = xorSign(data)
+                    self.listbox.insert(self.index, "Party ID:{} Pi commit gix = {}".format(node_id, gix))
                     self.index += 1
                     self.signer.set_pi_commit(node_id, data)
                 
                 case self.DS2_Pi_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Pi value len {}".format(node_id, len(data)))
+                    gix = xorSign(data)
+                    self.listbox.insert(self.index, "Party ID:{} Pi value gix = {}".format(node_id, gix))
                     self.index += 1
                     self.signer.set_pi_val(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Pi_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Pi_VALUE_FLAG):
                         rho, cpu_cycles = self.signer.get_rho()
                         self.keygen_time += cpu_cycles
-                        self.listbox.insert(self.index, "KeyGen: send rho value {} time {}".format(rho, self.keygen_time))
+                        gix = xorSign(rho)
+                        self.listbox.insert(self.index, "KeyGen: send rho {} - time {}".format(gix, self.keygen_time))
                         self.index += 1
                         self.response(self.DS2_Pi_VALUE_ACK, rho)
                 
                 case self.DS2_Ti_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Ti commit len {}".format(node_id, len(data)))
+                    gix = xorSign(data)
+                    self.listbox.insert(self.index, "Party ID:{} Ti commit gix = {}".format(node_id, gix))
                     self.index += 1
                     self.signer.set_ti_commit(node_id, data)
                 
                 case self.DS2_Ti_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Ti value len {}".format(node_id, len(data)))
+                    gix = xorSign(data)
+                    self.listbox.insert(self.index, "Party ID:{} Ti value gix {}".format(node_id, gix))
                     self.index += 1
                     self.signer.set_ti_val(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Ti_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Ti_VALUE_FLAG):
                         tr, cpu_cycles = self.signer.get_tr()
                         self.keygen_time += cpu_cycles
-                        self.listbox.insert(self.index, "KeyGen: send tr value {} time {}".format(tr, self.keygen_time))
+                        self.listbox.insert(self.index, "KeyGen: send tr - time {}".format(self.keygen_time))
                         self.index += 1
                         self.response(self.DS2_Ti_VALUE_ACK, tr)
                     
                 case self.DS2_Fi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Fi commit value {}".format(node_id, data))
+                    gix = xorSign(data)
+                    self.listbox.insert(self.index, "Party ID:{} Fi commit value gix {}".format(node_id, gix))
                     self.index += 1
                     self.signer.set_fi_commit(node_id, data)
                     if self.signer.is_flag_ready(self.DS2_Fi_COMMIT_FLAG):
@@ -334,10 +347,11 @@ class Sniffer:
                         frame_len = self.ser.read(4)
                         data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
                         data = self.ser.read(data_len)
+                        frame = frame_len+data
+                        gix = xorSign(frame)
+                        print("gix = ", gix)
+                        print(":".join("{:02x}".format(c) for c in (frame)))
                         self.msg_parser(data)
-                        print(data_len)
-                        print(":".join("{:02x}".format(c) for c in data))
-
                     #time.sleep(0.1)
 
         except Exception as err:
