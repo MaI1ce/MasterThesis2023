@@ -105,7 +105,9 @@ void APP_ENTRY_Init( APP_ENTRY_InitMode_t InitMode )
   UTIL_LPM_SetOffMode(1U << CFG_LPM_APP, UTIL_LPM_DISABLE);
   Led_Init();
   appe_Tl_Init(); /* Initialize all transport layers */
+#ifdef HAL_PCD_MODULE_ENABLED
   MX_USB_Device_Init();
+#endif
   elapsed_time_init();
   /**
    * From now, the application is waiting for the ready event ( VS_HCI_C2_Ready )
@@ -302,6 +304,19 @@ void DbgOutputTraces( uint8_t *p_data, uint16_t size, void (*cb)(void) )
 {
   HW_UART_Transmit_DMA(CFG_DEBUG_TRACE_UART, p_data, size, cb);
 	//CDC_Transmit_FS(p_data, size);
+  uint8_t dbg_buff[128] = {0};
+  uint32_t *len = (uint32_t*)dbg_buff;
+  dbg_buff[4] = 0xff; //msg_code DS2_DBG
+  dbg_buff[5] = 0xff; //node id - broadcast
+  uint8_t *data = &dbg_buff[6];
+  if (size > 122) {
+	  *len = 122;
+  } else {
+	  *len = size + 2;
+  }
+
+  HW_UART_Transmit_DMA(CFG_CLI_UART, dbg_buff, *len, cb);
+
 }
 
 #endif

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
+#include <string.h>
 
 #include "commit.h"
 #include "fips202.h"

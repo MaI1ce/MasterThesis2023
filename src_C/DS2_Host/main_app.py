@@ -14,8 +14,8 @@ import ds2
 def xorSign(msg):
     seed = 0x00
     for byte in msg:
-        seed = byte^seed;
-    return seed;
+        seed = byte^seed
+    return seed
 
 
 
@@ -56,8 +56,8 @@ class Sniffer:
     DS2_ERROR_Fi_COMMIT                 = 0x05 | DS2_ABORT
     DS2_ERROR_Zi_REJECT                 = 0X06 | DS2_ABORT
 
-    DS2_UNKNOWN_ERROR = 0xff
-
+    DS2_UNKNOWN_ERROR = 0xfe
+    DS2_DBG = 0xff
 
     DS2_Pi_COMMIT_FLAG      = (1 << DS2_Pi_COMMIT)
     DS2_Pi_VALUE_FLAG 		= (1 << DS2_Pi_VALUE)
@@ -84,12 +84,12 @@ class Sniffer:
         self.signer = ds2.ds2_host()
         
         self.keygen_time = 0
-        self.sing_time = 0
-        self.verify_time = 0;
+        self.sign_time = 0
+        self.verify_time = 0
         
         self.signature = None
 
-        self.listbox = tk.Listbox(self.main_frame, width=80, height=30)
+        self.listbox = tk.Listbox(self.main_frame, width=200, height=30)
         self.listbox.grid(row=0, column=0, rowspan=10, padx=2, pady=2, sticky="nswe")
         scrollbar = tk.Scrollbar(self.main_frame)
         scrollbar.grid(row=0, column=1, rowspan=10, sticky="nswe")
@@ -183,7 +183,7 @@ class Sniffer:
     def reset(self):
         self.signer.reset()
         self.keygen_time = 0
-        self.sing_time = 0
+        self.sign_time = 0
         self.verify_time = 0
         self.abort(self.DS2_ABORT)
         self.listbox.insert(self.index, "KEYS ARE DELETED")
@@ -323,7 +323,9 @@ class Sniffer:
                         self.listbox.insert(self.index, "Sign: signature value: {}".format(":".join("{:02x}".format(c) for c in self.signature)))
                         self.index += 1
                         #self.response(self.DS2_Zi_2_VALUE_FLAG)
-            
+                case self.DS2_DBG:
+                    self.listbox.insert(self.index, data.decode(encoding='latin1'))
+                    self.index += 1
                 case _:
                     self.listbox.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
                     self.index += 1

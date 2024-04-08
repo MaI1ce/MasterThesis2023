@@ -87,6 +87,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void);
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void);
 
+static void APP_RFD_MAC_802_15_4_DS2_Sign_MsgReceive(void);
 static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void);
 static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void);
 static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2(void);
@@ -112,7 +113,6 @@ static uint8_t		tr[SEED_BYTES] = {0};
 //public key
 static uint8_t 		g_rho[SEED_BYTES] = {0};
 static poly_t		t1[K] = {0};
-static poly_t		t[K] = {0};
 static poly_t		A[K][L] = {0};
 
 //signature
@@ -134,6 +134,7 @@ static poly_t		Fi[K][K] = {0};
 
 //global
 static uint16_t 	g_packet_cnt = 0;
+static uint8_t 		g_msg_ready_flag 	= 0;
 static uint16_t     g_panId             = 0x1AAA;
 static uint16_t     g_coordShortAddr    = 0x1122;
 static uint8_t      g_dataHandle        = 0x02;
@@ -174,6 +175,7 @@ void APP_RFD_MAC_802_15_4_Init( APP_MAC_802_15_4_InitMode_t InitMode, TL_CmdPack
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_STAGE_3, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_KEYGEN_FINAL, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_KeyGen_Final);
 
+  UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_MSG, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_Sign_MsgReceive);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_START, UTIL_SEQ_RFU, APP_RFD_MAC_802_15_4_DS2_Sign_Start);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_1, UTIL_SEQ_RFU,APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1);
   UTIL_SEQ_RegTask( 1<<CFG_TASK_DS2_SIGN_STAGE_2, UTIL_SEQ_RFU,APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2);
@@ -314,7 +316,7 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
 void APP_RFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data)
 {
-  elapsed_time_start(TIMER_PACKET_SEND);
+ elapsed_time_start(TIMER_PACKET_SEND);
   MAC_Status_t MacStatus = MAC_ERROR;
 
   BSP_LED_On(LED3);
@@ -719,7 +721,6 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 }
 
 static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
-//TODO - receive not t but computated tr
 {
 
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
@@ -740,25 +741,8 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 			g_packet_cnt++;
 			memcpy(tr, (uint8_t*)packet_ptr->data, data_size);
 
-			/*
-			elapsed_time_start(TIMER_KEYGEN_FINAL);
 
-			//unpack t1
-			poly_unpack(T1_BITS, t1_packed, K, 0, t);
-
-			//calculate tr
-			keccak_state_t state;
-			keccak_init(&state);
-			shake128_absorb(&state, g_rho, SEED_BYTES);
-			shake128_absorb(&state, (uint8_t*) t, sizeof(t));
-			shake128_finalize(&state);
-			shake128_squeeze(&state, SEED_BYTES, tr);
-
-			elapsed_time_stop(TIMER_KEYGEN_FINAL);
-			*/
 #ifdef DS2_DEBUG
-
-				//APP_DBG("RFD DS2 - KEYGEN - t1 = sum(t0, t1, ... ti) = %ld", t[1].coeffs[_N-1]);
 
 			uint8_t trx =  xorSign((char*)tr, sizeof(tr));
 			APP_DBG("RFD DS2 - KEYGEN - tr = h(rho, t1) = %ld", trx);
@@ -797,8 +781,41 @@ static void APP_RFD_MAC_802_15_4_DS2_SendSign_Start(void)
 	APP_RFD_MAC_802_15_4_DS2_Sign_Start();
 }
 
+static void APP_RFD_MAC_802_15_4_DS2_Sign_MsgReceive(void)
+{
+	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;
+	uint8_t src_id = packet_ptr->src_node_id;
+	uint32_t offset = packet_ptr->data_offset;
+	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
+	switch(g_AppState){
+	case DS2_READY:
 
+#ifdef DS2_DEBUG
+		APP_DBG("RFD DS2 -- SIGN -- RECEIVE MSG");
+#endif
+
+		iterations = 1;
+
+		g_AppState = DS2_SIGN_START_IDLE;
+		g_packet_cnt = 0;
+
+	case DS2_SIGN_START_IDLE:
+
+		g_packet_cnt++;
+		memcpy(&msg_buff[offset], (uint8_t*)packet_ptr->data, data_size);
+
+		if(g_packet_cnt == 3) {
+			g_msg_ready_flag = 1;
+			g_AppState = DS2_READY;
+			APP_RFD_MAC_802_15_4_DS2_Sign_Start();
+		}
+		break;
+	default:
+		APP_DBG("RFD DS2 -- SIGN RECEIVE -- ERROR: TASK TRIGGERED FROM BAD STATE %d", g_AppState);
+		break;
+	}
+}
 static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 {
 	poly_t y1_[L] = {0};
@@ -825,11 +842,11 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 
 	case DS2_SIGN_START_IDLE:
 
-		g_packet_cnt++;
-		memcpy(&msg_buff[offset], (uint8_t*)packet_ptr->data, data_size);
-
-		if(g_packet_cnt == 3) {
-
+		if(g_msg_ready_flag == 0) {
+			APP_DBG("RFD DS2 -- SIGN -- ERROR: STAGE 0 - NO MSG READY TO SIGN");
+			APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
+			return;
+		} else {
 			elapsed_time_start(TIMER_SIGN_START);
 			//generate r and y seed
 			y_seed_ptr = (uint32_t*)y_seed;
@@ -843,12 +860,12 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 				r_seed_ptr++;
 			}
 
-			keccak_state_t state;
-			keccak_init(&state);
-			shake256_absorb(&state, msg_buff, 256);
-			shake256_absorb(&state, tr, SEED_BYTES);
-			shake256_finalize(&state);
-			shake256_squeeze(&state, SEED_BYTES, ck_seed);
+		    keccak_state_t state;
+		    keccak_init(&state);
+		    shake256_absorb(&state, msg_buff, 256);
+		    shake256_absorb(&state, tr, SEED_BYTES);
+		    shake256_finalize(&state);
+		    shake256_squeeze(&state, SEED_BYTES, ck_seed);
 
 			//generate y1 and y2
 			poly_normal(y_seed, nonce_y1, SIGMA, L, y1);
@@ -882,18 +899,18 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 			elapsed_time_stop(TIMER_SIGN_START);
 
 	#ifdef DS2_DEBUG
-			uint8_t yx =  xorSign((char*)y_seed, sizeof(y_seed));
-			APP_DBG("RFD DS2 -- SIGN -- y_seed = rand() = %ld", yx);
+		    uint8_t yx =  xorSign((char*)y_seed, sizeof(y_seed));
+		    APP_DBG("RFD DS2 -- SIGN -- y_seed = rand() = %ld", yx);
 
-			uint8_t rx =  xorSign((char*)r_seed, sizeof(r_seed));
-			APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
+		    uint8_t rx =  xorSign((char*)r_seed, sizeof(r_seed));
+		    APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
 
-			uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
-			APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
-			//uint8_t wx =  xorSign((char*)w, sizeof(w));
-			APP_DBG("RFD DS2 -- SIGN -- w_n = (A | I) * y_n = %ld", w[1].coeffs[_N-1]);
+		    uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
+		    APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
+		    //uint8_t wx =  xorSign((char*)w, sizeof(w));
+		    APP_DBG("RFD DS2 -- SIGN -- w_n = (A | I) * y_n = %ld", w[1].coeffs[_N-1]);
 
-			APP_DBG("RFD DS2 -- SIGN -- com_i = ck*r + w = %ld", Fi[1][1].coeffs[_N-1]);
+		    APP_DBG("RFD DS2 -- SIGN -- com_i = ck*r + w = %ld", Fi[1][1].coeffs[_N-1]);
 	#endif
 
 			memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -979,7 +996,9 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
         poly_add(cs1, y1, L, z1);
         poly_add(cs2, y2, K, z2);
 
+		rej = 0;
         rej = poly_reject(z1, z2, cs1, cs2);
+		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 1 %d", rej);
 
     	poly_copy(t0, K, t0_);
     	poly_ntt(t0_, K);
@@ -995,7 +1014,12 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
         //check norm
         rej |= !poly_check_norm(z1, L, B);
+		
+		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 2 %d", rej);
+		
         rej |= !poly_check_norm(z2, K, B);
+		
+		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 3 %d", rej);
 
 	    poly_addq(z1, L);
 	    poly_pack(TC_L, z1, L, g_DS2_Data.zi_1_val);
@@ -1138,7 +1162,6 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 	    }
 
 	    g_AppState = DS2_SIGN_STAGE_3_END;
-	    elapsed_time_stop(TIMER_SIGN_TOTAL);
 		break;
 	default:
 		APP_DBG("FFD DS2 -- SIGN -- ERROR: STAGE 3 TASK TRIGGERED FROM BAD STATE %d", g_AppState);
@@ -1162,6 +1185,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Final(void)
 		APP_DBG("FFD DS2 -- SIGN -- STAGE 4");
 #endif
 	case DS2_SIGN_FINAL_IDLE:
+
+		elapsed_time_stop(TIMER_SIGN_TOTAL);
 		APP_DBG("RFD DS2 -- SIGN -- STAGE 0 TIMER:%ld",elapsed_time_max(TIMER_SIGN_START));
 		APP_DBG("RFD DS2 -- SIGN -- STAGE 1 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_1));
 		APP_DBG("RFD DS2 -- SIGN -- STAGE 2 TIMER:%ld",elapsed_time_max(TIMER_SIGN_STAGE_2));
@@ -1169,8 +1194,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Final(void)
 		APP_DBG("RFD DS2 -- SIGN -- STAGE 4 TIMER:%ld",elapsed_time_max(TIMER_SIGN_FINAL));
 		APP_DBG("RFD DS2 -- SIGN -- TOTAL   TIMER:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
 		APP_DBG("RFD DS2 -- SIGN -- ITERATIONS TOTAL:%ld",iterations);
-		APP_DBG("RFD DS2 -- SIGN -- COMMIT  TIMER:%ld",elapsed_time_max(TIMER_SIGN_COMMIT));
-	    APP_DBG("RFD DS2 -- SIGN -- PACKET  TIMER:%ld",elapsed_time_max(TIMER_PACKET_SEND));
+
 		g_AppState = DS2_READY;
 		break;
 	default:
@@ -1189,7 +1213,6 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Reset(void)
 	memset(t0, 0, sizeof(t0));
 	memset(s1, 0, sizeof(s1));
 	memset(s2, 0, sizeof(s2));
-	memset(t, 0, sizeof(t));
 	memset(tr, 0, sizeof(tr));
 	memset(g_rho, 0 , sizeof(g_rho));
 	memset(private_seed, 0 , sizeof(private_seed));

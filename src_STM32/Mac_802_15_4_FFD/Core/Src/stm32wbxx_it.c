@@ -27,9 +27,9 @@
 /******************************************************************************/
 /*            Cortex-M4+ Processor Exceptions Handlers                         */
 /******************************************************************************/
-
+#ifdef HAL_PCD_MODULE_ENABLED
 extern PCD_HandleTypeDef hpcd_USB_FS;
-
+#endif
 /**
  * @brief  This function handles NMI exception.
  * @param  None
@@ -166,6 +166,7 @@ void CFG_HW_LPUART1_DMA_TX_IRQHandler( void )
 /**
   * @brief This function handles USB high priority interrupt.
   */
+#ifdef HAL_PCD_MODULE_ENABLED
 void USB_HP_IRQHandler(void)
 {
   HAL_PCD_IRQHandler(&hpcd_USB_FS);
@@ -178,6 +179,7 @@ void USB_LP_IRQHandler(void)
 {
   HAL_PCD_IRQHandler(&hpcd_USB_FS);
 }
+#endif
 
 #ifdef USAGE_OF_VCP
 /**

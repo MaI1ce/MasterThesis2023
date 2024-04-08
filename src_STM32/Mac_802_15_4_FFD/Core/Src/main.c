@@ -367,9 +367,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     case BUTTON_SW1_PIN:
       /* Send Data To Coordinator*/
+#ifdef HAL_PCD_MODULE_ENABLED
   	  do {
   		  status = CDC_Transmit_FS((uint8_t*)_str, sizeof(_str));
   	  } while(status == USBD_BUSY);
+#endif
 
   	UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_SIGN_START, CFG_SCH_PRIO_0 );
 

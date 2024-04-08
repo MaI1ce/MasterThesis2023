@@ -59,8 +59,11 @@ void LPUART1_IRQHandler(void);
 void CFG_HW_LPUART1_DMA_TX_IRQHandler(void);
 #endif
 
+#ifdef HAL_PCD_MODULE_ENABLED
 void USB_LP_IRQHandler(void);
 void USB_HP_IRQHandler(void);
+#endif
+
 void EXTI15_10_IRQHandler(void);
 #ifdef USAGE_OF_VCP
 void USB_FS_WKUP_IRQHandler(void);

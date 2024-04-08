@@ -232,8 +232,8 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
 						break;
 
-					case DS2_SIGN_START_TASK:
-						//UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET, CFG_SCH_PRIO_0 );
+					case DS2_SIGN_START_TASK: case DS2_ERROR_Zi_REJECT:
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET_SIGN, CFG_SCH_PRIO_0 );
 						break;
 
 					case DS2_Fi_COMMIT:
