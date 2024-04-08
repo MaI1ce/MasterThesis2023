@@ -1,13 +1,13 @@
 # ninja log v5
-6	1757	7341126960982371	CMakeFiles/ds2.dir/source/ds2/ds2_host_class.cpp.obj	e0eb7d84dfa66ddc
+20	1948	7341248046984207	CMakeFiles/ds2.dir/source/ds2/ds2_host_class.cpp.obj	e0eb7d84dfa66ddc
 7	1516	7329137118058032	CMakeFiles/test_module.dir/source/module/python_wrapper.cpp.obj	9e2dd2b6aede363
 1516	1693	7329137119371568	F:/MasterDiploma2/src_C/DS2_Host/lib/test_module.cp312-win_amd64.pyd	f5d9b444e6b86376
-2	178	7341236262306719	build.ninja	f08d27fd96ad8552
-14	1843	7335864708273126	CMakeFiles/ds2.dir/source/module/python_wrapper.cpp.obj	c6ebca064de39d03
+2	178	7342957066633583	build.ninja	f08d27fd96ad8552
+16	2199	7341248049477213	CMakeFiles/ds2.dir/source/module/python_wrapper.cpp.obj	c6ebca064de39d03
 10	54	7329137103513158	CMakeFiles/test_module.dir/source/app/pybind_test.cpp.obj	cbb233b80f2afc19
 12	61	7329143091728112	CMakeFiles/ds2.dir/source/app/pybind_test.cpp.obj	90c8b3eee9f8642f
 1	8	0	clean	7e95802fea81e0de
-1758	2267	7341126964973184	F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.cp312-win_amd64.pyd	dae090adff5f4a82
+2199	2544	7341248052224522	F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.cp312-win_amd64.pyd	dae090adff5f4a82
 13	106	7329967068349476	CMakeFiles/ds2.dir/source/ds2/src/commit.cpp.obj	e3eb0fbc24c92ea4
 21	108	7334358470562262	CMakeFiles/ds2.dir/source/ds2/src/commit.c.obj	29f97c53b00b1c67
 15	70	7330002842348401	CMakeFiles/ds2.dir/source/ds2/src/fips202.c.obj	fed940976b85c755
@@ -16,6 +16,7 @@
 35	95	7334358470437410	CMakeFiles/ds2.dir/source/ds2/src/reduce.c.obj	3e13fc54702e853b
 18	83	7330005414585364	CMakeFiles/ds2.dir/source/ds2/src/util.c.obj	b1b3869d3b2158cf
 31	99	7334358470467303	CMakeFiles/ds2.dir/source/ds2/src/rand.c.obj	5584fd18e4135c7a
-20	1948	7341248046984207	CMakeFiles/ds2.dir/source/ds2/ds2_host_class.cpp.obj	e0eb7d84dfa66ddc
-16	2199	7341248049477213	CMakeFiles/ds2.dir/source/module/python_wrapper.cpp.obj	c6ebca064de39d03
-2199	2544	7341248052224522	F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.cp312-win_amd64.pyd	dae090adff5f4a82
+17	453	7342969215988468	CMakeFiles/ds2.dir/source/ds2/src/poly.c.obj	8248f8f001c3fd24
+15	1961	7342969231030846	CMakeFiles/ds2.dir/source/ds2/ds2_host_class.cpp.obj	e0eb7d84dfa66ddc
+12	2183	7342969233199012	CMakeFiles/ds2.dir/source/module/python_wrapper.cpp.obj	c6ebca064de39d03
+2183	2735	7342969237632181	F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.cp312-win_amd64.pyd	dae090adff5f4a82

@@ -23,7 +23,13 @@ RNG_HandleTypeDef hrng;
 
 extern void Error_Handler(void);
 
-static uint32_t master_seed[MASTER_SEED_LEN];
+static uint32_t master_seed;
+
+#define RND_NUMBER_COUNT 8
+
+static uint32_t index = 0;
+
+static uint32_t rnd_numbers[RND_NUMBER_COUNT];
 
 static keccak_state_t state;
 
@@ -38,23 +44,36 @@ void RNG_Init(void)
 
   keccak_init(&state);
 
-  for(int i = 0; i < MASTER_SEED_LEN; i++)
-  {
-	  HAL_RNG_GenerateRandomNumber(&hrng, &master_seed[i]);
-	  shake256_absorb_nonce(&state, master_seed[i]);
-  }
+  while(HAL_RNG_GenerateRandomNumber(&hrng, &master_seed) != HAL_OK);
 
-  //keccak_init(&state);
-  //shake256_absorb(&state, (uint8_t*)master_seed, sizeof(master_seed));
+  shake256_absorb_nonce(&state, master_seed);
+
   shake256_finalize(&state);
+
+  shake256_squeeze(&state, sizeof(uint32_t)*RND_NUMBER_COUNT, (uint8_t*)rnd_numbers);
 }
 
 
 HAL_StatusTypeDef RNG_GenerateRandomInt(uint32_t *rand_num)
 {
-	//shake256_squeeze(&state, sizeof(uint32_t), (uint8_t*)rand_num);
-	return HAL_RNG_GenerateRandomNumber(&hrng, rand_num);
-	//return HAL_OK;
+	/*
+	if(index < RND_NUMBER_COUNT){
+		*rand_num = rnd_numbers[index];
+		index++;
+	} else {
+		master_seed++;
+
+		keccak_init(&state);
+	    shake256_absorb_nonce(&state, master_seed);
+	    shake256_finalize(&state);
+	    shake256_squeeze(&state, sizeof(uint32_t)*RND_NUMBER_COUNT, (uint8_t*)rnd_numbers);
+
+	    *rand_num = rnd_numbers[0];
+
+	    index = 1;
+	}*/
+	*rand_num = 0;
+	return HAL_OK;
 }
 
 /**

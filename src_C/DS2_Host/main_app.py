@@ -174,7 +174,7 @@ class Sniffer:
         msg_text = self.msg_var.get()
         hmsg = self.signer.hash_msg(msg_text)
         self.signer.set_msg(hmsg)
-        #self.response(self.DS2_SIGN_START_TASK, hmsg)
+        self.response(self.DS2_SIGN_START_TASK, hmsg)
         
     
     def verify(self):

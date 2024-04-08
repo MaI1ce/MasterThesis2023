@@ -195,7 +195,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
   DS2_Packet *packet_ptr = (DS2_Packet *)pDataInd->msduPtr;
   // Check validity of the received Message extracting associated 
   // simple xor signature
-  APP_DBG("SRC:%d DST:%d MSG_CODE:%d", packet_ptr->src_node_id, packet_ptr->dst_node_id, packet_ptr->msg_code);
+  //APP_DBG("SRC:%d DST:%d MSG_CODE:%d", packet_ptr->src_node_id, packet_ptr->dst_node_id, packet_ptr->msg_code);
   if (!checkMsgXorSignature((char const *)(pDataInd->msduPtr),
                            pDataInd->msdu_length-1,
                            pDataInd->msduPtr[pDataInd->msdu_length-1],

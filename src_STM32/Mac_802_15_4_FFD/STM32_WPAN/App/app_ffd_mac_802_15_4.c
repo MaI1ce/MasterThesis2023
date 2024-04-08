@@ -107,7 +107,7 @@ static uint8_t xorSign( const char * pmessage, uint32_t message_len);
 
 static uint8_t 		UART1_rxBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
 static uint8_t		UART1_CMD_DATA_Flag = 0; // 0 - CMD;  1 - DATA
-static uint32_t 	UART1_rxBuffer_Len = 0;
+
 static uint8_t 		UART1_txBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
 static serial_frame* tx_ptr = (serial_frame*)UART1_txBuffer;
 static serial_frame* rx_ptr = (serial_frame*)UART1_rxBuffer;
@@ -117,13 +117,14 @@ static DS2_Party 	g_Parties[DS2_MAX_PARTY_NUM] = {0};
 static uint16_t 	g_packet_cnt[DS2_MAX_PARTY_NUM] = {0};
 static DS2_Packet 	g_msg_buffer = {0};
 
+static uint8_t		msg_buff[256] = {0};
+
 
 static uint8_t 		g_rho[SEED_BYTES] = {0};
 static poly_t		t1[K] = {0};
 static poly_t		A[K][L] = {0};
 static uint8_t		tr[SEED_BYTES] = {0};
 
-static uint32_t 	iterations = 0;
 static poly_t		Commit[K][K] = {0};
 static uint8_t		c[SEED_BYTES] = {0};
 static uint8_t 		ck_seed[SEED_BYTES] = {0};
@@ -138,7 +139,6 @@ static uint16_t     g_coordShortAddr    = 0x1122;
 static uint8_t      g_dataHandle        = 0x02;
 static long long    g_extAddr           = 0xACDE480000000001;
 static uint8_t      g_channel           = DEMO_CHANNEL;
-static uint8_t      g_channel_page      = 0x00;
 
 static uint8_t rfBuffer[256];
 //////////////////////////////////////////////////////////////////////////////
@@ -272,13 +272,13 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 
   APP_DBG("Run FFD MAC 802.15.4 - 2 - FFD Startup");
 
-/*
+
 	tx_ptr->msg_code = DS2_COORDINATOR_READY_RESET;
 	tx_ptr->node_id = 254;
 	tx_ptr->length = 2;
 	UART1_CMD_DATA_Flag = 0;
 	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
-*/
+
 
   /* Reset FFD Device */
   /* Reset MAC */
@@ -614,7 +614,7 @@ static void APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD(void){
 static void APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA(void)
 {
 
-	uint32_t data_len = rx_ptr->length;
+	uint32_t data_len = rx_ptr->length-2;
 	uint8_t msg_code = rx_ptr->msg_code;
 	//uint8_t node_id = rx_ptr->node_id;
 	uint8_t *data = UART1_rxBuffer+FRAME_HEADER_SIZE;
@@ -625,25 +625,13 @@ static void APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA(void)
 		return;
 	}
 
-	APP_DBG("FFD DS2 - UART RX DATA CALLBACK - MSG CODE %d LEN %d", msg_code, data_len);
 
-	switch(msg_code){
-	case DS2_SIGN_START_TASK:
-		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - START SIGN");
-		break;
-	case DS2_Pi_VALUE_ACK:
-		break;
-	case DS2_Ti_VALUE_ACK:
-		UART1_CMD_DATA_Flag = 0;
-		break;
-	case DS2_Fi_COMMIT_ACK:
-		break;
-	case DS2_Zi_2_VALUE_ACK:
-		UART1_CMD_DATA_Flag = 0;
-		break;
-	default:
-		APP_DBG("FFD DS2 - UART RX DATA CALLBACK - UNKNOWN COMMAND");
-		return;
+	if(msg_code == 129) {
+		APP_DBG("FFD DS2 - UART RX DATA CALLBACK - START SIGN");
+		memcpy(msg_buff, data, data_len);
+	} else {
+		APP_DBG("FFD DS2 - UART RX DATA CALLBACK - MSG CODE %d LEN %d", msg_code, data_len);
+
 	}
 
 	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
@@ -937,7 +925,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 	uint8_t data_size = packet_ptr->packet_length - DS2_HEADER_LEN;
 
 	poly_t temp_ti[K] = {0};
-	uint8_t t1_packed[DS2_Ti_VALUE_SIZE] = {0};
 
 	uint8_t temp_commit[DS2_Ti_COMMIT_SIZE] = {0};
 
@@ -992,12 +979,6 @@ static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Final(void)
 		    shake128_absorb(&state, (uint8_t*)t1, sizeof(t1));
 		    shake128_finalize(&state);
 		    shake128_squeeze(&state, SEED_BYTES, tr);
-
-		    //send t1
-		    uint8_t packet_num = DS2_Ti_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
-		    uint8_t last_data_len = DS2_Ti_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
-
-		    poly_pack(T1_BITS, t1, K, t1_packed);
 
 		    elapsed_time_stop(TIMER_KEYGEN_FINAL);
 
@@ -1058,9 +1039,6 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 	poly_t fi[K][K] = {0};
 	uint8_t f_packed[DS2_Fi_COMMIT_SIZE] = {0};
 
-	static char msg[] = "test message\0";
-	static uint32_t msg_len = sizeof(msg);
-
 
 	switch(g_AppState){
 	case DS2_READY:
@@ -1106,7 +1084,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 	        //c = H(com, msg, pk)
 		    keccak_state_t state;
 	        keccak_init(&state);
-		    shake256_absorb(&state, msg, msg_len);
+		    shake256_absorb(&state, msg_buff, 256);
 		    shake256_absorb(&state, tr, SEED_BYTES);
 		    shake256_finalize(&state);
 		    shake256_squeeze(&state, SEED_BYTES, ck_seed);
@@ -1168,7 +1146,10 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 
 		memcpy(&g_Parties[src_id].ri_val, (uint8_t*)packet_ptr->data, data_size);
 		//all packets from node src_id were received
-		g_Parties[src_id].status |= DS2_Ri_VALUE_FLAG ; ;
+		g_Parties[src_id].status |= DS2_Ri_VALUE_FLAG ;
+
+	    uint8_t rx =  xorSign((char*)g_Parties[src_id].ri_val, sizeof(g_Parties[src_id].ri_val));
+	    APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
 
 		uint32_t ready_flag = 0xFFFFFFFF;
 		for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
@@ -1294,8 +1275,6 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 	            poly_unpack(TC_L, g_Parties[i].zi_2_val, K, 0, z2_temp);
 
 #ifdef DS2_DEBUG
-			    uint8_t rx =  xorSign((char*)g_Parties[i].ri_val, sizeof(g_Parties[i].ri_val));
-			    APP_DBG("FFD DS2 -- SIGN -- r[%d]  = %ld", i, rx);
 	            APP_DBG("FFD DS2 -- SIGN -- z1[%d] = %ld", i, z1_temp[1].coeffs[_N-1]);
 	            APP_DBG("FFD DS2 -- SIGN -- z2[%d] = %ld", i, z2_temp[1].coeffs[_N-1]);
 #endif
@@ -1334,8 +1313,16 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 
 #ifdef DS2_DEBUG
 	            APP_DBG("FFD DS2 -- SIGN -- OPEN COMMITMENT com_i ...");
+
+	            //TODO -  WHY IS Ri IS ZERO ?
+	            //TODO -  WHY ALWAYS REJECT WHEN RND NUM IS NOT 0 ?
+			    uint8_t rx =  xorSign((char*)g_Parties[i].ri_val, sizeof(g_Parties[i].ri_val));
+			    APP_DBG("RFD DS2 -- SIGN -- r_seed = rand() = %ld", rx);
+
+			    uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
+			    APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
 #endif
-	    		poly_gen_commit(ck_seed, g_Parties[i].ri_val, (poly_t*)F1);
+	    		poly_gen_commit(ck_seed, g_Parties[i].ri_val, F1);
 	    		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, K, (poly_t*)&F1[1]);
 
 	    		poly_freeze((poly_t*)F1, K*K);
