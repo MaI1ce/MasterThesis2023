@@ -17,7 +17,9 @@
 #include "reduce.h"
 
 #include "stm_rng.h"
+//#include "stm_logging.h"
 
+//#define APPLI_PRINT_FILE_FUNC_LINE 0
 
 //#include "elapsed_time.h"
 #ifndef ELAPSED_TIME_H_
@@ -343,7 +345,7 @@ uint8_t poly_check_norm(const poly_t *poly, size_t polys_count, double bound) {
 
             norm += (int64_t) coeff * coeff;
         }
-
+        //APP_DBG("poly_check_norm norm = %f bound = %f",sqrt((double) norm), bound );
         // printf("BOUND CHECK: %f, %llu, %f\n", sqrt((double) norm), norm, bound);
         if (sqrt((double) norm) > bound) {
             // printf("failed check norm\n");
@@ -361,7 +363,7 @@ uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L],
 	#elif defined (STM_RNG_H_)
     uint32_t rand_num = 0;
 	RNG_GenerateRandomInt(&rand_num);
-	double u = rand_num / (double) RAND_MAX;
+	double u = rand_num / (double) UINT32_MAX;
     #else
     double u = rand() / (double) RAND_MAX;
     #endif
@@ -378,7 +380,7 @@ uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L],
     x /= 2.0 * SIGMA * SIGMA;
 
     // printf("REJECT CHECK: %f, %f, %f, %f\n", u, (exp(x) / M), x, exp(x));
-
+    //APP_DBG("poly_reject u = %f, x = %f",u, exp(x));
     return u > (exp(x) / M);
 }
 

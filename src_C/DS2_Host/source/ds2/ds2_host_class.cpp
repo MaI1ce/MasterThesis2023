@@ -55,6 +55,15 @@ void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K]
 	poly_invntt_tomont((poly_t*)fi, _K * _K);
 }
 
+std::string ds2_host::gen_commit(const std::string& r, const std::string& ck)
+{
+	poly_t f[_K][_K] = { 0 };
+
+	poly_gen_commit((uint8_t*)ck.c_str(), (uint8_t*)r.c_str(), f);
+
+	return std::string((char*)f, sizeof(f));
+}
+
 std::string ds2_host::hash_msg(const std::string& msg)
 {
 #define HASH_SIZE 256

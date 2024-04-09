@@ -175,6 +175,8 @@ public:
 
 	std::string get_signature(uint64_t& timestamp);
 
+	std::string gen_commit(const std::string& r, const std::string& ck);
+
 	bool is_flag_ready(uint32_t flag);
 	void reset();
 

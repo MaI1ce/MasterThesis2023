@@ -1056,7 +1056,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
     		g_msg_buffer.src_node_id = DS2_NODE_ID;
     		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
     		g_msg_buffer.msg_code = DS2_Ri_VALUE;
-    		g_msg_buffer.packet_length = DS2_HEADER_LEN;
+    		g_msg_buffer.packet_length = DS2_HEADER_LEN + SEED_BYTES;
     		g_msg_buffer.data_offset = 0;
 
     		memcpy((char*)&g_msg_buffer.data, r_seed, sizeof(r_seed));

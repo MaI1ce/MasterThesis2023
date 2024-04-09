@@ -56,7 +56,7 @@ void RNG_Init(void)
 
 HAL_StatusTypeDef RNG_GenerateRandomInt(uint32_t *rand_num)
 {
-	/*
+
 	if(index < RND_NUMBER_COUNT){
 		*rand_num = rnd_numbers[index];
 		index++;
@@ -71,8 +71,8 @@ HAL_StatusTypeDef RNG_GenerateRandomInt(uint32_t *rand_num)
 	    *rand_num = rnd_numbers[0];
 
 	    index = 1;
-	}*/
-	*rand_num = 0;
+	}
+	//*rand_num = 0;
 	return HAL_OK;
 }
 
