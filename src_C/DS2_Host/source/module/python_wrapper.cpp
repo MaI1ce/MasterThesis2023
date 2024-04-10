@@ -20,6 +20,7 @@ PYBIND11_MODULE(ds2, handle) {
 
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
+		.def("check_commit", &ds2_host::check_commit, py::return_value_policy::take_ownership)
 		.def("translate_exception", [](ds2_host& self) {return self.err_code; })
 		.def("hash_msg", 
 			[](ds2_host& self, std::string& msg) {

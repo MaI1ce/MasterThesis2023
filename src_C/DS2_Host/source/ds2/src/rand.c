@@ -34,7 +34,7 @@ void uniform_to_normal(double u1, double u2, int32_t mean, int32_t stddev, int32
 // Expects coeffs_count < N and coeffs_count is even.
 void sample_normal_from_seed(const uint8_t seed[SEED_BYTES], uint32_t nonce, int32_t mean, int32_t stddev, size_t coeffs_count, int32_t *coeffs) {
     keccak_state_t state;
-    uint8_t data[4 * _N];
+    uint8_t data[4 * _N_];
     uint32_t u1, u2;
 
     keccak_init(&state);

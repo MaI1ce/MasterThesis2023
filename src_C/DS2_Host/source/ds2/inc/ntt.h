@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include "params.h"
 
-void ntt(int32_t a[_N]);
+void ntt(int32_t a[_N_]);
 
-void invntt_tomont(int32_t a[_N]);
+void invntt_tomont(int32_t a[_N_]);
 
 #endif

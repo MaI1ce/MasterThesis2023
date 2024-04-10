@@ -6,7 +6,7 @@
 #include "params.h"
 
 typedef struct {
-    int32_t coeffs[_N];
+    int32_t coeffs[_N_];
 } poly_t;
 
 void poly_add(const poly_t *a, const poly_t *b, size_t polys_count, poly_t *c);

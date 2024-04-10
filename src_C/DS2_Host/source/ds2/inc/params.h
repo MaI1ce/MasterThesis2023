@@ -5,7 +5,7 @@
 
 #define N_PARTIES 2
 
-#define _N 256
+#define _N_ 256
 #define _Q 8380417
 
 #define _K 2
@@ -60,7 +60,7 @@
 
 #define SEED_BYTES 16 // 64
 #define T1_BITS 11
-#define POLY_T1_PACKED_BYTES (T1_BITS * (_N >> 3))
+#define POLY_T1_PACKED_BYTES (T1_BITS * (_N_ >> 3))
 
 #define TC_S_ 2059
 #define TC_S 815

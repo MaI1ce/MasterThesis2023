@@ -18,10 +18,10 @@
 #define DS2_Ti_COMMIT_SIZE 	L2
 #define DS2_Ti_VALUE_SIZE 	_K*POLY_T1_PACKED_BYTES
 
-#define DS2_Fi_COMMIT_SIZE	2 * 3 * _K * _N
+#define DS2_Fi_COMMIT_SIZE	2 * 3 * _K * _N_
 
-#define DS2_Zi_1_VALUE_SIZE 3 * _L * _N
-#define DS2_Zi_2_VALUE_SIZE 3 * _K * _N
+#define DS2_Zi_1_VALUE_SIZE 3 * _L * _N_
+#define DS2_Zi_2_VALUE_SIZE 3 * _K * _N_
 
 #define DS2_Ri_VALUE_SIZE 	SEED_BYTES
 

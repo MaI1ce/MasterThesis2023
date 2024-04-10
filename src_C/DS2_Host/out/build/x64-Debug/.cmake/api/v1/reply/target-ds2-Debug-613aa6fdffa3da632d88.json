@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.cp312-win_amd64.pyd"
+			"path" : "C:/home/MasterThesis/src_C/DS2_Host/lib/ds2.cp311-win_amd64.pyd"
 		},
 		{
-			"path" : "F:/MasterDiploma2/src_C/DS2_Host/lib/ds2.pdb"
+			"path" : "C:/home/MasterThesis/src_C/DS2_Host/lib/ds2.pdb"
 		}
 	],
 	"backtrace" : 2,
@@ -98,11 +98,14 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd"
+					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -MDd"
 				},
 				{
 					"backtrace" : 11,
 					"fragment" : "/bigobj"
+				},
+				{
+					"fragment" : "-std:c++17"
 				}
 			],
 			"defines" : 
@@ -115,17 +118,17 @@
 			[
 				{
 					"backtrace" : 9,
-					"path" : "F:/MasterDiploma2/src_C/DS2_Host/source/ds2/inc"
+					"path" : "C:/home/MasterThesis/src_C/DS2_Host/source/ds2/inc"
 				},
 				{
 					"backtrace" : 10,
 					"isSystem" : true,
-					"path" : "F:/MasterDiploma2/src_C/DS2_Host/externals/pybind11/include"
+					"path" : "C:/home/MasterThesis/src_C/DS2_Host/externals/pybind11/include"
 				},
 				{
 					"backtrace" : 10,
 					"isSystem" : true,
-					"path" : "C:/Users/MALICE/AppData/Local/Programs/Python/Python312/Include"
+					"path" : "C:/tools/Python311/Include"
 				}
 			],
 			"language" : "CXX",
@@ -162,17 +165,17 @@
 			[
 				{
 					"backtrace" : 9,
-					"path" : "F:/MasterDiploma2/src_C/DS2_Host/source/ds2/inc"
+					"path" : "C:/home/MasterThesis/src_C/DS2_Host/source/ds2/inc"
 				},
 				{
 					"backtrace" : 10,
 					"isSystem" : true,
-					"path" : "F:/MasterDiploma2/src_C/DS2_Host/externals/pybind11/include"
+					"path" : "C:/home/MasterThesis/src_C/DS2_Host/externals/pybind11/include"
 				},
 				{
 					"backtrace" : 10,
 					"isSystem" : true,
-					"path" : "C:/Users/MALICE/AppData/Local/Programs/Python/Python312/Include"
+					"path" : "C:/tools/Python311/Include"
 				}
 			],
 			"language" : "C",
@@ -199,7 +202,7 @@
 			},
 			{
 				"backtrace" : 8,
-				"fragment" : "C:\\Users\\MALICE\\AppData\\Local\\Programs\\Python\\Python312\\libs\\python312.lib",
+				"fragment" : "C:\\tools\\Python311\\libs\\python311.lib",
 				"role" : "libraries"
 			},
 			{
@@ -210,7 +213,7 @@
 		"language" : "CXX"
 	},
 	"name" : "ds2",
-	"nameOnDisk" : "ds2.cp312-win_amd64.pyd",
+	"nameOnDisk" : "ds2.cp311-win_amd64.pyd",
 	"paths" : 
 	{
 		"build" : ".",

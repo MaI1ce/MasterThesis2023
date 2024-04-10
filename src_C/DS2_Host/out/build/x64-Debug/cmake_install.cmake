@@ -1,8 +1,8 @@
-# Install script for directory: F:/MasterDiploma2/src_C/DS2_Host
+# Install script for directory: C:/home/MasterThesis/src_C/DS2_Host
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "F:/MasterDiploma2/src_C/DS2_Host/out/install/x64-Debug")
+  set(CMAKE_INSTALL_PREFIX "C:/home/MasterThesis/src_C/DS2_Host/out/install/x64-Debug")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -34,7 +34,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/externals/pybind11/cmake_install.cmake")
+  include("C:/home/MasterThesis/src_C/DS2_Host/out/build/x64-Debug/externals/pybind11/cmake_install.cmake")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/home/MasterThesis/src_C/DS2_Host/out/build/x64-Debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

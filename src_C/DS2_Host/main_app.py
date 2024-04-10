@@ -56,7 +56,8 @@ class Sniffer:
     DS2_ERROR_Fi_COMMIT                 = 0x05 | DS2_ABORT
     DS2_ERROR_Zi_REJECT                 = 0X06 | DS2_ABORT
 
-    DS2_UNKNOWN_ERROR = 0xfe
+    DS2_UNKNOWN_ERROR = 0xfd
+    DS2_CHECK_COMMIT = 0xfe
     DS2_DBG = 0xff
 
     DS2_Pi_COMMIT_FLAG      = (1 << DS2_Pi_COMMIT)
@@ -325,6 +326,17 @@ class Sniffer:
                         #self.response(self.DS2_Zi_2_VALUE_FLAG)
                 case self.DS2_DBG:
                     self.listbox.insert(self.index, data.decode(encoding='latin1'))
+                    self.index += 1
+                case self.DS2_CHECK_COMMIT:
+                    ri = data[0:16]
+                    ck = data[16:32]
+                    fi = data[32: 4128]
+                    wi = data[4128: -1]
+                    flag = ds2.check_commit(ri, ck, fi, wi)
+                    if flag:
+                        self.listbox.insert(self.index, "Commit[{}] - OK".format(node_id))
+                    else:
+                        self.listbox.insert(self.index, "Commit[{}] - NOK".format(node_id))
                     self.index += 1
                 case _:
                     self.listbox.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))

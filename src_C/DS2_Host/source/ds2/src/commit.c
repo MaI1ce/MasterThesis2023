@@ -9,12 +9,12 @@
 #include "rand.h"
 #include "reduce.h"
 
-void h0(const int32_t com[_K][_N][2], const uint8_t *msg, size_t msg_len, const uint8_t tr[SEED_BYTES], uint8_t c[SEED_BYTES]) {
+void h0(const int32_t com[_K][_N_][2], const uint8_t *msg, size_t msg_len, const uint8_t tr[SEED_BYTES], uint8_t c[SEED_BYTES]) {
     keccak_state_t state;
 
     keccak_init(&state);
     // FIXME: will be incorrect becouse of endiannes
-    shake256_absorb(&state, (uint8_t*) com, _K * _N * 2 * sizeof(int32_t));
+    shake256_absorb(&state, (uint8_t*) com, _K * _N_ * 2 * sizeof(int32_t));
     shake256_absorb(&state, msg, msg_len);
     shake256_absorb(&state, tr, SEED_BYTES);
     shake256_finalize(&state);

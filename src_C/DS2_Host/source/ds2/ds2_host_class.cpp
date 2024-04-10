@@ -40,13 +40,13 @@ static inline uint64_t get_cycles() {
 
 void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K])
 {
-	memset(fi, 0, _K * _K * _N);
+	memset(fi, 0, _K * _K * _N_);
 
 	for (size_t k = 0; k < TC_COLS; k++) {
 		for (size_t j = 0; j < _K; j++) {
 			for (size_t i = 0; i < _K; i++) {
 				// f[i][j] += r[j][k] + ck[i][k]
-				for (size_t n = 0; n < _N; n++)
+				for (size_t n = 0; n < _N_; n++)
 					fi[i][j].coeffs[n] += montgomery_reduce((int64_t)ck[i][k].coeffs[n] * r[j][k].coeffs[n]);
 			}
 		}
@@ -55,13 +55,24 @@ void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K]
 	poly_invntt_tomont((poly_t*)fi, _K * _K);
 }
 
-std::string ds2_host::gen_commit(const std::string& r, const std::string& ck)
+bool ds2_host::check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi)
 {
-	poly_t f[_K][_K] = { 0 };
+	poly_t f1[_K][_K] = { 0 };
+	poly_t f2[_K][_K] = { 0 };
+	poly_t w[_K] = { 0 };
 
-	poly_gen_commit((uint8_t*)ck.c_str(), (uint8_t*)r.c_str(), f);
+	memcpy(f1, fi.c_str(), fi.size());
 
-	return std::string((char*)f, sizeof(f));
+	poly_gen_commit((uint8_t*)ck.c_str(), (uint8_t*)r.c_str(), f2);
+
+	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
+
+	poly_freeze((poly_t*)f1, _K * _K);
+
+	if (memcmp(f1, f2, sizeof(f1)) == 0)
+		return true;
+	else
+		return false;
 }
 
 std::string ds2_host::hash_msg(const std::string& msg)
@@ -139,7 +150,7 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 		poly_unpack(TC_L, parties[i].fi_commit, _K * _K, 0, (poly_t*)fi);
 		poly_add((poly_t*)Commit, (poly_t*)fi, _K * _K, (poly_t*)Commit);
 #ifdef DS2_DEBUG
-		APP_DBG("FFD DS2 -- SIGN -- com_[%d] = ck*ri + wi = %ld", i, fi[1][1].coeffs[_N - 1]);
+		APP_DBG("FFD DS2 -- SIGN -- com_[%d] = ck*ri + wi = %ld", i, fi[1][1].coeffs[_N_ - 1]);
 #endif
 	}
 	poly_freeze((poly_t*)Commit, _K * _K);
@@ -195,7 +206,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 			for (size_t j = 0; j < _K; j++) {
 				do {
 					nonce++;
-					sample_normal_from_seed(parties[i].ri_val, j * TC_COLS + k + nonce, 0, TC_S, _N, ri[j][k].coeffs);
+					sample_normal_from_seed(parties[i].ri_val, j * TC_COLS + k + nonce, 0, TC_S, _N_, ri[j][k].coeffs);
 				} while (!poly_check_norm(&ri[j][k], 1, TC_B));
 			}
 		}
