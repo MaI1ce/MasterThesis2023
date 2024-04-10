@@ -61,9 +61,16 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 	poly_t f2[_K][_K] = { 0 };
 	poly_t w[_K] = { 0 };
 
-	memcpy(f1, fi.c_str(), fi.size());
+	uint8_t ri[SEED_BYTES] = { 0 };
+	uint8_t cki[SEED_BYTES] = { 0 };
 
-	poly_gen_commit((uint8_t*)ck.c_str(), (uint8_t*)r.c_str(), f2);
+
+	memcpy(f2, fi.c_str(), fi.size());
+	memcpy(w, wi.c_str(), wi.size());
+	memcpy(ri, r.c_str(), r.size());
+	memcpy(cki, ck.c_str(), ck.size());
+
+	poly_gen_commit(cki, ri, f1);
 
 	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
 

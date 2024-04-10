@@ -302,7 +302,7 @@ void DbgOutputInit( void )
   */
 void DbgOutputTraces( uint8_t *p_data, uint16_t size, void (*cb)(void) )
 {
-  HW_UART_Transmit_DMA(CFG_DEBUG_TRACE_UART, p_data, size, cb);
+
 	//CDC_Transmit_FS(p_data, size);
   static uint8_t dbg_buff[128] = {0};
   uint32_t *len = (uint32_t*)dbg_buff;
@@ -316,7 +316,8 @@ void DbgOutputTraces( uint8_t *p_data, uint16_t size, void (*cb)(void) )
   }
   memcpy(data, p_data, *len);
 
-  HW_UART_Transmit_DMA(CFG_CLI_UART, dbg_buff, *len+4, cb);
+  //HW_UART_Transmit_DMA(CFG_CLI_UART, dbg_buff, *len+4, cb);
+  HW_UART_Transmit_DMA(CFG_DEBUG_TRACE_UART, p_data, size, cb);
 
 }
 

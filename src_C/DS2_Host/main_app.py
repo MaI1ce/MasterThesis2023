@@ -331,8 +331,10 @@ class Sniffer:
                     ri = data[0:16]
                     ck = data[16:32]
                     fi = data[32: 4128]
-                    wi = data[4128: -1]
-                    flag = ds2.check_commit(ri, ck, fi, wi)
+                    wi = data[4128:]
+                    self.listbox.insert(self.index, "ri = {} ck = {} fi = {} wi = {}".format(xorSign(ri), xorSign(ck), int.from_bytes(fi[-4:], byteorder='little'), int.from_bytes(wi[-4:], byteorder='little')))
+                    self.index += 1
+                    flag = self.signer.check_commit(ri, ck, fi, wi)
                     if flag:
                         self.listbox.insert(self.index, "Commit[{}] - OK".format(node_id))
                     else:
@@ -354,8 +356,7 @@ class Sniffer:
             self.ser = serial.Serial(port=self.port_var.get(),
                                      baudrate=int(self.baudrate_var.get()),
                                      bytesize=8,
-                                     parity=serial.PARITY_NONE,
-                                     timeout=1)
+                                     parity=serial.PARITY_NONE)
             #self.ser.open()
             if self.ser.is_open:
                 self.listbox.insert(self.index, "port is opened")
@@ -367,6 +368,7 @@ class Sniffer:
                     if read_len > 3:
                         frame_len = self.ser.read(4)
                         data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
+                        print("msg len: ", data_len)
                         data = self.ser.read(data_len)
                         frame = frame_len+data
                         gix = xorSign(frame)

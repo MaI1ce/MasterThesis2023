@@ -40,7 +40,8 @@ typedef enum {
 	DS2_ERROR_Fi_COMMIT = 0x05 | DS2_ABORT,
 	DS2_ERROR_Zi_REJECT = 0X06 | DS2_ABORT,
 
-	DS2_UNKNOWN_ERROR = 0xfe,
+	DS2_UNKNOWN_ERROR = 0xfd,
+	DS2_CHECK_COMMIT = 0xfe,
 	DS2_DBG = 0xff
 }DS2_msg_codes;
 

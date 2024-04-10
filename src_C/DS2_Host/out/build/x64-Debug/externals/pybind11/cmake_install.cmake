@@ -1,8 +1,8 @@
-# Install script for directory: C:/home/MasterThesis/src_C/DS2_Host/externals/pybind11
+# Install script for directory: F:/MasterDiploma2/src_C/DS2_Host/externals/pybind11
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/home/MasterThesis/src_C/DS2_Host/out/install/x64-Debug")
+  set(CMAKE_INSTALL_PREFIX "F:/MasterDiploma2/src_C/DS2_Host/out/install/x64-Debug")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 

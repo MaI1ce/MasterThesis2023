@@ -106,9 +106,8 @@ void APP_FFD_MAC_802_15_4_SendEcho(void);
 static uint8_t xorSign( const char * pmessage, uint32_t message_len);
 
 static uint8_t 		UART1_rxBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
-static uint8_t		UART1_CMD_DATA_Flag = 0; // 0 - CMD;  1 - DATA
 
-static uint8_t 		UART1_txBuffer[DS2_Fi_COMMIT_SIZE+FRAME_HEADER_SIZE];
+static uint8_t 		UART1_txBuffer[sizeof(poly_t)*(K*K+K)+2*SEED_BYTES+FRAME_HEADER_SIZE];
 static serial_frame* tx_ptr = (serial_frame*)UART1_txBuffer;
 static serial_frame* rx_ptr = (serial_frame*)UART1_rxBuffer;
 
@@ -276,7 +275,6 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 	tx_ptr->msg_code = DS2_COORDINATOR_READY_RESET;
 	tx_ptr->node_id = 254;
 	tx_ptr->length = 2;
-	UART1_CMD_DATA_Flag = 0;
 	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 
 
@@ -1311,6 +1309,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 	    		// com_i = ck*r + w
 	            poly_unpack(TC_L, g_Parties[i].fi_commit, K*K, 0, (poly_t*)F2);
 
+
 #ifdef DS2_DEBUG
 	            APP_DBG("FFD DS2 -- SIGN -- OPEN COMMITMENT com_i ...");
 
@@ -1322,6 +1321,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 			    uint8_t ckx =  xorSign((char*)ck_seed, sizeof(ck_seed));
 			    APP_DBG("RFD DS2 -- SIGN -- ck_seed = h3(tr, msg) = %ld", ckx);
 #endif
+
 	    		poly_gen_commit(ck_seed, g_Parties[i].ri_val, F1);
 	    		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, K, (poly_t*)&F1[1]);
 
@@ -1367,6 +1367,22 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 			APP_DBG("FFD DS2 -- SIGN -- TOTAL   TIMER:%ld",elapsed_time_max(TIMER_SIGN_TOTAL));
 			APP_DBG("FFD DS2 -- SIGN -- COMMIT  TIMER:%ld",elapsed_time_max(TIMER_SIGN_COMMIT));
 			APP_DBG("FFD DS2 -- SIGN -- PACKET  TIMER:%ld",elapsed_time_max(TIMER_PACKET_SEND));
+
+
+		    tx_ptr->length = 2 + sizeof(g_Parties[0].ri_val) + sizeof(ck_seed) + sizeof(F2)+ sizeof(w_temp);
+		    tx_ptr->msg_code = DS2_CHECK_COMMIT;
+		    tx_ptr->node_id = 0;
+		    memcpy(UART1_txBuffer+FRAME_HEADER_SIZE, g_Parties[0].ri_val, sizeof(g_Parties[0].ri_val));
+		    memcpy(UART1_txBuffer+FRAME_HEADER_SIZE+sizeof(g_Parties[0].ri_val), ck_seed, sizeof(ck_seed));
+		    memcpy(UART1_txBuffer+FRAME_HEADER_SIZE+sizeof(g_Parties[0].ri_val)+sizeof(ck_seed), F2, sizeof(F2));
+		    memcpy(UART1_txBuffer+FRAME_HEADER_SIZE+sizeof(g_Parties[0].ri_val)+sizeof(ck_seed)+sizeof(F2), w_temp, sizeof(w_temp));
+
+		    HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)tx_ptr, tx_ptr->length+4, UART_TxCpltCallback);
+		    //HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)tx_ptr, FRAME_HEADER_SIZE, UART_TxCpltCallback);
+		    //HW_UART_Transmit_DMA(CFG_CLI_UART, g_Parties[0].ri_val, sizeof(g_Parties[0].ri_val), UART_TxCpltCallback);
+		    //HW_UART_Transmit_DMA(CFG_CLI_UART, ck_seed, sizeof(ck_seed), UART_TxCpltCallback);
+		    //HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)F2, sizeof(F2), UART_TxCpltCallback);
+		    //HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)w_temp, sizeof(w_temp), UART_TxCpltCallback);
 		}
 		break;
 	default:
