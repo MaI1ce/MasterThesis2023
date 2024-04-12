@@ -20,7 +20,24 @@ PYBIND11_MODULE(ds2, handle) {
 
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
-		.def("check_commit", &ds2_host::check_commit, py::return_value_policy::take_ownership)
+		.def("check_commit", 
+			[](ds2_host& self, const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(self.check_commit(r, ck, fi, wi, timestamp));
+				rl.append(timestamp);
+				return rl;
+			},
+			py::return_value_policy::take_ownership)
+		.def("check_commit2",
+			[](ds2_host& self, const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(self.check_commit2(r, ck, fi, wi, timestamp));
+				rl.append(timestamp);
+				return rl;
+			},
+			py::return_value_policy::take_ownership)
 		.def("translate_exception", [](ds2_host& self) {return self.err_code; })
 		.def("hash_msg", 
 			[](ds2_host& self, std::string& msg) {
@@ -59,6 +76,15 @@ PYBIND11_MODULE(ds2, handle) {
 				uint64_t timestamp = 0;
 				py::list rl;
 				rl.append(py::bytes(self.get_tr(timestamp)));
+				rl.append(timestamp);
+				return rl;
+			},
+			py::return_value_policy::take_ownership)
+		.def("get_c",
+			[](ds2_host& self) {
+				uint64_t timestamp = 0;
+				py::list rl;
+				rl.append(py::bytes(self.get_c(timestamp)));
 				rl.append(timestamp);
 				return rl;
 			},

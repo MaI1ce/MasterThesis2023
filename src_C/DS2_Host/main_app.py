@@ -18,8 +18,136 @@ def xorSign(msg):
     return seed
 
 
+class BufferToBig(Exception):
+    def __init__(self, err_msg, err_code):
+        self.err_msg = err_msg
+        self.err_code = err_code
+
+
+class party:
+    DS2_Pi_COMMIT_SIZE = 64
+    DS2_Pi_VALUE_SIZE = 16
+    DS2_Ti_COMMIT_SIZE = 64
+    DS2_Ti_VALUE_SIZE = 2 * (11 * (256 >> 3))
+    DS2_Fi_COMMIT_SIZE = 2*2*3*256
+    DS2_Zi_1_VALUE_SIZE = 3*2*256
+    DS2_Zi_2_VALUE_SIZE = 3*2*256
+    DS2_Ri_VALUE_SIZE = 16
+    
+    DS2_ABORT = 0xC0
+    DS2_ERROR_Pi_COMMIT                 = 0x03 | DS2_ABORT
+    DS2_ERROR_Ti_COMMIT                 = 0x04 | DS2_ABORT
+    DS2_ERROR_Fi_COMMIT                 = 0x05 | DS2_ABORT
+    DS2_ERROR_Zi_REJECT                 = 0X06 | DS2_ABORT
+
+    def __init__(self):
+        self.reset()
+        
+    def reset(self):
+        self.pi_commit = bytearray()
+        self.pi_val = bytearray()
+        self.ti_commit = bytearray()
+        self.ti_val = bytearray()
+        self.zi_1_val = bytearray()
+        self.zi_2_val = bytearray()
+        self.ri_val = bytearray()
+        self.fi_commit = bytearray()
+        
+    def add_pi_c(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.pi_commit += chunk
+        
+        if len(self.pi_commit) == self.DS2_Pi_COMMIT_SIZE:
+            return True
+        elif len(self.pi_commit) < self.DS2_Pi_COMMIT_SIZE:
+            return False
+        else:
+            raise BufferToBig("pi_commit size exceeded max buffer size", self.DS2_ERROR_Pi_COMMIT)
+        
+    def add_pi_v(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.pi_val += chunk
+        
+        if len(self.pi_val) == self.DS2_Pi_VALUE_SIZE:
+            return True
+        elif len(self.pi_val) < self.DS2_Pi_VALUE_SIZE:
+            return False
+        else:
+            raise BufferToBig("pi_val size exceeded max buffer size", self.DS2_ERROR_Pi_COMMIT)
+        
+    def add_ti_c(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.ti_commit += chunk
+        
+        if len(self.ti_commit) == self.DS2_Ti_COMMIT_SIZE:
+            return True
+        elif len(self.ti_commit) < self.DS2_Ti_COMMIT_SIZE:
+            return False
+        else:
+            raise BufferToBig("ti_commit size exceeded max buffer size", self.DS2_ERROR_Ti_COMMIT)
+        
+    def add_ti_v(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.ti_val += chunk
+        
+        if len(self.ti_val) == self.DS2_Ti_VALUE_SIZE:
+            return True
+        elif len(self.ti_val) < self.DS2_Ti_VALUE_SIZE:
+            return False
+        else:
+            raise BufferToBig("ti_val size exceeded max buffer size", self.DS2_ERROR_Ti_COMMIT)
+    
+    def add_fi_c(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.fi_commit += chunk
+        
+        if len(self.fi_commit) == self.DS2_Fi_COMMIT_SIZE:
+            return True
+        elif len(self.fi_commit) < self.DS2_Fi_COMMIT_SIZE:
+            return False
+        else:
+            raise BufferToBig("fi_commit size exceeded max buffer size", self.DS2_ERROR_Fi_COMMIT)
+        
+    def add_zi_1_v(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.zi_1_val += chunk
+        
+        if len(self.zi_1_val) == self.DS2_Zi_1_VALUE_SIZE:
+            return True
+        elif len(self.zi_1_val) < self.DS2_Zi_1_VALUE_SIZE:
+            return False
+        else:
+            raise BufferToBig("zi_1_val size exceeded max buffer size", self.DS2_ERROR_Fi_COMMIT)
+        
+    def add_zi_2_v(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.zi_2_val += chunk
+        
+        if len(self.zi_2_val) == self.DS2_Zi_2_VALUE_SIZE:
+            return True
+        elif len(self.zi_2_val) < self.DS2_Zi_2_VALUE_SIZE:
+            return False
+        else:
+            raise BufferToBig("zi_2_val size exceeded max buffer size", self.DS2_ERROR_Fi_COMMIT)
+        
+    def add_ri_v(self, chunk:bytearray):
+        #TODO - Add check if packets are in correct order
+        self.ri_val += chunk
+        
+        if len(self.ri_val) == self.DS2_Ri_VALUE_SIZE:
+            return True
+        elif len(self.ri_val) < self.DS2_Ri_VALUE_SIZE:
+            return False
+        else:
+            raise BufferToBig("ri_val size exceeded max buffer size", self.DS2_ERROR_Fi_COMMIT)
+
+
 
 class Sniffer:
+    
+    NUMBER_OF_PARTIES = 1
+    
+    nodes = [party()] * NUMBER_OF_PARTIES
     
     DS2_Pi_COMMIT   = 0x00
     DS2_Pi_VALUE    = 0x01
@@ -90,7 +218,7 @@ class Sniffer:
         
         self.signature = None
 
-        self.listbox = tk.Listbox(self.main_frame, width=200, height=30)
+        self.listbox = tk.Listbox(self.main_frame, width=100, height=30)
         self.listbox.grid(row=0, column=0, rowspan=10, padx=2, pady=2, sticky="nswe")
         scrollbar = tk.Scrollbar(self.main_frame)
         scrollbar.grid(row=0, column=1, rowspan=10, sticky="nswe")
@@ -182,6 +310,8 @@ class Sniffer:
         pass
     
     def reset(self):
+        for node in self.nodes:
+            node.reset()
         self.signer.reset()
         self.keygen_time = 0
         self.sign_time = 0
@@ -239,13 +369,21 @@ class Sniffer:
         
         
     def msg_parser(self, msg:bytes):
-        msg_code = msg[0]
-        node_id = msg[1]
-        data = msg[2:]
+        dst_node_id = msg[0]
+        src_node_id = msg[1]
+        msg_code = msg[2]
+        if len(msg) == 3:
+            offset = 0
+            data = None
+            crc = 0
+        else:
+            offset = int.from_bytes(msg[3:7], byteorder='little', signed=False)
+            data = msg[7:]
+            crc = xorSign(data)
         try:
             match msg_code:
                 case self.DS2_COORDINATOR_HELLO:
-                    self.listbox.insert(self.index, "Party ID:{} connected".format(node_id))
+                    self.listbox.insert(self.index, "Party ID:{} connected".format(src_node_id))
                     self.index += 1
 
                 case self.DS2_COORDINATOR_READY_RESET:
@@ -253,77 +391,93 @@ class Sniffer:
                     self.index += 1
             
                 case self.DS2_Pi_COMMIT:
-                    gix = xorSign(data)
-                    self.listbox.insert(self.index, "Party ID:{} Pi commit gix = {}".format(node_id, gix))
+                    self.listbox.insert(self.index, "Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_pi_commit(node_id, data)
+                    flag = self.nodes[src_node_id].add_pi_c(data)
+                    if flag is True:
+                        self.signer.set_pi_commit(src_node_id, self.nodes[src_node_id].pi_commit)
+                        #self.response(...)
                 
                 case self.DS2_Pi_VALUE:
-                    gix = xorSign(data)
-                    self.listbox.insert(self.index, "Party ID:{} Pi value gix = {}".format(node_id, gix))
+                    self.listbox.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_pi_val(node_id, data)
-                    if self.signer.is_flag_ready(self.DS2_Pi_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Pi_VALUE_FLAG):
-                        rho, cpu_cycles = self.signer.get_rho()
-                        self.keygen_time += cpu_cycles
-                        gix = xorSign(rho)
-                        self.listbox.insert(self.index, "KeyGen: send rho {} - time {}".format(gix, self.keygen_time))
-                        self.index += 1
-                        self.response(self.DS2_Pi_VALUE_ACK, rho)
+                    flag = self.nodes[src_node_id].add_pi_v(data)
+                    if flag is True:
+                        self.signer.set_pi_val(src_node_id,  self.nodes[src_node_id].pi_val)
+                        if self.signer.is_flag_ready(self.DS2_Pi_COMMIT_FLAG | self.DS2_Pi_VALUE_FLAG):
+                            rho, time_stamp = self.signer.get_rho()
+                            self.keygen_time += time_stamp
+                            crc = xorSign(rho)
+                            self.listbox.insert(self.index, "KeyGen: send rho CRC {} - time {}".format(crc, self.keygen_time))
+                            self.index += 1
+                            #self.response(self.DS2_Pi_VALUE_ACK, rho)
                 
                 case self.DS2_Ti_COMMIT:
-                    gix = xorSign(data)
-                    self.listbox.insert(self.index, "Party ID:{} Ti commit gix = {}".format(node_id, gix))
+                    self.listbox.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_ti_commit(node_id, data)
+                    flag = self.nodes[src_node_id].add_ti_c(data)
+                    if flag is True:
+                        self.signer.set_ti_commit(src_node_id,  self.nodes[src_node_id].ti_commit)
+                        #self.response(...)
                 
                 case self.DS2_Ti_VALUE:
-                    gix = xorSign(data)
-                    self.listbox.insert(self.index, "Party ID:{} Ti value gix {}".format(node_id, gix))
+                    self.listbox.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_ti_val(node_id, data)
-                    if self.signer.is_flag_ready(self.DS2_Ti_COMMIT_FLAG) and self.signer.is_flag_ready(self.DS2_Ti_VALUE_FLAG):
-                        tr, cpu_cycles = self.signer.get_tr()
-                        self.keygen_time += cpu_cycles
-                        self.listbox.insert(self.index, "KeyGen: send tr - time {}".format(self.keygen_time))
-                        self.index += 1
-                        self.response(self.DS2_Ti_VALUE_ACK, tr)
+                    flag = self.nodes[src_node_id].add_ti_v(data)
+                    if flag is True:
+                        self.signer.set_ti_val(src_node_id, self.nodes[src_node_id].ti_val)
+                        if self.signer.is_flag_ready(self.DS2_Ti_COMMIT_FLAG | self.DS2_Ti_VALUE_FLAG):
+                            tr, time_stamp = self.signer.get_tr()
+                            self.keygen_time += time_stamp
+                            crc = xorSign(tr)
+                            self.listbox.insert(self.index, "KeyGen: send tr crc {} - time {}".format(crc, time_stamp))
+                            self.index += 1
+                            #self.response(self.DS2_Ti_VALUE_ACK, tr)
                     
                 case self.DS2_Fi_COMMIT:
-                    gix = xorSign(data)
-                    self.listbox.insert(self.index, "Party ID:{} Fi commit value gix {}".format(node_id, gix))
+                    self.listbox.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_fi_commit(node_id, data)
-                    if self.signer.is_flag_ready(self.DS2_Fi_COMMIT_FLAG):
-                        sc, cpu_cycles = self.signer.get_c()
-                        self.sign_time += cpu_cycles
-                        self.listbox.insert(self.index, "Sign: send sc value {} time {}".format(sc, self.sign_time))
-                        self.index += 1
-                        self.response(self.DS2_Fi_COMMIT_ACK, sc)
+                    flag = self.nodes[src_node_id].add_fi_c(data)
+                    if flag is True:
+                        self.signer.set_fi_commit(src_node_id, self.nodes[src_node_id].fi_commit)
+                        if self.signer.is_flag_ready(self.DS2_Fi_COMMIT_FLAG):
+                            sc, time_stamp = self.signer.get_c()
+                            crc = xorSign(sc)
+                            self.sign_time += time_stamp
+                            self.listbox.insert(self.index, "Sign: send sc value CRC {} time {}".format(crc, time_stamp))
+                            self.index += 1
+                            #self.response(self.DS2_Fi_COMMIT_ACK, sc)
                     
                 case self.DS2_Ri_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Ri value len {}".format(node_id, len(data)))
+                    self.listbox.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_ri_val(node_id, data)
+                    flag = self.nodes[src_node_id].add_ri_v(data)
+                    if flag is True:
+                        self.signer.set_ri_val(src_node_id, self.nodes[src_node_id].ri_val)
+                        #self.response(...)
                     
                 case self.DS2_Zi_1_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_1 value len {}".format(node_id, len(data)))
+                    self.listbox.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_zi_1_val(node_id, data)
+                    flag = self.nodes[src_node_id].add_zi_1_v(data)
+                    if flag is True:
+                        self.signer.set_zi_1_val(src_node_id, self.nodes[src_node_id].zi_1_val)
+                        #self.response(...)
 
                 case self.DS2_Zi_2_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_2 value len {}".format(node_id, len(data)))
+                    self.listbox.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
                     self.index += 1
-                    self.signer.set_zi_2_val(node_id, data)
-                    if self.signer.is_flag_ready(self.DS2_Ri_VALUE_FLAG) and \
-                        self.signer.is_flag_ready(self.DS2_Zi_1_VALUE_FLAG) and \
-                        self.signer.is_flag_ready(self.DS2_Zi_2_VALUE_FLAG):
-                        self.signature, cpu_cycles = self.signer.get_signature()
-                        self.sign_time += cpu_cycles
-                        print("signature: ", ":".join("{:02x}".format(c) for c in self.signature))
-                        self.listbox.insert(self.index, "Sign: signature value: {}".format(":".join("{:02x}".format(c) for c in self.signature)))
-                        self.index += 1
-                        #self.response(self.DS2_Zi_2_VALUE_FLAG)
+                    flag = self.nodes[src_node_id].add_zi_2_v(data)
+                    if flag is True:
+                        self.signer.set_zi_2_val(src_node_id, self.nodes[src_node_id].zi_2_val)
+                        if self.signer.is_flag_ready(self.DS2_Ri_VALUE_FLAG | self.DS2_Zi_1_VALUE_FLAG |self.DS2_Zi_2_VALUE_FLAG):
+                            self.signature, time_stamp = self.signer.get_signature()
+                            self.sign_time += time_stamp
+                            crc = xorSign(self.signature)
+                            print("Signature: ", ":".join("{:02x}".format(c) for c in self.signature))
+                            self.listbox.insert(self.index, "Sign: signature CRC: {}".format(crc))
+                            self.index += 1
+                            #self.response(self.DS2_Zi_2_VALUE_FLAG)
                 case self.DS2_DBG:
                     self.listbox.insert(self.index, data.decode(encoding='latin1'))
                     self.index += 1
@@ -334,21 +488,32 @@ class Sniffer:
                     wi = data[4128:]
                     self.listbox.insert(self.index, "ri = {} ck = {} fi = {} wi = {}".format(xorSign(ri), xorSign(ck), int.from_bytes(fi[-4:], byteorder='little'), int.from_bytes(wi[-4:], byteorder='little')))
                     self.index += 1
-                    flag = self.signer.check_commit(ri, ck, fi, wi)
+                    flag, cpu_cycles = self.signer.check_commit(ri, ck, fi, wi)
                     if flag:
-                        self.listbox.insert(self.index, "Commit[{}] - OK".format(node_id))
+                        self.listbox.insert(self.index, "Commit[{}] - OK time - {}".format(src_node_id, cpu_cycles))
                     else:
-                        self.listbox.insert(self.index, "Commit[{}] - NOK".format(node_id))
+                        self.listbox.insert(self.index, "Commit[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
+                    self.index += 1
+                    
+                    flag, cpu_cycles = self.signer.check_commit2(ri, ck, fi, wi)
+                    if flag:
+                        self.listbox.insert(self.index, "Commit2[{}] - OK time - {}".format(src_node_id, cpu_cycles))
+                    else:
+                        self.listbox.insert(self.index, "Commit2[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
                     self.index += 1
                 case _:
                     self.listbox.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
                     self.index += 1
                     
         except ds2.DS2Exception as err:
-             self.listbox.insert(self.index, "Error: {} node_id:{}".format(str(err), node_id)) #TODO - paint red
-             self.index += 1
-             err_code = self.signer.translate_exception()
-             self.abort(err_code)
+            self.listbox.insert(self.index, "Error: {} ".format(str(err))) #TODO - paint red
+            self.index += 1
+            err_code = self.signer.translate_exception()
+            self.abort(err_code)
+        except BufferToBig as err:
+            self.listbox.insert(self.index, "Error: {} ".format(err.err_msg)) #TODO - paint red
+            self.index += 1
+            self.abort(err.err_code)
         
 
     def read_serial_thread(self):
@@ -365,23 +530,15 @@ class Sniffer:
 
                 while self.thread_run:
                     read_len = self.ser.inWaiting()
-                    if read_len > 3:
-                        frame_len = self.ser.read(4)
-                        data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
-                        print("msg len: ", data_len)
-                        data = self.ser.read(data_len)
-                        frame = frame_len+data
-                        gix = xorSign(frame)
-                        print("gix = ", gix)
-                        print(":".join("{:02x}".format(c) for c in (frame)))
-                        self.msg_parser(data)
+                    if read_len >= 4:
+                        frame_len = self.ser.read(1)
+                        #data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
+                        frame = self.ser.read(frame_len[0]-1)
+                        print("msg len: {} msg code: {} node id: {}".format(frame_len[0], frame[2], frame[1]))
+                        print(":".join("{:02x}".format(c) for c in (frame_len+frame)))
+                        self.msg_parser(frame)
+                        
                     #time.sleep(0.1)
-
-        except Exception as err:
-            #messagebox.showerror('Error', str(err))
-            print(str(err))
-            self.listbox.insert(self.index, str(err))
-            self.index += 1
         finally:
             pass
             #print("THREAD FINAL")

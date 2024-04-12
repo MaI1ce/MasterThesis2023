@@ -1,13 +1,6 @@
 #include "ds2_host_class.h"
 
-#include <cmath>
 #include <cstdio>
-
-#ifdef __WINDOWS__
-#include <windows.h>
-#elif defined(__LINUX__)
-
-#endif
 
 extern "C" {
 #include "./inc/commit.h"
@@ -18,8 +11,10 @@ extern "C" {
 
 #include <string.h>
 
+
+
 // Function to get the CPU cycle count
-static inline uint64_t get_cycles() {
+static inline uint64_t get_timestamp() {
 
 #ifdef __WINDOWS__
 	LARGE_INTEGER timestamp;
@@ -55,7 +50,7 @@ void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K]
 	poly_invntt_tomont((poly_t*)fi, _K * _K);
 }
 
-bool ds2_host::check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi)
+bool ds2_host::check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp)
 {
 	poly_t f1[_K][_K] = { 0 };
 	poly_t f2[_K][_K] = { 0 };
@@ -64,6 +59,7 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 	uint8_t ri[SEED_BYTES] = { 0 };
 	uint8_t cki[SEED_BYTES] = { 0 };
 
+	timestamp = get_timestamp();//start
 
 	memcpy(f2, fi.c_str(), fi.size());
 	memcpy(w, wi.c_str(), wi.size());
@@ -75,6 +71,55 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
 
 	poly_freeze((poly_t*)f1, _K * _K);
+
+	timestamp = coef * (get_timestamp() - timestamp);//finish
+
+	if (memcmp(f1, f2, sizeof(f1)) == 0)
+		return true;
+	else
+		return false;
+}
+
+bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp)
+{
+	poly_t f1[_K][_K] = { 0 };
+	poly_t f2[_K][_K] = { 0 };
+	poly_t w[_K] = { 0 };
+
+	uint8_t ri[SEED_BYTES] = { 0 };
+	uint8_t cki[SEED_BYTES] = { 0 };
+
+	timestamp = get_timestamp();//start
+
+	memcpy(f2, fi.c_str(), fi.size());
+	memcpy(w, wi.c_str(), wi.size());
+	memcpy(ri, r.c_str(), r.size());
+	memcpy(ck_seed, ck.c_str(), ck.size());
+
+	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
+		for (size_t i = 0; i < _K; i++) {
+			poly_uniform(ck_seed, 1, i * TC_COLS + k, &this->ck[i][k]);
+		}
+	}
+
+	uint32_t nonce = 0;
+	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
+		nonce = 0;
+		for (size_t j = 0; j < _K; j++) {
+			do {
+				nonce++;
+				sample_normal_from_seed(ri, j * TC_COLS + k + nonce, 0, TC_S, _N_, this->ri[j][k].coeffs);
+			} while (!poly_check_norm(&this->ri[j][k], 1, TC_B));
+		}
+	}
+
+	poly_gen_commit2(this->ck, this->ri, f1);
+
+	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
+
+	poly_freeze((poly_t*)f1, _K * _K);
+
+	timestamp = coef * (get_timestamp() - timestamp);//finish
 
 	if (memcmp(f1, f2, sizeof(f1)) == 0)
 		return true;
@@ -97,7 +142,7 @@ std::string ds2_host::hash_msg(const std::string& msg)
 
 std::string ds2_host::get_rho(uint64_t& timestamp)
 {
-	timestamp = get_cycles();//start
+	timestamp = get_timestamp();//start
 
 	//rho = H(pi)
 	keccak_state_t state;
@@ -111,7 +156,7 @@ std::string ds2_host::get_rho(uint64_t& timestamp)
 
 	poly_uniform(rho, _K * _L, 0, &A[0][0]);
 
-	timestamp = get_cycles() - timestamp;//finish
+	timestamp = coef * (get_timestamp() - timestamp);//finish
 
 	return std::string((const char*)rho, sizeof(rho));
 }
@@ -121,7 +166,7 @@ std::string ds2_host::get_tr(uint64_t& timestamp)
 
 	poly_t temp_ti[_K] = { 0 };
 
-	timestamp = get_cycles();//start
+	timestamp = get_timestamp();//start
 
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
 		poly_unpack(T1_BITS, parties[i].ti_val, _K, 0, temp_ti);
@@ -139,7 +184,7 @@ std::string ds2_host::get_tr(uint64_t& timestamp)
 
 	//poly_pack(T1_BITS, t1, _K, t1_packed);
 
-	timestamp = get_cycles() - timestamp;//finish
+	timestamp = coef * (get_timestamp() - timestamp);//finish
 
 	return std::string((const char*)tr, sizeof(tr));
 }
@@ -150,7 +195,7 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 	poly_t fi[_K][_K] = { 0 };
 	uint8_t f_packed[DS2_Fi_COMMIT_SIZE] = { 0 };
 
-	timestamp = get_cycles();//start
+	timestamp = get_timestamp();//start
 
 	//commit = sum(f_i)
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
@@ -187,7 +232,7 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 		}
 	}
 
-	timestamp = get_cycles() - timestamp;//finish
+	timestamp = coef * (get_timestamp() - timestamp);//finish
 
 	return std::string((const char*)c, sizeof(c));
 }
@@ -201,7 +246,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 	poly_t F1[_K][_K] = { 0 };
 	poly_t F2[_K][_K] = { 0 };
 
-	timestamp = get_cycles();
+	timestamp = get_timestamp();
 
 	uint8_t rej = 0;
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
@@ -260,7 +305,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 		rej = memcmp(F1, F2, sizeof(F1));
 
 		if (rej != 0) {
-			timestamp = get_cycles() - timestamp;//finish
+			timestamp = coef * (get_timestamp() - timestamp);//finish
 			char errormsg[80] = { 0 };
 			std::sprintf(errormsg, "Commitment check failed for node ID %d", i);
 			err_code = DS2_ERROR_Fi_COMMIT;
@@ -268,7 +313,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 		}
 	}
 
-	timestamp = get_cycles() - timestamp;//finish
+	timestamp = coef * (get_timestamp() - timestamp);//finish
 
 	std::string sign_str = std::string((const char*)c, sizeof(c));
 

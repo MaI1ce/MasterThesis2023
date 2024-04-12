@@ -4,15 +4,23 @@
 #include <stdint.h>
 #include <exception>
 #include <string>
+#include <cmath>
 #include <pybind11/pybind11.h>
+
+#define __WINDOWS__
+//#define __LINUX__
+
+#ifdef __WINDOWS__
+#include <windows.h>
+#elif defined(__LINUX__)
+
+#endif
 
 extern "C" {
 #include "./inc/params.h"
 #include "./inc/poly.h"
 #include "./inc/ds2_osi3_conf.h"
 }
-
-#define __WINDOWS__
 
 class DS2Exception : public std::exception {
 private:
@@ -133,7 +141,10 @@ public:
 
 	uint32_t err_code;
 
+	uint64_t coef;
+
 	ds2_host():
+		coef(0),
 		err_code(0),
 		party_num(DS2_MAX_PARTY_NUM),
 		rho{ 0 },
@@ -148,7 +159,15 @@ public:
 		z2{ 0 },
 		ck{ 0 },
 		msg(std::string())
-	{}
+	{
+		LARGE_INTEGER Frequency;
+		QueryPerformanceFrequency(&Frequency);
+		double f2 = double(Frequency.QuadPart);
+
+		double f1 = 64000000.0;
+
+		coef = static_cast<uint64_t>(std::round(f2 / f1));
+	}
 
 	uint32_t get_party_num() { return party_num; }
 
@@ -175,7 +194,9 @@ public:
 
 	std::string get_signature(uint64_t& timestamp);
 
-	bool check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi);
+	bool check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp);
+
+	bool check_commit2(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp);
 
 	bool is_flag_ready(uint32_t flag);
 	void reset();

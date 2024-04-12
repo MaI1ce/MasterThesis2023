@@ -275,7 +275,7 @@ void APP_FFD_MAC_802_15_4_SetupTask(void)
 	tx_ptr->msg_code = DS2_COORDINATOR_READY_RESET;
 	tx_ptr->node_id = 254;
 	tx_ptr->length = 2;
-	HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
+	//HW_UART_Transmit_DMA(CFG_CLI_UART, UART1_txBuffer, 4+tx_ptr->length, UART_TxCpltCallback);
 
 
   /* Reset FFD Device */
@@ -614,7 +614,7 @@ static void APP_FFD_MAC_802_15_4_DS2_UART_RX_DATA(void)
 
 	uint32_t data_len = rx_ptr->length-2;
 	uint8_t msg_code = rx_ptr->msg_code;
-	//uint8_t node_id = rx_ptr->node_id;
+	uint8_t node_id = rx_ptr->node_id;
 	uint8_t *data = UART1_rxBuffer+FRAME_HEADER_SIZE;
 
 	if(msg_code >= DS2_ABORT){
@@ -1368,7 +1368,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 			APP_DBG("FFD DS2 -- SIGN -- COMMIT  TIMER:%ld",elapsed_time_max(TIMER_SIGN_COMMIT));
 			APP_DBG("FFD DS2 -- SIGN -- PACKET  TIMER:%ld",elapsed_time_max(TIMER_PACKET_SEND));
 
-
+/*
 		    tx_ptr->length = 2 + sizeof(g_Parties[0].ri_val) + sizeof(ck_seed) + sizeof(F2)+ sizeof(w_temp);
 		    tx_ptr->msg_code = DS2_CHECK_COMMIT;
 		    tx_ptr->node_id = 0;
@@ -1378,6 +1378,7 @@ static void APP_FFD_MAC_802_15_4_DS2_Sign_Final(void)
 		    memcpy(UART1_txBuffer+FRAME_HEADER_SIZE+sizeof(g_Parties[0].ri_val)+sizeof(ck_seed)+sizeof(F2), w_temp, sizeof(w_temp));
 
 		    HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)tx_ptr, tx_ptr->length+4, UART_TxCpltCallback);
+		    */
 		    //HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)tx_ptr, FRAME_HEADER_SIZE, UART_TxCpltCallback);
 		    //HW_UART_Transmit_DMA(CFG_CLI_UART, g_Parties[0].ri_val, sizeof(g_Parties[0].ri_val), UART_TxCpltCallback);
 		    //HW_UART_Transmit_DMA(CFG_CLI_UART, ck_seed, sizeof(ck_seed), UART_TxCpltCallback);

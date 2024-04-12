@@ -196,6 +196,8 @@ void APP_FFD_parseClientReqResCmd ( const char * CommandString  );
 
 void APP_FFD_MAC_802_15_4_SendData(uint16_t dst_addr, DS2_Packet* data);
 
+void UART_TxCpltCallback(void);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
