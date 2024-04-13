@@ -141,10 +141,10 @@ public:
 
 	uint32_t err_code;
 
-	uint64_t coef;
+	double coef;
 
 	ds2_host():
-		coef(0),
+		coef(1),
 		err_code(0),
 		party_num(DS2_MAX_PARTY_NUM),
 		rho{ 0 },
@@ -166,7 +166,7 @@ public:
 
 		double f1 = 64000000.0;
 
-		coef = static_cast<uint64_t>(std::round(f2 / f1));
+		coef = f1 / f2;
 	}
 
 	uint32_t get_party_num() { return party_num; }

@@ -72,7 +72,7 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 
 	poly_freeze((poly_t*)f1, _K * _K);
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	if (memcmp(f1, f2, sizeof(f1)) == 0)
 		return true;
@@ -119,7 +119,7 @@ bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const 
 
 	poly_freeze((poly_t*)f1, _K * _K);
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	if (memcmp(f1, f2, sizeof(f1)) == 0)
 		return true;
@@ -156,7 +156,7 @@ std::string ds2_host::get_rho(uint64_t& timestamp)
 
 	poly_uniform(rho, _K * _L, 0, &A[0][0]);
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	return std::string((const char*)rho, sizeof(rho));
 }
@@ -184,7 +184,7 @@ std::string ds2_host::get_tr(uint64_t& timestamp)
 
 	//poly_pack(T1_BITS, t1, _K, t1_packed);
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	return std::string((const char*)tr, sizeof(tr));
 }
@@ -232,7 +232,7 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 		}
 	}
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	return std::string((const char*)c, sizeof(c));
 }
@@ -305,7 +305,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 		rej = memcmp(F1, F2, sizeof(F1));
 
 		if (rej != 0) {
-			timestamp = coef * (get_timestamp() - timestamp);//finish
+			timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 			char errormsg[80] = { 0 };
 			std::sprintf(errormsg, "Commitment check failed for node ID %d", i);
 			err_code = DS2_ERROR_Fi_COMMIT;
@@ -313,7 +313,7 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 		}
 	}
 
-	timestamp = coef * (get_timestamp() - timestamp);//finish
+	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	std::string sign_str = std::string((const char*)c, sizeof(c));
 

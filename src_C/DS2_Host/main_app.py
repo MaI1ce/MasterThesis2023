@@ -7,6 +7,7 @@ from threading import Thread
 import serial
 import time
 import sys
+import base64
 sys.path.insert(0, '.\\lib')
 
 import ds2
@@ -220,6 +221,8 @@ class Sniffer:
         
         self.signature = None
         
+        self.fdc = self.signer.get_freq_coef()
+        
         col = 0
 
         self.listbox_main = tk.Listbox(self.main_frame, width=100, height=30)
@@ -411,16 +414,18 @@ class Sniffer:
                     self.index += 1
             
                 case self.DS2_Pi_COMMIT:
-                    self.listbox_main.insert(self.index, "Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_pi_c(data)
                     if flag is True:
                         self.signer.set_pi_commit(src_node_id, self.nodes[src_node_id].pi_commit)
                         self.response(self.DS2_Pi_COMMIT_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Pi_VALUE:
-                    self.listbox_main.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_pi_v(data)
                     if flag is True:
                         self.signer.set_pi_val(src_node_id,  self.nodes[src_node_id].pi_val)
@@ -433,16 +438,18 @@ class Sniffer:
                             self.response(self.DS2_Pi_VALUE_ACK, dst_node=0xff, data=rho)
                 
                 case self.DS2_Ti_COMMIT:
-                    self.listbox_main.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_ti_c(data)
                     if flag is True:
                         self.signer.set_ti_commit(src_node_id,  self.nodes[src_node_id].ti_commit)
                         self.response(self.DS2_Ti_COMMIT_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Ti_VALUE:
-                    self.listbox_main.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Ti value CRC {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_ti_v(data)
                     if flag is True:
                         self.signer.set_ti_val(src_node_id, self.nodes[src_node_id].ti_val)
@@ -450,13 +457,16 @@ class Sniffer:
                             tr, time_stamp = self.signer.get_tr()
                             self.keygen_time += time_stamp
                             crc = xorSign(tr)
-                            self.listbox_main.insert(self.index, "KeyGen: send tr crc {} - time {}".format(crc, time_stamp))
+                            self.listbox_main.insert(self.index, "KeyGen: send tr CRC {} - time {}".format(crc, time_stamp))
                             self.index += 1
                             self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
+                            self.listbox_main.insert(self.index, "KEYS GENERATED - TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(self.keygen_time, self.fdc))
+                            self.index += 1
                     
                 case self.DS2_Fi_COMMIT:
-                    self.listbox_main.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_fi_c(data)
                     if flag is True:
                         self.signer.set_fi_commit(src_node_id, self.nodes[src_node_id].fi_commit)
@@ -469,35 +479,45 @@ class Sniffer:
                             self.response(self.DS2_Fi_COMMIT_ACK, dst_node=0xff, data=sc)
                     
                 case self.DS2_Ri_VALUE:
-                    self.listbox_main.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Ri value CRC {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_ri_v(data)
                     if flag is True:
                         self.signer.set_ri_val(src_node_id, self.nodes[src_node_id].ri_val)
                         self.response(self.DS2_Ri_VALUE_ACK, dst_node=src_node_id)
                     
                 case self.DS2_Zi_1_VALUE:
-                    self.listbox_main.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_zi_1_v(data)
                     if flag is True:
                         self.signer.set_zi_1_val(src_node_id, self.nodes[src_node_id].zi_1_val)
                         self.response(self.DS2_Zi_1_VALUE_ACK, dst_node=src_node_id)
 
                 case self.DS2_Zi_2_VALUE:
-                    self.listbox_main.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
-                    self.index += 1
+                    #self.listbox_main.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
+                    #self.index += 1
+                    print("Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
                     flag = self.nodes[src_node_id].add_zi_2_v(data)
                     if flag is True:
                         self.signer.set_zi_2_val(src_node_id, self.nodes[src_node_id].zi_2_val)
                         if self.signer.is_flag_ready(self.DS2_Ri_VALUE_FLAG | self.DS2_Zi_1_VALUE_FLAG |self.DS2_Zi_2_VALUE_FLAG):
                             self.signature, time_stamp = self.signer.get_signature()
                             self.sign_time += time_stamp
+                            self.response(self.DS2_Zi_2_VALUE_ACK, dst_node=0xff)
                             crc = xorSign(self.signature)
                             print("Signature: ", ":".join("{:02x}".format(c) for c in self.signature))
-                            self.listbox_main.insert(self.index, "Sign: signature CRC: {}".format(crc))
+                            self.listbox_main.insert(self.index, "SIGNATURE GENERATED - CRC {} TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(crc, self.sign_time, self.fdc))
                             self.index += 1
-                            self.response(self.DS2_Zi_2_VALUE_ACK, dst_node=0xff)
+                            #self.listbox_main.insert(self.index, "SIGNATURE GENERATED - CRC {} TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(crc, self.keygen_time, self.fdc))
+                            #self.index += 1
+                            b64_sign = base64.b64encode(self.signature)
+                            f = open("Signature.txt", "a")
+                            f.write(b64_sign.decode("utf-8"))
+                            f.close()
+                            
                             
                 case self.DS2_ERROR_Zi_REJECT:
                     self.listbox_main.insert(self.index, "Node[{}] rejected Z: ".format(src_node_id))

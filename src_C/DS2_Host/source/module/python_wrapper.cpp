@@ -20,6 +20,7 @@ PYBIND11_MODULE(ds2, handle) {
 
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
+		.def("get_freq_coef", [](ds2_host& self) { return self.coef; })
 		.def("check_commit", 
 			[](ds2_host& self, const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi) {
 				uint64_t timestamp = 0;
