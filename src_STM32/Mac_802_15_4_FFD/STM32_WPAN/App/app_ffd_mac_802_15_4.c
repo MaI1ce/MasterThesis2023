@@ -600,9 +600,10 @@ static void APP_FFD_MAC_802_15_4_DS2_UART_RX_CMD(void){
 		memcpy(msg_buff, data, data_len);
 		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - START SIGN");
 		break;
+		/*
 	default:
 		APP_DBG("FFD DS2 - UART RX CMD CALLBACK - UNKNOWN COMMAND");
-		return;
+		return;*/
 	}
 
 	memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));

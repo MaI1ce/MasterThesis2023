@@ -238,6 +238,7 @@ class Sniffer:
         scrollbar.grid(row=0, column=col, rowspan=10, sticky="nswe")
         self.listbox_dbg.config(yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.listbox_dbg.yview)
+        self.dbg_index = 0
         
         col += 1
 
@@ -261,6 +262,9 @@ class Sniffer:
 
         btn_save_log = tk.Button(self.main_frame, text="Save log", command=self.save_log_file)
         btn_save_log .grid(row=4, column=col, sticky="nswe", padx=2, pady=2)
+        
+        btn_clear = tk.Button(self.main_frame, text="Clear screen", command=self.clear)
+        btn_clear .grid(row=5, column=col, sticky="nswe", padx=2, pady=2)
         
 
         ###############################################
@@ -297,6 +301,12 @@ class Sniffer:
 
     def tk_mainloop(self):
         self.root.mainloop()
+        
+    def clear(self):
+        self.listbox_main.delete(0, tk.END)
+        self.index = 0
+        self.listbox_dbg.delete(0, tk.END)
+        self.dbg_index = 0
         
     def keygen(self):
         self.response(self.DS2_KEYGEN_START_TASK, dst_node=0xff)
@@ -406,7 +416,7 @@ class Sniffer:
                     flag = self.nodes[src_node_id].add_pi_c(data)
                     if flag is True:
                         self.signer.set_pi_commit(src_node_id, self.nodes[src_node_id].pi_commit)
-                        #self.response(self.DS2_Pi_COMMIT_ACK, dst_node=src_node_id)
+                        self.response(self.DS2_Pi_COMMIT_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Pi_VALUE:
                     self.listbox_main.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
@@ -420,7 +430,7 @@ class Sniffer:
                             crc = xorSign(rho)
                             self.listbox_main.insert(self.index, "KeyGen: send rho CRC {} - time {}".format(crc, self.keygen_time))
                             self.index += 1
-                            #self.response(self.DS2_Pi_VALUE_ACK, dst_node=0xff, data=rho)
+                            self.response(self.DS2_Pi_VALUE_ACK, dst_node=0xff, data=rho)
                 
                 case self.DS2_Ti_COMMIT:
                     self.listbox_main.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
@@ -428,7 +438,7 @@ class Sniffer:
                     flag = self.nodes[src_node_id].add_ti_c(data)
                     if flag is True:
                         self.signer.set_ti_commit(src_node_id,  self.nodes[src_node_id].ti_commit)
-                        #self.response(self.DS2_Ti_VALUE_ACK, dst_node=src_node_id)
+                        self.response(self.DS2_Ti_COMMIT_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Ti_VALUE:
                     self.listbox_main.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
@@ -442,7 +452,7 @@ class Sniffer:
                             crc = xorSign(tr)
                             self.listbox_main.insert(self.index, "KeyGen: send tr crc {} - time {}".format(crc, time_stamp))
                             self.index += 1
-                            #self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
+                            self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
                     
                 case self.DS2_Fi_COMMIT:
                     self.listbox_main.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
@@ -456,7 +466,7 @@ class Sniffer:
                             self.sign_time += time_stamp
                             self.listbox_main.insert(self.index, "Sign: send sc value CRC {} time {}".format(crc, time_stamp))
                             self.index += 1
-                            #self.response(self.DS2_Fi_COMMIT_ACK, dst_node=0xff, data=sc)
+                            self.response(self.DS2_Fi_COMMIT_ACK, dst_node=0xff, data=sc)
                     
                 case self.DS2_Ri_VALUE:
                     self.listbox_main.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
@@ -464,7 +474,7 @@ class Sniffer:
                     flag = self.nodes[src_node_id].add_ri_v(data)
                     if flag is True:
                         self.signer.set_ri_val(src_node_id, self.nodes[src_node_id].ri_val)
-                        #self.response(self.DS2_Ri_VALUE_ACK, dst_node=src_node_id)
+                        self.response(self.DS2_Ri_VALUE_ACK, dst_node=src_node_id)
                     
                 case self.DS2_Zi_1_VALUE:
                     self.listbox_main.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
@@ -472,7 +482,7 @@ class Sniffer:
                     flag = self.nodes[src_node_id].add_zi_1_v(data)
                     if flag is True:
                         self.signer.set_zi_1_val(src_node_id, self.nodes[src_node_id].zi_1_val)
-                        #self.response(self.DS2_Zi_1_VALUE_ACK, dst_node=src_node_id)
+                        self.response(self.DS2_Zi_1_VALUE_ACK, dst_node=src_node_id)
 
                 case self.DS2_Zi_2_VALUE:
                     self.listbox_main.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
@@ -487,11 +497,16 @@ class Sniffer:
                             print("Signature: ", ":".join("{:02x}".format(c) for c in self.signature))
                             self.listbox_main.insert(self.index, "Sign: signature CRC: {}".format(crc))
                             self.index += 1
-                            #self.response(self.DS2_Zi_2_VALUE_FLAG, dst_node=0xff)
+                            self.response(self.DS2_Zi_2_VALUE_ACK, dst_node=0xff)
                             
-                case self.DS2_DBG:
-                    self.listbox_dbg.insert(self.index, data.decode(encoding='latin1'))
+                case self.DS2_ERROR_Zi_REJECT:
+                    self.listbox_main.insert(self.index, "Node[{}] rejected Z: ".format(src_node_id))
                     self.index += 1
+                    self.nodes[src_node_id].fi_commit = bytearray()
+
+                case self.DS2_DBG:
+                    self.listbox_dbg.insert(self.dbg_index, data.decode(encoding='latin1'))
+                    self.dbg_index += 1
                 case self.DS2_CHECK_COMMIT:
                     ri = data[0:16]
                     ck = data[16:32]

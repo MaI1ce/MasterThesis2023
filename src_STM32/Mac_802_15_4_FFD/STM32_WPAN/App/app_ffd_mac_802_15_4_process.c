@@ -223,7 +223,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						break;
 					case DS2_SIGN_START_TASK: case DS2_ERROR_Zi_REJECT:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET_SIGN, CFG_SCH_PRIO_0 );
-						break;
+						break;/*
 					case DS2_Pi_COMMIT:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
 						break;
@@ -259,7 +259,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 					default :
 						//APP_DBG("DS2 DATA ERROR - JOB ABORTED");
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_ABORT, CFG_SCH_PRIO_0 );
-						break;
+						break;*/
 					}
 				} else {
 					APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID %d", packet_ptr->dst_node_id);
