@@ -82,6 +82,7 @@ extern "C" {
   void HW_UART_Init(hw_uart_id_t hw_uart_id);
   void HW_UART_Receive_IT(hw_uart_id_t hw_uart_id, uint8_t *pData, uint16_t Size, void (*Callback)(void));
   void HW_UART_Receive_DMA(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size, void (*Callback)(void));
+  hw_status_t HW_UART_Receive(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size,  uint32_t timeout);
   void HW_UART_Transmit_IT(hw_uart_id_t hw_uart_id, uint8_t *pData, uint16_t Size,  void (*Callback)(void));
   hw_status_t HW_UART_Transmit(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size,  uint32_t timeout);
   hw_status_t HW_UART_Transmit_DMA(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size, void (*Callback)(void));

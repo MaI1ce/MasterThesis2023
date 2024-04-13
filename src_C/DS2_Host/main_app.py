@@ -200,6 +200,8 @@ class Sniffer:
 
     DS2_BROADCAST_ID        = 255
     DS2_COORDINATOR_ID      = 254
+    
+    DS2_MAX_PACKET_LEN      = 100
 
     def __init__(self):
         self.root = tk.Tk()
@@ -217,49 +219,52 @@ class Sniffer:
         self.verify_time = 0
         
         self.signature = None
+        
+        col = 0
 
-        self.listbox = tk.Listbox(self.main_frame, width=100, height=30)
-        self.listbox.grid(row=0, column=0, rowspan=10, padx=2, pady=2, sticky="nswe")
+        self.listbox_main = tk.Listbox(self.main_frame, width=100, height=30)
+        self.listbox_main.grid(row=0, column=col, rowspan=10, padx=2, pady=2, sticky="nswe")
+        col += 1
         scrollbar = tk.Scrollbar(self.main_frame)
-        scrollbar.grid(row=0, column=1, rowspan=10, sticky="nswe")
-        self.listbox.config(yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.listbox.yview)
+        scrollbar.grid(row=0, column=col, rowspan=10, sticky="nswe")
+        self.listbox_main.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.listbox_main.yview)
+        col += 1
+        
+        self.listbox_dbg = tk.Listbox(self.main_frame, width=100, height=30)
+        self.listbox_dbg.grid(row=0, column=col, rowspan=10, padx=2, pady=2, sticky="nswe")
+        col += 1
+        scrollbar = tk.Scrollbar(self.main_frame)
+        scrollbar.grid(row=0, column=col, rowspan=10, sticky="nswe")
+        self.listbox_dbg.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.listbox_dbg.yview)
+        
+        col += 1
 
         port_frame = tk.LabelFrame(self.main_frame, text='Port')
         self.port_var = tk.StringVar()
         port_entry = tk.Entry(port_frame, textvariable=self.port_var)
         port_entry.grid(sticky="nswe")
-        port_frame.grid(row=0, column=2, sticky="nswe", padx=2, pady=2)
+        port_frame.grid(row=0, column=col, sticky="nswe", padx=2, pady=2)
 
         baudrate_frame = tk.LabelFrame(self.main_frame, text='Baudrate')
         self.baudrate_var = tk.StringVar()
         baudrate_entry = tk.Entry(baudrate_frame, textvariable=self.baudrate_var)
         baudrate_entry.grid(sticky="nswe")
-        baudrate_frame.grid(row=1, column=2, sticky="nswe", padx=2, pady=2)
-
-        datasize_frame = tk.LabelFrame(self.main_frame, text='Data size')
-        self.datasize_var = tk.StringVar()
-        datasize_entry = tk.Entry(datasize_frame, textvariable=self.datasize_var)
-        datasize_entry.grid(sticky="nswe")
-        datasize_frame.grid(row=2, column=2, sticky="nswe", padx=2, pady=2)
-
-        parity_frame = tk.LabelFrame(self.main_frame, text='Parity')
-        self.parity_var = tk.StringVar()
-        parity_entry = tk.Entry(parity_frame, textvariable=self.parity_var)
-        parity_entry.grid(sticky="nswe")
-        parity_frame.grid(row=3, column=2, sticky="nswe", padx=2, pady=2)
+        baudrate_frame.grid(row=1, column=col, sticky="nswe", padx=2, pady=2)
 
         btn_port_open = tk.Button(self.main_frame, text="Open port", command=self.port_open)
-        btn_port_open.grid(row=4, column=2, sticky="nswe", padx=2, pady=2)
+        btn_port_open.grid(row=2, column=col, sticky="nswe", padx=col, pady=2)
 
         btn_port_close = tk.Button(self.main_frame, text="Close port", command=self.port_close)
-        btn_port_close.grid(row=5, column=2, sticky="nswe", padx=2, pady=2)
+        btn_port_close.grid(row=3, column=col, sticky="nswe", padx=2, pady=2)
 
         btn_save_log = tk.Button(self.main_frame, text="Save log", command=self.save_log_file)
-        btn_save_log .grid(row=6, column=2, sticky="nswe", padx=2, pady=2)
+        btn_save_log .grid(row=4, column=col, sticky="nswe", padx=2, pady=2)
         
 
         ###############################################
+        col += 1
         sign_controll_frame = tk.Frame(self.main_frame)
         
         msg_frame = tk.LabelFrame(sign_controll_frame, text='Message')
@@ -280,7 +285,7 @@ class Sniffer:
         btn_reset = tk.Button(sign_controll_frame, text="Reset", command=self.reset)
         btn_reset.grid(row=4, column=0, sticky="nswe", padx=2, pady=2)
 
-        sign_controll_frame.grid(row=0, column=3, rowspan=10, sticky="nswe")
+        sign_controll_frame.grid(row=0, column=col, rowspan=10, sticky="nswe")
         self.main_frame.grid(row=0, column=0, sticky="nswe")
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -294,8 +299,8 @@ class Sniffer:
         self.root.mainloop()
         
     def keygen(self):
-        self.response(self.DS2_KEYGEN_START_TASK, None)
-        self.listbox.insert(self.index, "START KEYGEN")
+        self.response(self.DS2_KEYGEN_START_TASK, dst_node=0xff)
+        self.listbox_main.insert(self.index, "START KEYGEN")
         self.index += 1
 
     
@@ -303,7 +308,9 @@ class Sniffer:
         msg_text = self.msg_var.get()
         hmsg = self.signer.hash_msg(msg_text)
         self.signer.set_msg(hmsg)
-        self.response(self.DS2_SIGN_START_TASK, hmsg)
+        self.listbox_main.insert(self.index, "START SIGN")
+        self.index += 1
+        self.response(self.DS2_SIGN_START_TASK, dst_node=0xff, data=hmsg)
         
     
     def verify(self):
@@ -317,15 +324,15 @@ class Sniffer:
         self.sign_time = 0
         self.verify_time = 0
         self.abort(self.DS2_ABORT)
-        self.listbox.insert(self.index, "KEYS ARE DELETED")
+        self.listbox_main.insert(self.index, "KEYS ARE DELETED")
         self.index += 1
 
     def port_open(self):
-        self.listbox.delete(0, tk.END)
+        self.listbox_main.delete(0, tk.END)
         self.index = 0
         if self.read_thread is None:
             self.thread_run = True
-            self.listbox.insert(self.index, "THREAD START")
+            self.listbox_main.insert(self.index, "THREAD START")
             self.read_thread = Thread(target=self.read_serial_thread)
             self.read_thread.start()
             self.index += 1
@@ -338,16 +345,16 @@ class Sniffer:
             if self.ser is not None:
                 #print("port closing ...")
                 self.ser.close()
-                self.listbox.insert(self.index, "port is closed")
+                self.listbox_main.insert(self.index, "port is closed")
                 self.index += 1
 
             self.ser = None
-            self.listbox.insert(self.index, "THREAD STOP")
+            self.listbox_main.insert(self.index, "THREAD STOP")
             self.index += 1
 
     def save_log_file(self):
         file = fd.asksaveasfile(initialfile='Untitled.log',defaultextension=".log",filetypes=[("All Files","*.*"),("Logs","*.log")])
-        file_text = self.listbox.get(2, tk.END)
+        file_text = self.listbox_main.get(2, tk.END)
         for line in file_text:
             file.write(line)
         file.close()
@@ -355,17 +362,20 @@ class Sniffer:
     def abort(self, err_code:int):
         self.response(err_code)
             
-    def response(self, msg_code, data:bytes=None):
+    def response(self, msg_code:int, dst_node:int=0xff, data:bytes=None):
         if self.ser is not None and self.ser.is_open:
-            #msg_code + node_id
-            if data is not None:
-                data_len = len(data) + 2
-                wr_data = data_len.to_bytes(4, 'little') + msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little') + data
+            header = msg_code.to_bytes(1, 'little') + dst_node.to_bytes(1, 'little')
+            if data is None:
+                msg = 0x00.to_bytes(4, 'little') +  header
+                self.ser.write(msg)
+                print("send ", ":".join("{:02x}".format(c) for c in msg))
             else:
-                data_len = 2
-                wr_data = data_len.to_bytes(4, 'little') + msg_code.to_bytes(1, 'little') + 0xff.to_bytes(1, 'little')
-            self.ser.write(wr_data)
-            print("send ", ":".join("{:02x}".format(c) for c in wr_data))
+                packet_len = len(data)
+                msg = packet_len.to_bytes(4, 'little') +  header + data
+                self.ser.write(msg)
+                print("send ", ":".join("{:02x}".format(c) for c in msg))
+
+                    
         
         
     def msg_parser(self, msg:bytes):
@@ -383,23 +393,23 @@ class Sniffer:
         try:
             match msg_code:
                 case self.DS2_COORDINATOR_HELLO:
-                    self.listbox.insert(self.index, "Party ID:{} connected".format(src_node_id))
+                    self.listbox_main.insert(self.index, "Party ID:{} connected".format(src_node_id))
                     self.index += 1
 
                 case self.DS2_COORDINATOR_READY_RESET:
-                    self.listbox.insert(self.index, "Coordinator ready !!!")
+                    self.listbox_main.insert(self.index, "Coordinator ready !!!")
                     self.index += 1
             
                 case self.DS2_Pi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Pi commit CRC = {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_pi_c(data)
                     if flag is True:
                         self.signer.set_pi_commit(src_node_id, self.nodes[src_node_id].pi_commit)
-                        #self.response(...)
+                        #self.response(self.DS2_Pi_COMMIT_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Pi_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Pi value CRC = {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_pi_v(data)
                     if flag is True:
@@ -408,20 +418,20 @@ class Sniffer:
                             rho, time_stamp = self.signer.get_rho()
                             self.keygen_time += time_stamp
                             crc = xorSign(rho)
-                            self.listbox.insert(self.index, "KeyGen: send rho CRC {} - time {}".format(crc, self.keygen_time))
+                            self.listbox_main.insert(self.index, "KeyGen: send rho CRC {} - time {}".format(crc, self.keygen_time))
                             self.index += 1
-                            #self.response(self.DS2_Pi_VALUE_ACK, rho)
+                            #self.response(self.DS2_Pi_VALUE_ACK, dst_node=0xff, data=rho)
                 
                 case self.DS2_Ti_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Ti commit CRC = {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_ti_c(data)
                     if flag is True:
                         self.signer.set_ti_commit(src_node_id,  self.nodes[src_node_id].ti_commit)
-                        #self.response(...)
+                        #self.response(self.DS2_Ti_VALUE_ACK, dst_node=src_node_id)
                 
                 case self.DS2_Ti_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Ti value CRC {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_ti_v(data)
                     if flag is True:
@@ -430,12 +440,12 @@ class Sniffer:
                             tr, time_stamp = self.signer.get_tr()
                             self.keygen_time += time_stamp
                             crc = xorSign(tr)
-                            self.listbox.insert(self.index, "KeyGen: send tr crc {} - time {}".format(crc, time_stamp))
+                            self.listbox_main.insert(self.index, "KeyGen: send tr crc {} - time {}".format(crc, time_stamp))
                             self.index += 1
-                            #self.response(self.DS2_Ti_VALUE_ACK, tr)
+                            #self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
                     
                 case self.DS2_Fi_COMMIT:
-                    self.listbox.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_fi_c(data)
                     if flag is True:
@@ -444,28 +454,28 @@ class Sniffer:
                             sc, time_stamp = self.signer.get_c()
                             crc = xorSign(sc)
                             self.sign_time += time_stamp
-                            self.listbox.insert(self.index, "Sign: send sc value CRC {} time {}".format(crc, time_stamp))
+                            self.listbox_main.insert(self.index, "Sign: send sc value CRC {} time {}".format(crc, time_stamp))
                             self.index += 1
-                            #self.response(self.DS2_Fi_COMMIT_ACK, sc)
+                            #self.response(self.DS2_Fi_COMMIT_ACK, dst_node=0xff, data=sc)
                     
                 case self.DS2_Ri_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Ri value CRC {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_ri_v(data)
                     if flag is True:
                         self.signer.set_ri_val(src_node_id, self.nodes[src_node_id].ri_val)
-                        #self.response(...)
+                        #self.response(self.DS2_Ri_VALUE_ACK, dst_node=src_node_id)
                     
                 case self.DS2_Zi_1_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Zi_1 value CRC {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_zi_1_v(data)
                     if flag is True:
                         self.signer.set_zi_1_val(src_node_id, self.nodes[src_node_id].zi_1_val)
-                        #self.response(...)
+                        #self.response(self.DS2_Zi_1_VALUE_ACK, dst_node=src_node_id)
 
                 case self.DS2_Zi_2_VALUE:
-                    self.listbox.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
+                    self.listbox_main.insert(self.index, "Party ID:{} Zi_2 value CRC {}".format(src_node_id, crc))
                     self.index += 1
                     flag = self.nodes[src_node_id].add_zi_2_v(data)
                     if flag is True:
@@ -475,43 +485,44 @@ class Sniffer:
                             self.sign_time += time_stamp
                             crc = xorSign(self.signature)
                             print("Signature: ", ":".join("{:02x}".format(c) for c in self.signature))
-                            self.listbox.insert(self.index, "Sign: signature CRC: {}".format(crc))
+                            self.listbox_main.insert(self.index, "Sign: signature CRC: {}".format(crc))
                             self.index += 1
-                            #self.response(self.DS2_Zi_2_VALUE_FLAG)
+                            #self.response(self.DS2_Zi_2_VALUE_FLAG, dst_node=0xff)
+                            
                 case self.DS2_DBG:
-                    self.listbox.insert(self.index, data.decode(encoding='latin1'))
+                    self.listbox_dbg.insert(self.index, data.decode(encoding='latin1'))
                     self.index += 1
                 case self.DS2_CHECK_COMMIT:
                     ri = data[0:16]
                     ck = data[16:32]
                     fi = data[32: 4128]
                     wi = data[4128:]
-                    self.listbox.insert(self.index, "ri = {} ck = {} fi = {} wi = {}".format(xorSign(ri), xorSign(ck), int.from_bytes(fi[-4:], byteorder='little'), int.from_bytes(wi[-4:], byteorder='little')))
+                    self.listbox_main.insert(self.index, "ri = {} ck = {} fi = {} wi = {}".format(xorSign(ri), xorSign(ck), int.from_bytes(fi[-4:], byteorder='little'), int.from_bytes(wi[-4:], byteorder='little')))
                     self.index += 1
                     flag, cpu_cycles = self.signer.check_commit(ri, ck, fi, wi)
                     if flag:
-                        self.listbox.insert(self.index, "Commit[{}] - OK time - {}".format(src_node_id, cpu_cycles))
+                        self.listbox_main.insert(self.index, "Commit[{}] - OK time - {}".format(src_node_id, cpu_cycles))
                     else:
-                        self.listbox.insert(self.index, "Commit[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
+                        self.listbox_main.insert(self.index, "Commit[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
                     self.index += 1
                     
                     flag, cpu_cycles = self.signer.check_commit2(ri, ck, fi, wi)
                     if flag:
-                        self.listbox.insert(self.index, "Commit2[{}] - OK time - {}".format(src_node_id, cpu_cycles))
+                        self.listbox_main.insert(self.index, "Commit2[{}] - OK time - {}".format(src_node_id, cpu_cycles))
                     else:
-                        self.listbox.insert(self.index, "Commit2[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
+                        self.listbox_main.insert(self.index, "Commit2[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
                     self.index += 1
                 case _:
-                    self.listbox.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
+                    self.listbox_main.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
                     self.index += 1
                     
         except ds2.DS2Exception as err:
-            self.listbox.insert(self.index, "Error: {} ".format(str(err))) #TODO - paint red
+            self.listbox_main.insert(self.index, "Error: {} ".format(str(err))) #TODO - paint red
             self.index += 1
             err_code = self.signer.translate_exception()
             self.abort(err_code)
         except BufferToBig as err:
-            self.listbox.insert(self.index, "Error: {} ".format(err.err_msg)) #TODO - paint red
+            self.listbox_main.insert(self.index, "Error: {} ".format(err.err_msg)) #TODO - paint red
             self.index += 1
             self.abort(err.err_code)
         
@@ -524,7 +535,7 @@ class Sniffer:
                                      parity=serial.PARITY_NONE)
             #self.ser.open()
             if self.ser.is_open:
-                self.listbox.insert(self.index, "port is opened")
+                self.listbox_main.insert(self.index, "port is opened")
                 self.index += 1
 
 
@@ -532,10 +543,13 @@ class Sniffer:
                     read_len = self.ser.inWaiting()
                     if read_len >= 4:
                         frame_len = self.ser.read(1)
+                        if frame_len[0] > 108:
+                            continue
                         #data_len = int.from_bytes(frame_len, byteorder='little', signed=False)
                         frame = self.ser.read(frame_len[0]-1)
-                        print("msg len: {} msg code: {} node id: {}".format(frame_len[0], frame[2], frame[1]))
-                        print(":".join("{:02x}".format(c) for c in (frame_len+frame)))
+                        if frame[2] < 255:
+                            print("msg len: {} msg code: {} node id: {}".format(frame_len[0], frame[2], frame[1]))
+                            print(":".join("{:02x}".format(c) for c in (frame_len+frame)))
                         self.msg_parser(frame)
                         
                     #time.sleep(0.1)

@@ -213,12 +213,16 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 			else {
 				if((packet_ptr->dst_node_id == DS2_BROADCAST_ID)||(packet_ptr->dst_node_id == DS2_COORDINATOR_ID)){
 					HW_UART_Transmit_DMA(CFG_CLI_UART, (uint8_t*)pDataInd->msduPtr, pDataInd->msdu_length-1, UART_TxCpltCallback);
+
 					switch(packet_ptr->msg_code){
 					case DS2_KEYGEN_START_TASK:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET, CFG_SCH_PRIO_0 );
 						break;
 					case DS2_COORDINATOR_HELLO:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_NEW_CONNECTION, CFG_SCH_PRIO_0 );
+						break;
+					case DS2_SIGN_START_TASK: case DS2_ERROR_Zi_REJECT:
+						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET_SIGN, CFG_SCH_PRIO_0 );
 						break;
 					case DS2_Pi_COMMIT:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_STAGE_1, CFG_SCH_PRIO_0 );
@@ -231,10 +235,6 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 						break;
 					case DS2_Ti_VALUE:
 						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_KEYGEN_FINAL, CFG_SCH_PRIO_0 );
-						break;
-
-					case DS2_SIGN_START_TASK: case DS2_ERROR_Zi_REJECT:
-						UTIL_SEQ_SetTask( 1<< CFG_TASK_DS2_RESET_SIGN, CFG_SCH_PRIO_0 );
 						break;
 
 					case DS2_Fi_COMMIT:
@@ -264,6 +264,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 				} else {
 					APP_DBG("DS2 DATA ERROR - WRONG DST NODE ID %d", packet_ptr->dst_node_id);
 				}
+
 			}
 		}
   }

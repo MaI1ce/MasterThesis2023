@@ -304,19 +304,19 @@ void DbgOutputTraces( uint8_t *p_data, uint16_t size, void (*cb)(void) )
 {
 
 	//CDC_Transmit_FS(p_data, size);
-  static uint8_t dbg_buff[128] = {0};
-  uint32_t *len = (uint32_t*)dbg_buff;
+  static uint8_t dbg_buff[108] = {0};
+  dbg_buff[1] = 0xff; //node id - broadcast
+  dbg_buff[2] = 0xff; //node id - broadcast
   dbg_buff[3] = 0xff; //msg_code DS2_DBG
-  dbg_buff[4] = 0xff; //node id - broadcast
-  uint8_t *data = &dbg_buff[5];
-  if (size > 122) {
-	  *len = 124;
+  uint8_t *data = &dbg_buff[8];
+  if (size > 100) {
+	  dbg_buff[0] = 108;
   } else {
-	  *len = size + 2;
+	  dbg_buff[0] = size + 8;
   }
-  memcpy(data, p_data, *len);
+  memcpy(data, p_data, dbg_buff[0]);
 
-  //HW_UART_Transmit_DMA(CFG_CLI_UART, dbg_buff, *len+4, cb);
+  HW_UART_Transmit_DMA(CFG_CLI_UART, dbg_buff, dbg_buff[0], cb);
   HW_UART_Transmit_DMA(CFG_DEBUG_TRACE_UART, p_data, size, cb);
 
 }

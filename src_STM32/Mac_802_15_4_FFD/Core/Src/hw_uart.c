@@ -36,6 +36,12 @@
           HAL_UART_Init(&(__HANDLE__));                                                         \
         } while(0)
 
+#define HW_UART_RX(__HANDLE__, __USART_BASE__)                                                  \
+        do{                                                                                     \
+          (__HANDLE__).Instance = (__USART_BASE__);                                             \
+          hal_status = HAL_UART_Receive(&(__HANDLE__), p_data, size, timeout);                 \
+        } while(0)
+
 #define HW_UART_RX_IT(__HANDLE__, __USART_BASE__)                                               \
         do{                                                                                     \
           HW_##__HANDLE__##RxCb = cb;                                                           \
@@ -223,6 +229,54 @@ void HW_UART_Receive_IT(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size,
   }
 
   return;
+}
+
+hw_status_t HW_UART_Receive(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size,  uint32_t timeout)
+{
+  HAL_StatusTypeDef hal_status = HAL_OK;
+  hw_status_t hw_status = hw_uart_ok;
+
+  switch (hw_uart_id)
+  {
+#if (CFG_HW_USART1_ENABLED == 1)
+    case hw_uart1:
+      HW_UART_RX(huart1, USART1);
+      break;
+#endif
+
+#if (CFG_HW_LPUART1_ENABLED == 1)
+    case hw_lpuart1:
+      HW_UART_RX(lpuart1, LPUART1);
+      break;
+#endif
+
+    default:
+      break;
+  }
+
+  switch (hal_status)
+  {
+    case HAL_OK:
+      hw_status = hw_uart_ok;
+      break;
+
+    case HAL_ERROR:
+      hw_status = hw_uart_error;
+      break;
+
+    case HAL_BUSY:
+      hw_status = hw_uart_busy;
+      break;
+
+    case HAL_TIMEOUT:
+      hw_status = hw_uart_to;
+      break;
+
+    default:
+      break;
+  }
+
+  return hw_status;
 }
 
 void HW_UART_Receive_DMA(hw_uart_id_t hw_uart_id, uint8_t *p_data, uint16_t size, void (*cb)(void))

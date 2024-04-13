@@ -177,7 +177,7 @@ MAC_Status_t APP_MAC_mcpsDataIndCb( const  MAC_dataInd_t * pDataInd )
 {
 	  memcpy(&g_DataInd_rx,pDataInd,sizeof(MAC_dataInd_t));
 	  DS2_Packet *packet_ptr = (DS2_Packet *)pDataInd->msduPtr;
-	  //APP_DBG("SRC:%d DST:%d MSG_CODE:%d", packet_ptr->src_node_id, packet_ptr->dst_node_id, packet_ptr->msg_code);
+	  APP_DBG("SRC:%d DST:%d MSG_CODE:%d", packet_ptr->src_node_id, packet_ptr->dst_node_id, packet_ptr->msg_code);
 	if (packet_ptr != NULL){
 		if(packet_ptr->packet_length < 4){
 			APP_DBG("DS2 DATA ERROR - MSG IS TOO SHORT");
