@@ -443,8 +443,8 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     memset(f, 0, K*K*_N);
 
     for(size_t k = 0; k < TC_COLS; k++) {
-    	nonce = 0;
     	for (size_t j = 0; j < K; j++) {
+    		nonce = 0;
 			//generate r[j][k]
     		do {
     			nonce++;

@@ -13,7 +13,7 @@ uint8_t verify(const party_t *party, const uint8_t *msg, size_t msg_len, const s
     poly_t c = {};
     poly_t w1[K];
 
-    if (!poly_check_norm(sig->z1, L, N_PARTIES_SQRT * _B) || !poly_check_norm(sig->z2, K, N_PARTIES_SQRT * _B))
+    if (!poly_check_norm(sig->z1, L, N_PARTIES_SQRT * _B_) || !poly_check_norm(sig->z2, K, N_PARTIES_SQRT * _B_))
         return 0;
 
     poly_uniform(party->rho, K * L, &A[0][0]);

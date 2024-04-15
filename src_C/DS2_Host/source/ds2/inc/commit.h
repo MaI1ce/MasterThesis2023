@@ -12,11 +12,11 @@
 extern "C" {
 #endif
 
-	void h0(const int32_t com[_K][_N_][2], const uint8_t* msg, size_t msg_len, const uint8_t tr[SEED_BYTES], uint8_t c[SEED_BYTES]);
+	void h0(const int32_t com[_K_][_N_][2], const uint8_t* msg, size_t msg_len, const uint8_t tr[SEED_BYTES], uint8_t c[SEED_BYTES]);
 
 	void h1(const uint8_t seed[SEED_BYTES], uint32_t n, uint8_t g[L1]);
 
-	void h2(const uint8_t t[_K * POLY_T1_PACKED_BYTES], uint32_t n, uint8_t g[L2]);
+	void h2(const uint8_t t[_K_ * POLY_T1_PACKED_BYTES], uint32_t n, uint8_t g[L2]);
 
 	void h3(const uint8_t* msg, size_t msg_len, const uint8_t tr[SEED_BYTES], poly_t ck[2][TC_COLS]);
 

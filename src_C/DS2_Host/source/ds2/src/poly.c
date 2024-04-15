@@ -90,9 +90,9 @@ void poly_invntt_tomont(poly_t *poly, size_t polys_count) {
         invntt_tomont(poly[i].coeffs);
 }
 
-void poly_product(const poly_t a[_K][_L], const poly_t b[_L], poly_t c[_K]) {
-    for (size_t i = 0; i < _K; i++)
-        poly_mul_acc(a[i], b, _L, &c[i]);
+void poly_product(const poly_t a[_K_][_L_], const poly_t b[_L_], poly_t c[_K_]) {
+    for (size_t i = 0; i < _K_; i++)
+        poly_mul_acc(a[i], b, _L_, &c[i]);
 }
 
 void poly_product2(const poly_t a[2][TC_COLS], const poly_t b[TC_COLS], poly_t c[2]) {
@@ -129,7 +129,7 @@ void poly_uniform(const uint8_t seed[SEED_BYTES], size_t polys_count, size_t non
             for (size_t j = 0; j < _N_; j++) {
                 coeff = ((data[3 * j] << 16) | (data[3 * j + 1] << 8) | data[3 * j]) & 0x7fffff;
 
-                if (coeff < _Q)
+                if (coeff < _Q_)
                     poly[i].coeffs[count++] = coeff;
 
                 if (count == _N_)
@@ -302,9 +302,9 @@ uint8_t poly_open(const poly_t *poly, size_t polys_count, const poly_t ck[][TC_C
 void poly_power2round(poly_t *r1, size_t polys_count, poly_t *r0) {
     for (size_t i = 0; i < polys_count; i++) {
         for (size_t j = 0; j < _N_; j++) {
-            r0[i].coeffs[j] = (r1[i].coeffs[j] & ((1 << _D) - 1));
-            r0[i].coeffs[j] -= (1 << _D) & (((1 << (_D - 1)) - r0[i].coeffs[j]) >> 31);
-            r1[i].coeffs[j] = (r1[i].coeffs[j] - r0[i].coeffs[j]) >> _D;
+            r0[i].coeffs[j] = (r1[i].coeffs[j] & ((1 << _D_) - 1));
+            r0[i].coeffs[j] -= (1 << _D_) & (((1 << (_D_ - 1)) - r0[i].coeffs[j]) >> 31);
+            r1[i].coeffs[j] = (r1[i].coeffs[j] - r0[i].coeffs[j]) >> _D_;
         }
     }
 }
@@ -319,7 +319,7 @@ void poly_decompose(poly_t *r1, size_t polys_count, poly_t *r0) {
             if (_r0 > (ALPHA >> 1))
                 _r0 -= ALPHA;
 
-            if (_r1 - _r0 == _Q - 1) {
+            if (_r1 - _r0 == _Q_ - 1) {
                 _r0 -= 1;
                 _r1 = 0;
             } else
@@ -353,7 +353,7 @@ uint8_t poly_check_norm(const poly_t *poly, size_t polys_count, double bound) {
     return 1;
 }
 
-uint8_t poly_reject(const poly_t z1[_L], const poly_t z2[_K], const poly_t cs1[_L], const poly_t cs2[_K]) {
+uint8_t poly_reject(const poly_t z1[_L_], const poly_t z2[_K_], const poly_t cs1[_L_], const poly_t cs2[_K_]) {
     #ifdef USE_SAFE_RANDOM
     double u = arc4random() / (double) UINT32_MAX;
 	#elif defined (STM_RNG_H_)
@@ -365,19 +365,19 @@ uint8_t poly_reject(const poly_t z1[_L], const poly_t z2[_K], const poly_t cs1[_
     #endif
     double x = 0;
 
-    for (size_t i = 0; i < _L; i++)
+    for (size_t i = 0; i < _L_; i++)
         for (size_t j = 0; j < _N_; j++)
             x += (-2.0 * z1[i].coeffs[j] + cs1[i].coeffs[j]) * cs1[i].coeffs[j];
 
-    for (size_t i = 0; i < _K; i++)
+    for (size_t i = 0; i < _K_; i++)
         for (size_t j = 0; j < _N_; j++)
             x += (-2.0 * z2[i].coeffs[j] + cs2[i].coeffs[j]) * cs2[i].coeffs[j];
 
     x /= 2.0 * SIGMA * SIGMA;
 
-    // printf("REJECT CHECK: %f, %f, %f, %f\n", u, (exp(x) / _M), x, exp(x));
+    // printf("REJECT CHECK: %f, %f, %f, %f\n", u, (exp(x) / _M_), x, exp(x));
 
-    return u > (exp(x) / _M);
+    return u > (exp(x) / _M_);
 }
 
 void poly_pack(uint8_t valid_bits, const poly_t *poly, size_t polys_count, uint8_t *data) {
@@ -432,7 +432,7 @@ void poly_unpack(uint8_t valid_bits, const uint8_t *data, size_t polys_count, ui
 }
 
 
-void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][_K])
+void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEED_BYTES], poly_t f[][_K_])
 {
     int8_t bound_exceeded = 0;
 
@@ -440,18 +440,18 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     poly_t ck_ik = {0};
     uint32_t nonce = 0;
 
-    memset(f, 0, _K*_K*_N_);
+    memset(f, 0, _K_*_K_*_N_);
 
     for(size_t k = 0; k < TC_COLS; k++) {
     	nonce = 0;
-    	for (size_t j = 0; j < _K; j++) {
+    	for (size_t j = 0; j < _K_; j++) {
 			//generate r[j][k]
     		do {
     			nonce++;
     			sample_normal_from_seed(r_seed, j*TC_COLS+k+nonce, 0, TC_S, _N_, r_kj.coeffs);
     		} while(!poly_check_norm(&r_kj, 1, TC_B));
 
-    		for(size_t i = 0; i < _K; i++) {
+    		for(size_t i = 0; i < _K_; i++) {
 
         		//generate ck[i][k]
         		poly_uniform(ck_seed, 1, i*TC_COLS+k, (poly_t*) &ck_ik);
@@ -462,6 +462,6 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     		}
     	}
     }
-    poly_reduce((poly_t*)f, _K*_K);
-    poly_invntt_tomont((poly_t*)f, _K*_K);
+    poly_reduce((poly_t*)f, _K_*_K_);
+    poly_invntt_tomont((poly_t*)f, _K_*_K_);
 }

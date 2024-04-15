@@ -118,8 +118,7 @@ static poly_t		A[K][L] = {0};
 //signature
 static uint8_t		rej = 1;
 static uint32_t		iterations = 0;
-static uint32_t		nonce_y1 = 0;
-static uint32_t		nonce_y2 = 0;
+static uint32_t		nonce_y = 0;
 static uint8_t 		y_seed[SEED_BYTES] = {0};
 static uint8_t 		r_seed[SEED_BYTES] = {0};
 static uint8_t 		ck_seed[SEED_BYTES] = {0};
@@ -868,10 +867,10 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 		    shake256_squeeze(&state, SEED_BYTES, ck_seed);
 
 			//generate y1 and y2
-			poly_normal(y_seed, nonce_y1, SIGMA, L, y1);
-			nonce_y1 += L;
-			poly_normal(y_seed, nonce_y2, SIGMA, K, y2);
-			nonce_y2 += K;
+			poly_normal(y_seed, nonce_y, SIGMA, L, y1);
+			nonce_y += L;
+			poly_normal(y_seed, nonce_y, SIGMA, K, y2);
+			nonce_y += K;
 
 			// Compute w_n = (A | I) * y_n
 			poly_copy(y1, L, y1_);
@@ -1225,8 +1224,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Reset(void)
 static void APP_RFD_MAC_802_15_4_DS2_Sign_Reset(void)
 {
 	rej = 1;
-	nonce_y1 = 0;
-	nonce_y2 = 0;
+	nonce_y = 0;
 	memset(y1, 0, sizeof(y1));
 	memset(y2, 0, sizeof(y2));
 	memset(z1, 0, sizeof(z1));

@@ -17,14 +17,14 @@ typedef struct {
 
     // pk
     uint8_t rho[SEED_BYTES];
-    poly_t A[_K][_L];
-    poly_t t1[N_PARTIES][_K];
+    poly_t A[_K_][_L_];
+    poly_t t1[N_PARTIES][_K_];
 
     // sk
     uint8_t tr[SEED_BYTES];
-    poly_t s1[_L];
-    poly_t s2[_K];
-    poly_t t0[_K];
+    poly_t s1[_L_];
+    poly_t s2[_K_];
+    poly_t t0[_K_];
 } party_t;
 
 void send_data(const party_t *party, uint32_t n, const uint8_t *data, size_t data_len);

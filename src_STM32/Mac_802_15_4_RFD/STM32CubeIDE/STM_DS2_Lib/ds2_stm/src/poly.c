@@ -17,9 +17,9 @@
 #include "reduce.h"
 
 #include "stm_rng.h"
-//#include "stm_logging.h"
+#include "stm_logging.h"
 
-//#define APPLI_PRINT_FILE_FUNC_LINE 0
+#define APPLI_PRINT_FILE_FUNC_LINE 0
 
 //#include "elapsed_time.h"
 #ifndef ELAPSED_TIME_H_
@@ -345,11 +345,11 @@ uint8_t poly_check_norm(const poly_t *poly, size_t polys_count, double bound) {
 
             norm += (int64_t) coeff * coeff;
         }
-        //APP_DBG("poly_check_norm norm = %f bound = %f",sqrt((double) norm), bound );
+        //
         // printf("BOUND CHECK: %f, %llu, %f\n", sqrt((double) norm), norm, bound);
         if (sqrt((double) norm) > bound) {
             // printf("failed check norm\n");
-
+        	APP_DBG("poly_check_norm norm = %f bound = %f",sqrt((double) norm), bound );
             return 0;
         }
     }
@@ -380,7 +380,7 @@ uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L],
     x /= 2.0 * SIGMA * SIGMA;
 
     // printf("REJECT CHECK: %f, %f, %f, %f\n", u, (exp(x) / M), x, exp(x));
-    //APP_DBG("poly_reject u = %f, x = %f",u, exp(x));
+    APP_DBG("poly_reject u = %f, x = %f",u, exp(x));
     return u > (exp(x) / M);
 }
 
@@ -447,8 +447,8 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     memset(f, 0, K*K*_N);
 
     for(size_t k = 0; k < TC_COLS; k++) {
-    	nonce = 0;
     	for (size_t j = 0; j < K; j++) {
+    		nonce = 0;
 			//generate r[j][k]
     		do {
     			nonce++;

@@ -194,6 +194,12 @@ public:
 
 	std::string get_signature(uint64_t& timestamp);
 
+	std::string get_publick_key();
+
+	void set_public_key(const std::string& t1_, const std::string& rho_, const std::string& tr_);
+
+	bool verify(const std::string& c_, const std::string& z1_, const std::string& z2_, const std::vector<std::string> ri_, uint64_t& timestamp);
+	
 	bool check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp);
 
 	bool check_commit2(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp);
@@ -201,26 +207,26 @@ public:
 	bool is_flag_ready(uint32_t flag);
 	void reset();
 
-private:
+//private:
 	ds2_party	parties[DS2_MAX_PARTY_NUM];
 
 // Public key
 	uint8_t		rho[SEED_BYTES];
-	poly_t		t1[_K];
-	poly_t		A[_K][_L];
+	poly_t		t1[_K_];
+	poly_t		A[_K_][_L_];
 	uint8_t		tr[SEED_BYTES];
 
 // Signature
 	uint8_t		c[SEED_BYTES];
 	poly_t		poly_c;
-	poly_t		z1[_L];
-	poly_t		z2[_K];
+	poly_t		z1[_L_];
+	poly_t		z2[_K_];
 	uint8_t		r[DS2_MAX_PARTY_NUM][DS2_Ri_VALUE_SIZE];
 
 // Current commitment key
 	uint8_t 	ck_seed[SEED_BYTES];
-	poly_t		ck[_K][TC_COLS];
-	poly_t		ri[_K][TC_COLS];
+	poly_t		ck[_K_][TC_COLS];
+	poly_t		ri[_K_][TC_COLS];
 };
 
 #endif

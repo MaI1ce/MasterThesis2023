@@ -203,6 +203,7 @@ class Sniffer:
     DS2_COORDINATOR_ID      = 254
     
     DS2_MAX_PACKET_LEN      = 100
+    SEED_BYTES              = 16
 
     def __init__(self):
         self.root = tk.Tk()
@@ -220,6 +221,7 @@ class Sniffer:
         self.verify_time = 0
         
         self.signature = None
+        self.hmsg = None
         
         self.fdc = self.signer.get_freq_coef()
         
@@ -245,54 +247,60 @@ class Sniffer:
         
         col += 1
 
-        port_frame = tk.LabelFrame(self.main_frame, text='Port')
+        control_frame = tk.Frame(self.main_frame)
+
+        port_frame = tk.LabelFrame(control_frame, text='Port')
         self.port_var = tk.StringVar()
         port_entry = tk.Entry(port_frame, textvariable=self.port_var)
         port_entry.grid(sticky="nswe")
-        port_frame.grid(row=0, column=col, sticky="nswe", padx=2, pady=2)
+        port_frame.grid(row=0, column=0, sticky="nswe", padx=2, pady=2)
 
-        baudrate_frame = tk.LabelFrame(self.main_frame, text='Baudrate')
+        baudrate_frame = tk.LabelFrame(control_frame, text='Baudrate')
         self.baudrate_var = tk.StringVar()
         baudrate_entry = tk.Entry(baudrate_frame, textvariable=self.baudrate_var)
         baudrate_entry.grid(sticky="nswe")
-        baudrate_frame.grid(row=1, column=col, sticky="nswe", padx=2, pady=2)
+        baudrate_frame.grid(row=1, column=0, sticky="nswe", padx=2, pady=2)
 
-        btn_port_open = tk.Button(self.main_frame, text="Open port", command=self.port_open)
-        btn_port_open.grid(row=2, column=col, sticky="nswe", padx=col, pady=2)
+        btn_port_open = tk.Button(control_frame, text="Open port", command=self.port_open)
+        btn_port_open.grid(row=2, column=0, sticky="nswe", padx=2, pady=2)
 
-        btn_port_close = tk.Button(self.main_frame, text="Close port", command=self.port_close)
-        btn_port_close.grid(row=3, column=col, sticky="nswe", padx=2, pady=2)
+        btn_port_close = tk.Button(control_frame, text="Close port", command=self.port_close)
+        btn_port_close.grid(row=3, column=0, sticky="nswe", padx=2, pady=2)
 
-        btn_save_log = tk.Button(self.main_frame, text="Save log", command=self.save_log_file)
-        btn_save_log .grid(row=4, column=col, sticky="nswe", padx=2, pady=2)
+        btn_save_log = tk.Button(control_frame, text="Save log", command=self.save_log_file)
+        btn_save_log .grid(row=4, column=0, sticky="nswe", padx=2, pady=2)
         
-        btn_clear = tk.Button(self.main_frame, text="Clear screen", command=self.clear)
-        btn_clear .grid(row=5, column=col, sticky="nswe", padx=2, pady=2)
+        btn_clear = tk.Button(control_frame, text="Clear screen", command=self.clear)
+        btn_clear .grid(row=5, column=0, sticky="nswe", padx=2, pady=2)
         
+        control_frame.grid(row=0, column=col, rowspan=10, sticky="nswe")
 
         ###############################################
         col += 1
-        sign_controll_frame = tk.Frame(self.main_frame)
+        sign_control_frame = tk.Frame(self.main_frame)
         
-        msg_frame = tk.LabelFrame(sign_controll_frame, text='Message')
+        msg_frame = tk.LabelFrame(sign_control_frame, text='Message')
         self.msg_var = tk.StringVar()
         msg_entry = tk.Entry(msg_frame, textvariable=self.msg_var)
         msg_entry.grid(sticky="nswe")
         msg_frame.grid(row=0, column=0, sticky="nswe", padx=2, pady=2)
         
-        btn_key_gen = tk.Button(sign_controll_frame, text="New Keys", command=self.keygen)
+        btn_key_gen = tk.Button(sign_control_frame, text="New Keys", command=self.keygen)
         btn_key_gen.grid(row=1, column=0, sticky="nswe", padx=2, pady=2)
         
-        btn_sign = tk.Button(sign_controll_frame, text="Sign", command=self.sign)
+        btn_sign = tk.Button(sign_control_frame, text="Sign", command=self.sign)
         btn_sign.grid(row=2, column=0, sticky="nswe", padx=2, pady=2)
         
-        btn_verify = tk.Button(sign_controll_frame, text="Verify", command=self.verify)
+        btn_verify = tk.Button(sign_control_frame, text="Verify", command=self.verify)
         btn_verify.grid(row=3, column=0, sticky="nswe", padx=2, pady=2)
         
-        btn_reset = tk.Button(sign_controll_frame, text="Reset", command=self.reset)
+        btn_reset = tk.Button(sign_control_frame, text="Reset", command=self.reset)
         btn_reset.grid(row=4, column=0, sticky="nswe", padx=2, pady=2)
+        
+        btn_commit_test = tk.Button(sign_control_frame, text="Commit Test", command=self.commit_test)
+        btn_commit_test.grid(row=5, column=0, sticky="nswe", padx=2, pady=2)
 
-        sign_controll_frame.grid(row=0, column=col, rowspan=10, sticky="nswe")
+        sign_control_frame.grid(row=0, column=col, rowspan=10, sticky="nswe")
         self.main_frame.grid(row=0, column=0, sticky="nswe")
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -319,15 +327,112 @@ class Sniffer:
     
     def sign(self):
         msg_text = self.msg_var.get()
-        hmsg = self.signer.hash_msg(msg_text)
-        self.signer.set_msg(hmsg)
+        self.hmsg = self.signer.hash_msg(msg_text)
+        self.signer.set_msg(self.hmsg)
         self.listbox_main.insert(self.index, "START SIGN")
         self.index += 1
-        self.response(self.DS2_SIGN_START_TASK, dst_node=0xff, data=hmsg)
+        self.response(self.DS2_SIGN_START_TASK, dst_node=0xff, data=self.hmsg)
         
     
     def verify(self):
-        pass
+        file = fd.askopenfile(initialfile='Signature.txt',defaultextension=".txt",filetypes=[("All Files","*.*"),("Text","*.txt")])
+        str_data = file.read()
+        byte_data = str_data.encode("utf-8")
+        signature = base64.b64decode(byte_data)
+        file.close()
+        
+        file = fd.askopenfile(initialfile='Public_key.txt',defaultextension=".txt",filetypes=[("All Files","*.*"),("Text","*.txt")])
+        str_data = file.read()
+        byte_data = str_data.encode("utf-8")
+        pk = base64.b64decode(byte_data)
+        file.close()
+
+        state = self.signer.get_internal_state()
+        
+        before = {
+            "c": xorSign(state["c"]),
+            "poly_c": xorSign(state["poly_c"]),
+            "ck_seed": xorSign(state["ck_seed"]),
+            "rho": xorSign(state["rho"]),
+            "tr": xorSign(state["tr"]),
+            "z1": xorSign(state["z1"]),
+            "z2": xorSign(state["z2"]),
+            "t1": xorSign(state["t1"]),
+            "A": xorSign(state["A"]),
+            "r": xorSign(state["r"]),
+            "msg": xorSign(state["msg"]),
+            }
+        
+        K = 2 #z2
+        L = 2 #z1
+        N = 256
+        
+        offset = 0
+        t1 = pk[offset: offset+4*N*K]
+        offset += 4*N*K
+        rho = pk[offset:offset+self.SEED_BYTES]
+        offset += self.SEED_BYTES
+        tr = pk[offset:offset+self.SEED_BYTES]
+        
+        self.signer.set_public_key(t1, rho, tr)
+
+        offset = 0
+        self.hmsg = signature[offset:256]
+        offset += 256
+        c = signature[offset:offset+self.SEED_BYTES]
+        offset += self.SEED_BYTES
+        z1 = signature[offset:offset+4*N*L]
+        offset += 4*N*L
+        z2 = signature[offset:offset+4*N*K]
+        offset += 4*N*K
+        ri = list()
+        while offset < len(signature):
+            ri.append(signature[offset:offset+self.SEED_BYTES])
+            offset += self.SEED_BYTES
+            
+        self.signer.set_msg(self.hmsg)
+        flag, self.verify_time = self.signer.verify(c, z1, z2, ri)
+        if flag:
+            self.listbox_main.insert(self.index, "VERIFICATION - OK, TIME SPENT: {}".format(self.verify_time))
+            self.index += 1
+        else:
+            self.listbox_main.insert(self.index, "VERIFICATION - NOK, TIME SPENT: {}".format(self.verify_time))
+            self.index += 1
+            
+        
+        state = self.signer.get_internal_state()
+        after = {
+            "c": xorSign(state["c"]),
+            "poly_c": xorSign(state["poly_c"]),
+            "ck_seed": xorSign(state["ck_seed"]),
+            "rho": xorSign(state["rho"]),
+            "tr": xorSign(state["tr"]),
+            "z1": xorSign(state["z1"]),
+            "z2": xorSign(state["z2"]),
+            "t1": xorSign(state["t1"]),
+            "A": xorSign(state["A"]),
+            "r": xorSign(state["r"]),
+            "msg": xorSign(state["msg"]),
+            }
+
+        print(before)
+        print(after)
+        
+    def commit_test(self):
+        data = bytes([0xAA]*6176)
+        ri = data[0:16]
+        ck = data[16:32]
+        fi = data[32: 4128]
+        wi = data[4128:]
+
+        flag, cpu_cycles = self.signer.check_commit(ri, ck, fi, wi)
+        self.listbox_main.insert(self.index, "Commit (slow) time - {}".format( cpu_cycles))
+        self.index += 1
+                    
+        flag, cpu_cycles = self.signer.check_commit2(ri, ck, fi, wi)
+        self.listbox_main.insert(self.index, "Commit2 time - {}".format(cpu_cycles))
+        self.index += 1
+
     
     def reset(self):
         for node in self.nodes:
@@ -462,6 +567,11 @@ class Sniffer:
                             self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
                             self.listbox_main.insert(self.index, "KEYS GENERATED - TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(self.keygen_time, self.fdc))
                             self.index += 1
+                            public_key = self.signer.get_public_key()
+                            b64_public_key = base64.b64encode(public_key)
+                            f = open("Public_key.txt", "w")
+                            f.write(b64_public_key.decode("utf-8"))
+                            f.close()
                     
                 case self.DS2_Fi_COMMIT:
                     #self.listbox_main.insert(self.index, "Party ID:{} Fi commit value CRC {}".format(src_node_id, crc))
@@ -513,8 +623,8 @@ class Sniffer:
                             self.index += 1
                             #self.listbox_main.insert(self.index, "SIGNATURE GENERATED - CRC {} TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(crc, self.keygen_time, self.fdc))
                             #self.index += 1
-                            b64_sign = base64.b64encode(self.signature)
-                            f = open("Signature.txt", "a")
+                            b64_sign = base64.b64encode(self.hmsg + self.signature)
+                            f = open("Signature.txt", "w")
                             f.write(b64_sign.decode("utf-8"))
                             f.close()
                             
@@ -527,26 +637,6 @@ class Sniffer:
                 case self.DS2_DBG:
                     self.listbox_dbg.insert(self.dbg_index, data.decode(encoding='latin1'))
                     self.dbg_index += 1
-                case self.DS2_CHECK_COMMIT:
-                    ri = data[0:16]
-                    ck = data[16:32]
-                    fi = data[32: 4128]
-                    wi = data[4128:]
-                    self.listbox_main.insert(self.index, "ri = {} ck = {} fi = {} wi = {}".format(xorSign(ri), xorSign(ck), int.from_bytes(fi[-4:], byteorder='little'), int.from_bytes(wi[-4:], byteorder='little')))
-                    self.index += 1
-                    flag, cpu_cycles = self.signer.check_commit(ri, ck, fi, wi)
-                    if flag:
-                        self.listbox_main.insert(self.index, "Commit[{}] - OK time - {}".format(src_node_id, cpu_cycles))
-                    else:
-                        self.listbox_main.insert(self.index, "Commit[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
-                    self.index += 1
-                    
-                    flag, cpu_cycles = self.signer.check_commit2(ri, ck, fi, wi)
-                    if flag:
-                        self.listbox_main.insert(self.index, "Commit2[{}] - OK time - {}".format(src_node_id, cpu_cycles))
-                    else:
-                        self.listbox_main.insert(self.index, "Commit2[{}] - NOK time - {}".format(src_node_id, cpu_cycles))
-                    self.index += 1
                 case _:
                     self.listbox_main.insert(self.index, "unknown msg_code:{} data:{}".format(msg_code, data))
                     self.index += 1

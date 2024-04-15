@@ -10,16 +10,27 @@ extern "C" {
 }
 
 #include <string.h>
-
+#include <intrin.h>
 
 
 // Function to get the CPU cycle count
 static inline uint64_t get_timestamp() {
 
 #ifdef __WINDOWS__
-	LARGE_INTEGER timestamp;
-	QueryPerformanceCounter(&timestamp);
-	return timestamp.QuadPart;
+/*
+	Generates the rdtsc instruction, which returns the processor time stamp.
+	The processor time stamp records the number of clock cycles since the last reset.
+
+	The __rdtsc() instruction returns the number of ticks from the timestamp counter (TSC), 
+	which corresponds to the number of CPU cycles. The TSC is a high-resolution counter that increments 
+	with each clock cycle of the CPU. It does not rely on any external frequency and provides 
+	a direct measurement of elapsed time in terms of cycles.
+*/
+	return __rdtsc();
+
+	//LARGE_INTEGER timestamp;
+	//QueryPerformanceCounter(&timestamp);
+	//return timestamp.QuadPart;
 
 	//if(QueryPerformanceFrequency(&frequency) != FALSE)
 	//	double interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
@@ -28,33 +39,31 @@ static inline uint64_t get_timestamp() {
 	return 0;
 #endif
 
-//	uint64_t t;
-//	__asm volatile ("rdtsc" : "=A"(t));
-//	return t;
+
 }
 
-void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K])
+void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K_])
 {
-	memset(fi, 0, _K * _K * _N_);
+	memset(fi, 0, _K_ * _K_ * _N_);
 
 	for (size_t k = 0; k < TC_COLS; k++) {
-		for (size_t j = 0; j < _K; j++) {
-			for (size_t i = 0; i < _K; i++) {
+		for (size_t j = 0; j < _K_; j++) {
+			for (size_t i = 0; i < _K_; i++) {
 				// f[i][j] += r[j][k] + ck[i][k]
 				for (size_t n = 0; n < _N_; n++)
 					fi[i][j].coeffs[n] += montgomery_reduce((int64_t)ck[i][k].coeffs[n] * r[j][k].coeffs[n]);
 			}
 		}
 	}
-	poly_reduce((poly_t*)fi, _K * _K);
-	poly_invntt_tomont((poly_t*)fi, _K * _K);
+	poly_reduce((poly_t*)fi, _K_ * _K_);
+	poly_invntt_tomont((poly_t*)fi, _K_ * _K_);
 }
 
 bool ds2_host::check_commit(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp)
 {
-	poly_t f1[_K][_K] = { 0 };
-	poly_t f2[_K][_K] = { 0 };
-	poly_t w[_K] = { 0 };
+	poly_t f1[_K_][_K_] = { 0 };
+	poly_t f2[_K_][_K_] = { 0 };
+	poly_t w[_K_] = { 0 };
 
 	uint8_t ri[SEED_BYTES] = { 0 };
 	uint8_t cki[SEED_BYTES] = { 0 };
@@ -68,12 +77,12 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 
 	poly_gen_commit(cki, ri, f1);
 
-	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
+	poly_add((poly_t*)&f1[1], (poly_t*)w, _K_, (poly_t*)&f1[1]);
 
-	poly_freeze((poly_t*)f1, _K * _K);
+	poly_freeze((poly_t*)f1, _K_ * _K_);
 
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
-
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
 	if (memcmp(f1, f2, sizeof(f1)) == 0)
 		return true;
 	else
@@ -82,9 +91,9 @@ bool ds2_host::check_commit(const std::string& r, const std::string& ck, const s
 
 bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const std::string& fi, const std::string& wi, uint64_t& timestamp)
 {
-	poly_t f1[_K][_K] = { 0 };
-	poly_t f2[_K][_K] = { 0 };
-	poly_t w[_K] = { 0 };
+	poly_t f1[_K_][_K_] = { 0 };
+	poly_t f2[_K_][_K_] = { 0 };
+	poly_t w[_K_] = { 0 };
 
 	uint8_t ri[SEED_BYTES] = { 0 };
 	uint8_t cki[SEED_BYTES] = { 0 };
@@ -97,7 +106,7 @@ bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const 
 	memcpy(ck_seed, ck.c_str(), ck.size());
 
 	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
-		for (size_t i = 0; i < _K; i++) {
+		for (size_t i = 0; i < _K_; i++) {
 			poly_uniform(ck_seed, 1, i * TC_COLS + k, &this->ck[i][k]);
 		}
 	}
@@ -105,7 +114,7 @@ bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const 
 	uint32_t nonce = 0;
 	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
 		nonce = 0;
-		for (size_t j = 0; j < _K; j++) {
+		for (size_t j = 0; j < _K_; j++) {
 			do {
 				nonce++;
 				sample_normal_from_seed(ri, j * TC_COLS + k + nonce, 0, TC_S, _N_, this->ri[j][k].coeffs);
@@ -115,11 +124,13 @@ bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const 
 
 	poly_gen_commit2(this->ck, this->ri, f1);
 
-	poly_add((poly_t*)&f1[1], (poly_t*)w, _K, (poly_t*)&f1[1]);
+	poly_add((poly_t*)&f1[1], (poly_t*)w, _K_, (poly_t*)&f1[1]);
 
-	poly_freeze((poly_t*)f1, _K * _K);
+	poly_freeze((poly_t*)f1, _K_ * _K_);
 
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+
+	timestamp = get_timestamp() - timestamp;
 
 	if (memcmp(f1, f2, sizeof(f1)) == 0)
 		return true;
@@ -154,9 +165,10 @@ std::string ds2_host::get_rho(uint64_t& timestamp)
 	shake128_finalize(&state);
 	shake128_squeeze(&state, SEED_BYTES, rho);
 
-	poly_uniform(rho, _K * _L, 0, &A[0][0]);
+	poly_uniform(rho, _K_ * _L_, 0, &A[0][0]);
 
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
 
 	return std::string((const char*)rho, sizeof(rho));
 }
@@ -164,15 +176,15 @@ std::string ds2_host::get_rho(uint64_t& timestamp)
 std::string ds2_host::get_tr(uint64_t& timestamp) 
 {
 
-	poly_t temp_ti[_K] = { 0 };
+	poly_t temp_ti[_K_] = { 0 };
 
 	timestamp = get_timestamp();//start
 
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
-		poly_unpack(T1_BITS, parties[i].ti_val, _K, 0, temp_ti);
-		poly_add(t1, temp_ti, _K, t1);
+		poly_unpack(T1_BITS, parties[i].ti_val, _K_, 0, temp_ti);
+		poly_add(t1, temp_ti, _K_, t1);
 	}
-	poly_freeze(t1, _K);
+	poly_freeze(t1, _K_);
 
 	//generate tr
 	keccak_state_t state;
@@ -182,32 +194,29 @@ std::string ds2_host::get_tr(uint64_t& timestamp)
 	shake128_finalize(&state);
 	shake128_squeeze(&state, SEED_BYTES, tr);
 
-	//poly_pack(T1_BITS, t1, _K, t1_packed);
+	//poly_pack(T1_BITS, t1, _K_, t1_packed);
 
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
-
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
 	return std::string((const char*)tr, sizeof(tr));
 }
 
 std::string ds2_host::get_c(uint64_t& timestamp)
 {
-	poly_t Commit[_K][_K] = { 0 };
-	poly_t fi[_K][_K] = { 0 };
+	poly_t Commit[_K_][_K_] = { 0 };
+	poly_t fi[_K_][_K_] = { 0 };
 	uint8_t f_packed[DS2_Fi_COMMIT_SIZE] = { 0 };
 
 	timestamp = get_timestamp();//start
 
 	//commit = sum(f_i)
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
-		poly_unpack(TC_L, parties[i].fi_commit, _K * _K, 0, (poly_t*)fi);
-		poly_add((poly_t*)Commit, (poly_t*)fi, _K * _K, (poly_t*)Commit);
-#ifdef DS2_DEBUG
-		APP_DBG("FFD DS2 -- SIGN -- com_[%d] = ck*ri + wi = %ld", i, fi[1][1].coeffs[_N_ - 1]);
-#endif
+		poly_unpack(TC_L, parties[i].fi_commit, _K_ * _K_, 0, (poly_t*)fi);
+		poly_add((poly_t*)Commit, (poly_t*)fi, _K_ * _K_, (poly_t*)Commit);
 	}
-	poly_freeze((poly_t*)Commit, _K * _K);
+	poly_freeze((poly_t*)Commit, _K_ * _K_);
 
-	poly_pack(TC_L, (poly_t*)Commit, _K * _K, f_packed);
+	poly_pack(TC_L, (poly_t*)Commit, _K_ * _K_, f_packed);
 
 	//c = H(com, msg, pk)
 	keccak_state_t state;
@@ -227,35 +236,55 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 	poly_ntt(&poly_c, 1);
 
 	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
-		for (size_t i = 0; i < _K; i++) {
+		for (size_t i = 0; i < _K_; i++) {
 			poly_uniform(ck_seed, 1, i * TC_COLS + k, &ck[i][k]);
 		}
 	}
 
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
-
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
 	return std::string((const char*)c, sizeof(c));
+}
+
+std::string ds2_host::get_publick_key()
+{
+	std::string key_str = std::string((const char*)t1, sizeof(t1));
+
+	key_str += std::string((const char*)rho, sizeof(rho));
+
+	key_str += std::string((const char*)tr, sizeof(tr));
+
+	return key_str;
+}
+
+void ds2_host::set_public_key(const std::string& t1_, const std::string& rho_, const std::string& tr_)
+{
+	memcpy(t1, t1_.c_str(), t1_.size());
+	memcpy(tr, tr_.c_str(), tr_.size());
+	memcpy(rho, rho_.c_str(), rho_.size());
+
+	poly_uniform(rho, _K_ * _L_, 0, &A[0][0]);
 }
 
 std::string ds2_host::get_signature(uint64_t& timestamp)
 {
-	poly_t z1_temp[_L] = { 0 };
-	poly_t z2_temp[_K] = { 0 };
-	poly_t t1_temp[_K] = { 0 };
-	poly_t w_temp[_K] = { 0 };
-	poly_t F1[_K][_K] = { 0 };
-	poly_t F2[_K][_K] = { 0 };
+	poly_t z1_temp[_L_] = { 0 };
+	poly_t z2_temp[_K_] = { 0 };
+	poly_t t1_temp[_K_] = { 0 };
+	poly_t w_temp[_K_] = { 0 };
+	poly_t F1[_K_][_K_] = { 0 };
+	poly_t F2[_K_][_K_] = { 0 };
 
 	timestamp = get_timestamp();
 
 	uint8_t rej = 0;
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
-		poly_unpack(TC_L, parties[i].zi_1_val, _L, 0, z1_temp);
-		poly_unpack(TC_L, parties[i].zi_2_val, _K, 0, z2_temp);
+		poly_unpack(TC_L, parties[i].zi_1_val, _L_, 0, z1_temp);
+		poly_unpack(TC_L, parties[i].zi_2_val, _K_, 0, z2_temp);
 
 		for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
-			uint32_t nonce = 0;
-			for (size_t j = 0; j < _K; j++) {
+			for (size_t j = 0; j < _K_; j++) {
+				uint32_t nonce = 0;
 				do {
 					nonce++;
 					sample_normal_from_seed(parties[i].ri_val, j * TC_COLS + k + nonce, 0, TC_S, _N_, ri[j][k].coeffs);
@@ -263,57 +292,56 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 			}
 		}
 
-		poly_center(z1_temp, _L);
-		poly_center(z2_temp, _K);
+		poly_center(z1_temp, _L_);
+		poly_center(z2_temp, _K_);
 
-		poly_add(z1, z1_temp, _L, z1);
-		poly_add(z2, z2_temp, _K, z2);
+		poly_add(z1, z1_temp, _L_, z1);
+		poly_add(z2, z2_temp, _K_, z2);
 
 		// w = Az1 - ct1 * 2^D
-		poly_unpack(T1_BITS, parties[i].ti_val, _K, 0, t1_temp);
+		poly_unpack(T1_BITS, parties[i].ti_val, _K_, 0, t1_temp);
 
 		// t1 * 2^D
-		poly_const_mul(t1_temp, 1 << _D, _K, t1_temp);
+		poly_const_mul(t1_temp, 1 << _D_, _K_, t1_temp);
 
-		poly_ntt(z1_temp, _L);
-		poly_ntt(t1_temp, _K);
+		poly_ntt(z1_temp, _L_);
+		poly_ntt(t1_temp, _K_);
 
 		poly_product(A, z1_temp, w_temp);
-		poly_mul_pointwise(t1_temp, &poly_c, _K, t1_temp);
+		poly_mul_pointwise(t1_temp, &poly_c, _K_, t1_temp);
 
-		poly_reduce(w_temp, _K);
-		poly_reduce(t1_temp, _K);
+		poly_reduce(w_temp, _K_);
+		poly_reduce(t1_temp, _K_);
 
-		poly_invntt_tomont(w_temp, _K);
-		poly_invntt_tomont(t1_temp, _K);
+		poly_invntt_tomont(w_temp, _K_);
+		poly_invntt_tomont(t1_temp, _K_);
 
-		poly_add(w_temp, z2_temp, _K, w_temp);
-		poly_sub(w_temp, t1_temp, _K, w_temp);
+		poly_add(w_temp, z2_temp, _K_, w_temp);
+		poly_sub(w_temp, t1_temp, _K_, w_temp);
 
-		poly_freeze(w_temp, _K);
+		poly_freeze(w_temp, _K_);
 
 		// com_i = ck*r + w
-		poly_unpack(TC_L, parties[i].fi_commit, _K * _K, 0, (poly_t*)F2);
+		poly_unpack(TC_L, parties[i].fi_commit, _K_ * _K_, 0, (poly_t*)F2);
 
 		poly_gen_commit2(ck, ri, F1);//WARNING !!!
 
-		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, _K, (poly_t*)&F1[1]);
+		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, _K_, (poly_t*)&F1[1]);
 
-		poly_freeze((poly_t*)F1, _K * _K);
+		poly_freeze((poly_t*)F1, _K_ * _K_);
 
 		//check commitments
 		rej = memcmp(F1, F2, sizeof(F1));
 
 		if (rej != 0) {
-			timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+			//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+			timestamp = get_timestamp() - timestamp;
 			char errormsg[80] = { 0 };
 			std::sprintf(errormsg, "Commitment check failed for node ID %d", i);
 			err_code = DS2_ERROR_Fi_COMMIT;
 			throw DS2Exception(DS2_ERROR_Fi_COMMIT, errormsg, timestamp);
 		}
 	}
-
-	timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 
 	std::string sign_str = std::string((const char*)c, sizeof(c));
 
@@ -326,7 +354,112 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 		sign_str += std::string((const char*)r[i], sizeof(r[i]));
 	}
 
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
+
 	return sign_str;
+}
+
+bool ds2_host::verify(const std::string& c_, const std::string& z1_, const std::string& z2_, const std::vector<std::string> ri_, uint64_t& timestamp)
+{
+	poly_t F1[_K_][_K_] = { 0 };
+	poly_t w_temp[_K_] = { 0 };
+	poly_t z1_temp[_K_] = { 0 };
+	poly_t t1_temp[_K_] = { 0 };
+	uint8_t f_packed[DS2_Fi_COMMIT_SIZE] = { 0 };
+	uint8_t new_c[SEED_BYTES] = { 0 };
+
+	timestamp = get_timestamp();
+
+	memset(&poly_c, 0, sizeof(poly_c));
+	memcpy(c, c_.c_str(), c_.size()); // ???
+	poly_challenge(c, &poly_c);
+	poly_ntt(&poly_c, 1);
+
+	//ck = H(com, msg, pk)
+	keccak_state_t state;
+	keccak_init(&state);
+	shake256_absorb(&state, (const uint8_t*)msg.c_str(), msg.size());
+	shake256_absorb(&state, tr, SEED_BYTES);
+	shake256_finalize(&state);
+	shake256_squeeze(&state, SEED_BYTES, ck_seed);
+
+	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
+		for (size_t i = 0; i < _K_; i++) {
+			poly_uniform(ck_seed, 1, i * TC_COLS + k, &ck[i][k]);
+		}
+	}
+
+	memcpy(z1, z1_.c_str(), z1_.size());
+	memcpy(z1_temp, z1_.c_str(), z1_.size());
+	memcpy(z2, z2_.c_str(), z2_.size());
+
+	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++)
+	{
+		memcpy(r[i], ri_[i].c_str(), DS2_Ri_VALUE_SIZE);
+	}
+
+	
+	poly_t r_temp = { 0 };
+	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
+		
+		for (size_t j = 0; j < _K_; j++) {
+			memset(ri[j][k].coeffs, 0, sizeof(ri[j][k].coeffs));
+
+			for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
+				uint32_t nonce = 0;
+				
+				do {
+					nonce++;
+					sample_normal_from_seed(r[i], j * TC_COLS + k + nonce, 0, TC_S, _N_, r_temp.coeffs);
+				} while (!poly_check_norm(&ri[j][k], 1, TC_B));
+
+				poly_add(&(ri[j][k]), &r_temp, 1, &(ri[j][k]));
+			}
+		}
+	}
+
+	// t1 * 2^D
+	poly_const_mul(t1, 1 << _D_, _K_, t1_temp);
+
+	poly_ntt(z1_temp, _L_);
+	poly_ntt(t1_temp, _K_);
+
+	poly_product(A, z1_temp, w_temp);
+	poly_mul_pointwise(t1_temp, &poly_c, _K_, t1_temp);
+
+	poly_reduce(w_temp, _K_);
+	poly_reduce(t1_temp, _K_);
+
+	poly_invntt_tomont(w_temp, _K_);
+	poly_invntt_tomont(t1_temp, _K_);
+
+	poly_add(w_temp, z2, _K_, w_temp);
+	poly_sub(w_temp, t1_temp, _K_, w_temp);
+
+	poly_freeze(w_temp, _K_);
+
+
+	poly_gen_commit2(ck, ri, F1);//WARNING !!!
+
+	poly_add((poly_t*)&F1[1], (poly_t*)w_temp, _K_, (poly_t*)&F1[1]);
+
+	poly_freeze((poly_t*)F1, _K_ * _K_);
+
+	poly_pack(TC_L, (poly_t*)F1, _K_ * _K_, f_packed);
+
+	keccak_init(&state);
+	shake256_absorb(&state, f_packed, sizeof(f_packed));
+	shake256_absorb(&state, ck_seed, sizeof(ck_seed));
+	shake256_finalize(&state);
+	shake256_squeeze(&state, SEED_BYTES, new_c);
+
+	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
+	timestamp = get_timestamp() - timestamp;
+	if (memcmp(new_c, c, SEED_BYTES) == 0)
+		return true;
+	else
+		return false;
 }
 
 void ds2_host::reset()
@@ -350,7 +483,7 @@ bool ds2_host::is_flag_ready(uint32_t flag)
 		ready_flag &= (parties[i].status & flag);
 	}
 
-	if (ready_flag)
+	if (ready_flag == flag)
 		return true;
 	else
 		return false;

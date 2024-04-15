@@ -138,7 +138,7 @@ int8_t sign(const party_t *party, const uint8_t *msg, size_t msg_len, sign_t *si
             poly_center(sig->z1, L);
             poly_center(sig->z2, K);
 
-            rej = !poly_check_norm(sig->z1, L, _B) || !poly_check_norm(sig->z2, K, _B);
+            rej = !poly_check_norm(sig->z1, L, _B_) || !poly_check_norm(sig->z2, K, _B_);
 
             send_abort(party, rej);
 
@@ -179,7 +179,7 @@ int8_t sign(const party_t *party, const uint8_t *msg, size_t msg_len, sign_t *si
             poly_center(z1_received, L);
             poly_center(z2_received, K);
 
-            if (!poly_check_norm(z1_received, L, _B) || !poly_check_norm(z2_received, K, _B)) {
+            if (!poly_check_norm(z1_received, L, _B_) || !poly_check_norm(z2_received, K, _B_)) {
                 printf("COULD NOT CHECK NORM\n");
                 send_abort(party, 1);
                 check_abort(party);
