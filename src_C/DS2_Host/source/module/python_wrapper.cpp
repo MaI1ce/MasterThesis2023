@@ -19,6 +19,7 @@ PYBIND11_MODULE(ds2, handle) {
 		//.def("err_code", [](const DS2Exception& self) {return self.err_code; });
 	py::class_<ds2_host>(handle, "ds2_host")
 		.def(py::init())
+		.def("get_timestamp", &ds2_host::get_timer)
 		.def("get_internal_state",
 			[](ds2_host& self) {
 				py::dict d(

@@ -1,4 +1,5 @@
 F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/CMakeFiles/ds2.dir
+F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/CMakeFiles/ds2_main_test.dir
 F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/CMakeFiles/edit_cache.dir
 F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
 F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/externals/pybind11/CMakeFiles/edit_cache.dir

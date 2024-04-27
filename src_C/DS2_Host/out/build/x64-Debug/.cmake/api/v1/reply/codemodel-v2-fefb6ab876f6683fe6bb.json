@@ -19,7 +19,8 @@
 					"source" : ".",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				},
 				{
@@ -49,7 +50,8 @@
 					"name" : "DS2_Host",
 					"targetIndexes" : 
 					[
-						0
+						0,
+						1
 					]
 				},
 				{
@@ -66,8 +68,15 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "ds2::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-ds2-Debug-66363e2a8ab527e148d3.json",
+					"jsonFile" : "target-ds2-Debug-20c7b1915f6ed755e2a0.json",
 					"name" : "ds2",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ds2_main_test::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ds2_main_test-Debug-c85a7878c3962caed602.json",
+					"name" : "ds2_main_test",
 					"projectIndex" : 0
 				}
 			]

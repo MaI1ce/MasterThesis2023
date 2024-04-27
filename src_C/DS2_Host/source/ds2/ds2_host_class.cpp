@@ -12,6 +12,14 @@ extern "C" {
 #include <string.h>
 #include <intrin.h>
 
+static uint8_t xorSign(const char* pmessage, uint32_t message_len)
+{
+	uint8_t seed = 0x00;
+	for (uint32_t i = 0x00; i < message_len; i++)
+		seed = (uint8_t)pmessage[i] ^ seed;
+	return seed;
+}
+
 
 // Function to get the CPU cycle count
 static inline uint64_t get_timestamp() {
@@ -42,14 +50,19 @@ static inline uint64_t get_timestamp() {
 
 }
 
-void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K_])
+uint64_t ds2_host::get_timer()
+{
+	return get_timestamp();
+}
+
+static void poly_gen_commit2(poly_t ck[][TC_COLS], poly_t r[][TC_COLS], poly_t fi[][_K_])
 {
 	memset(fi, 0, _K_ * _K_ * _N_);
 
 	for (size_t k = 0; k < TC_COLS; k++) {
 		for (size_t j = 0; j < _K_; j++) {
 			for (size_t i = 0; i < _K_; i++) {
-				// f[i][j] += r[j][k] + ck[i][k]
+				// f[i][j] += r[j][k] * ck[i][k]
 				for (size_t n = 0; n < _N_; n++)
 					fi[i][j].coeffs[n] += montgomery_reduce((int64_t)ck[i][k].coeffs[n] * r[j][k].coeffs[n]);
 			}
@@ -113,8 +126,8 @@ bool ds2_host::check_commit2(const std::string& r, const std::string& ck, const 
 
 	uint32_t nonce = 0;
 	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
-		nonce = 0;
 		for (size_t j = 0; j < _K_; j++) {
+			nonce = 0;
 			do {
 				nonce++;
 				sample_normal_from_seed(ri, j * TC_COLS + k + nonce, 0, TC_S, _N_, this->ri[j][k].coeffs);
@@ -278,6 +291,10 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 	timestamp = get_timestamp();
 
 	uint8_t rej = 0;
+	std::printf("A = %d\n", xorSign((const char*)A, sizeof(A)));
+	std::printf("ck = %d\n", xorSign((const char*)ck, sizeof(ck)));
+	std::printf("ck_seed = %d\n", xorSign((const char*)ck_seed, sizeof(ck_seed)));
+	std::printf("poly_c = %d\n", xorSign((const char*)&poly_c, sizeof(poly_c)));
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
 		poly_unpack(TC_L, parties[i].zi_1_val, _L_, 0, z1_temp);
 		poly_unpack(TC_L, parties[i].zi_2_val, _K_, 0, z2_temp);
@@ -291,15 +308,22 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 				} while (!poly_check_norm(&ri[j][k], 1, TC_B));
 			}
 		}
+		std::printf("r_seed = %d\n", xorSign((const char*)parties[i].ri_val, sizeof(parties[i].ri_val)));
+		std::printf("r[%d] = %d\n", i, xorSign((const char*)ri, sizeof(ri)));
 
 		poly_center(z1_temp, _L_);
 		poly_center(z2_temp, _K_);
+
+		std::printf("z1[%d] = %d\n", i, xorSign((const char*)z1_temp, sizeof(z1_temp)));
+		std::printf("z2[%d] = %d\n", i, xorSign((const char*)z2_temp, sizeof(z2_temp)));
 
 		poly_add(z1, z1_temp, _L_, z1);
 		poly_add(z2, z2_temp, _K_, z2);
 
 		// w = Az1 - ct1 * 2^D
 		poly_unpack(T1_BITS, parties[i].ti_val, _K_, 0, t1_temp);
+		std::printf("t1[%d] = %d\n", i, xorSign((const char*)t1_temp, sizeof(t1_temp)));
+		
 
 		// t1 * 2^D
 		poly_const_mul(t1_temp, 1 << _D_, _K_, t1_temp);
@@ -321,14 +345,25 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 
 		poly_freeze(w_temp, _K_);
 
+		std::printf("w[%d] = %d\n", i, xorSign((const char*)w_temp, sizeof(w_temp)));
 		// com_i = ck*r + w
 		poly_unpack(TC_L, parties[i].fi_commit, _K_ * _K_, 0, (poly_t*)F2);
 
-		poly_gen_commit2(ck, ri, F1);//WARNING !!!
+		std::printf("ck_seed = %d %d %d %d\n", *(uint32_t*)&ck_seed[0],
+			*(uint32_t*)&ck_seed[4],
+			*(uint32_t*)&ck_seed[8],
+			*(uint32_t*)&ck_seed[12]);
+
+		std::printf("r_seed = %d %d %d %d\n", *(uint32_t*)&parties[i].ri_val[0],
+			*(uint32_t*)&parties[i].ri_val[4],
+			*(uint32_t*)&parties[i].ri_val[8],
+			*(uint32_t*)&parties[i].ri_val[12]);
+		poly_gen_commit(ck_seed, parties[i].ri_val, F1);//WARNING !!!
+		std::printf("f[%d] = %d\n", i, xorSign((const char*)F1, sizeof(F1)));
 
 		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, _K_, (poly_t*)&F1[1]);
-
 		poly_freeze((poly_t*)F1, _K_ * _K_);
+
 
 		//check commitments
 		rej = memcmp(F1, F2, sizeof(F1));

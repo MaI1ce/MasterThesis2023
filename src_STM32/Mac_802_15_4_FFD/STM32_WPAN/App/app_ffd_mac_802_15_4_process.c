@@ -86,7 +86,7 @@ MAC_Status_t APP_MAC_mlmeAssociateIndCb( const  MAC_associateInd_t * pAssociateI
 
   APP_DBG("FFD MAC APP - Association Requested - APP_MAC_mlmeAssociateIndCb");
 
-  uint16_t shortAssociationAddr = 0x3344;
+  static uint16_t shortAssociationAddr = 0x3300;
 
   memcpy(&g_MAC_associateInd,pAssociateInd,sizeof(MAC_associateInd_t));
 
@@ -101,6 +101,7 @@ MAC_Status_t APP_MAC_mlmeAssociateIndCb( const  MAC_associateInd_t * pAssociateI
   }
   HAL_Delay(200);
   BSP_LED_Off(LED2);
+  shortAssociationAddr++;
   return MAC_SUCCESS;
 }
 

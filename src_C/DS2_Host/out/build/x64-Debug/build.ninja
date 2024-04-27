@@ -150,6 +150,115 @@ build F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.cp312-win_amd64.pyd: CXX_MODULE_
   TARGET_IMPLIB = F:\MasterDiploma2\src_C\DS2_Host\lib\ds2.lib
   TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\lib\ds2.pdb
 
+# =============================================================================
+# Object build statements for EXECUTABLE target ds2_main_test
+
+
+#############################################
+# Order-only phony target for ds2_main_test
+
+build cmake_object_order_depends_target_ds2_main_test: phony || CMakeFiles\ds2_main_test.dir
+
+build CMakeFiles\ds2_main_test.dir\source\exec\main.cpp.obj: CXX_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\exec\main.cpp || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\exec
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\ds2_host_class.cpp.obj: CXX_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\ds2_host_class.cpp || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\ds2_node_class.cpp.obj: CXX_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\ds2_node_class.cpp || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\commit.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\commit.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\poly.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\poly.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\fips202.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\fips202.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\ntt.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\ntt.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\util.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\util.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\rand.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\rand.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+build CMakeFiles\ds2_main_test.dir\source\ds2\src\reduce.c.obj: C_COMPILER__ds2_main_test_unscanned_Debug F$:\MasterDiploma2\src_C\DS2_Host\source\ds2\src\reduce.c || cmake_object_order_depends_target_ds2_main_test
+  FLAGS = /DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1 -MDd
+  INCLUDES = -IF:\MasterDiploma2\src_C\DS2_Host\source\ds2\inc
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  OBJECT_FILE_DIR = CMakeFiles\ds2_main_test.dir\source\ds2\src
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target ds2_main_test
+
+
+#############################################
+# Link the executable F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe
+
+build F$:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe: CXX_EXECUTABLE_LINKER__ds2_main_test_Debug CMakeFiles\ds2_main_test.dir\source\exec\main.cpp.obj CMakeFiles\ds2_main_test.dir\source\ds2\ds2_host_class.cpp.obj CMakeFiles\ds2_main_test.dir\source\ds2\ds2_node_class.cpp.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\commit.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\poly.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\fips202.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\ntt.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\util.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\rand.c.obj CMakeFiles\ds2_main_test.dir\source\ds2\src\reduce.c.obj
+  FLAGS = /DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -MDd
+  LINK_FLAGS = /machine:x64 /debug /INCREMENTAL /subsystem:console
+  LINK_LIBRARIES = kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib
+  OBJECT_DIR = CMakeFiles\ds2_main_test.dir
+  POST_BUILD = cd .
+  PRE_LINK = cd .
+  TARGET_COMPILE_PDB = CMakeFiles\ds2_main_test.dir\
+  TARGET_FILE = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe
+  TARGET_IMPLIB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.lib
+  TARGET_PDB = F:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.pdb
+
 
 #############################################
 # Utility command for edit_cache
@@ -208,6 +317,10 @@ build ds2: phony F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.cp312-win_amd64.pyd
 
 build ds2.cp312-win_amd64.pyd: phony F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.cp312-win_amd64.pyd
 
+build ds2_main_test: phony F$:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe
+
+build ds2_main_test.exe: phony F$:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe
+
 # =============================================================================
 # Folder targets.
 
@@ -216,7 +329,7 @@ build ds2.cp312-win_amd64.pyd: phony F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.c
 #############################################
 # Folder: F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug
 
-build all: phony F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.cp312-win_amd64.pyd externals\pybind11\all
+build all: phony F$:\MasterDiploma2\src_C\DS2_Host\lib\ds2.cp312-win_amd64.pyd F$:\MasterDiploma2\src_C\DS2_Host\exe_out\ds2_main_test.exe externals\pybind11\all
 
 # =============================================================================
 

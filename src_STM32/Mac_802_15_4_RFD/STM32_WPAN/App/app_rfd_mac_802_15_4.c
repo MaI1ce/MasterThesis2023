@@ -98,6 +98,8 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Final(void);
 
 ////////////////////////////////////////////////////////////////////////
 uint8_t	 			g_AppState = DS2_IDLE;
+
+static uint8_t		node_id = 0;
 static uint8_t 		rfBuffer[256];
 static DS2_Packet 	g_msg_buffer = {0};
 static DS2_Party 	g_DS2_Data = {0};
@@ -304,8 +306,8 @@ void APP_RFD_MAC_802_15_4_SetupTask(void)
 
 
     BSP_LED_On(LED2);
-
-    g_msg_buffer.src_node_id = DS2_NODE_ID;
+    node_id = g_MAC_associateCnf.a_assoc_short_address[0];
+    g_msg_buffer.src_node_id = node_id;
     g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
     g_msg_buffer.msg_code = DS2_COORDINATOR_HELLO;
     g_msg_buffer.packet_length = 4;
@@ -472,7 +474,7 @@ static void APP_RFD_MAC_802_15_4_TraceError(char * pMess, uint32_t ErrCode)
 uint8_t xorSign( const char * pmessage, uint32_t message_len)
 {
   uint8_t seed = 0x00;
-  for (uint8_t i=0x00;i<message_len;i++)
+  for (uint32_t i=0x00;i<message_len;i++)
     seed = (uint8_t)pmessage[i]^seed;
   return seed; 
 }
@@ -491,7 +493,7 @@ static void APP_RFD_MAC_802_15_4_DS2_SendKeyGen_Start(void)
 {
 	APP_RFD_MAC_802_15_4_DS2_KeyGen_Reset();
 
-	g_msg_buffer.src_node_id = DS2_NODE_ID;
+	g_msg_buffer.src_node_id = node_id;
 	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
 	g_msg_buffer.msg_code = DS2_KEYGEN_START_TASK;
 	g_msg_buffer.packet_length = 4;
@@ -524,7 +526,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
 			seed_ptr++;
 		}
 		// generate pi commit
-		h1(g_DS2_Data.pi_val, DS2_NODE_ID, g_DS2_Data.pi_commit);
+		h1(g_DS2_Data.pi_val, node_id, g_DS2_Data.pi_commit);
 
 		elapsed_time_stop(TIMER_KEYGEN_START);
 
@@ -537,7 +539,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Start(void)
         APP_DBG("RFD DS2 - KEYGEN - gi = h1(pi) = %ld", gix);
 #endif
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.src_node_id = node_id;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 		g_msg_buffer.msg_code = DS2_Pi_COMMIT;
 		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_COMMIT_SIZE; //send g_i - size 64 byte
@@ -568,7 +570,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.src_node_id = node_id;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 		g_msg_buffer.msg_code = DS2_Pi_VALUE;
 		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Pi_VALUE_SIZE;
@@ -636,7 +638,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 		poly_pack(T1_BITS, t1, K, g_DS2_Data.ti_val);
 
 		//generate ti commit
-		h2(g_DS2_Data.ti_val, DS2_NODE_ID, g_DS2_Data.ti_commit);
+		h2(g_DS2_Data.ti_val, node_id, g_DS2_Data.ti_commit);
 
 		elapsed_time_stop(TIMER_KEYGEN_STAGE_2);
 
@@ -654,7 +656,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_2(void)
 #endif
 
 		//send commit ti
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.src_node_id = node_id;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 		g_msg_buffer.msg_code = DS2_Ti_COMMIT;
 		g_msg_buffer.packet_length = DS2_HEADER_LEN + DS2_Ti_COMMIT_SIZE;
@@ -687,7 +689,7 @@ static void APP_RFD_MAC_802_15_4_DS2_KeyGen_Stage_3(void)
 		memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 		int i = 0;
 
-		g_msg_buffer.src_node_id = DS2_NODE_ID;
+		g_msg_buffer.src_node_id = node_id;
 		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 		g_msg_buffer.msg_code = DS2_Ti_VALUE;
 		g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
@@ -771,7 +773,7 @@ static void APP_RFD_MAC_802_15_4_DS2_SendSign_Start(void)
 {
 	APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
 
-	g_msg_buffer.src_node_id = DS2_NODE_ID;
+	g_msg_buffer.src_node_id = node_id;
 	g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
 	g_msg_buffer.msg_code = DS2_SIGN_START_TASK;
 	g_msg_buffer.packet_length = 4;
@@ -840,12 +842,12 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 		g_packet_cnt = 0;
 
 	case DS2_SIGN_START_IDLE:
-
+		APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
 		if(g_msg_ready_flag == 0) {
 			APP_DBG("RFD DS2 -- SIGN -- ERROR: STAGE 0 - NO MSG READY TO SIGN");
-			APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
 			return;
 		} else {
+
 			elapsed_time_start(TIMER_SIGN_START);
 			//generate r and y seed
 			y_seed_ptr = (uint32_t*)y_seed;
@@ -915,7 +917,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Start(void)
 			memset((char*)&g_msg_buffer, 0, sizeof(g_msg_buffer));
 			int i = 0;
 
-			g_msg_buffer.src_node_id = DS2_NODE_ID;
+			g_msg_buffer.src_node_id = node_id;
 			g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 			g_msg_buffer.msg_code = DS2_Fi_COMMIT;
 			g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
@@ -972,8 +974,15 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
 		elapsed_time_start(TIMER_SIGN_STAGE_1);
 
+		memset(&poly_c, 0 , sizeof(poly_c));
+
 		memcpy(c, (uint8_t*)packet_ptr->data, data_size);
 		poly_challenge(c, &poly_c);
+
+        memset(z1, 0 , sizeof(z1));
+        memset(z2, 0 , sizeof(z2));
+        memset(cs1, 0 , sizeof(cs1));
+        memset(cs2, 0 , sizeof(cs2));
 
         // z_n = c * s_n + y_n
         poly_copy(s1, L, cs1);
@@ -997,19 +1006,29 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
 
 		rej = 0;
         rej = poly_reject(z1, z2, cs1, cs2);
-		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 1 %d", rej);
+		//APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 1 %d", rej);
+
+	    APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
 
     	poly_copy(t0, K, t0_);
     	poly_ntt(t0_, K);
+    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
     	poly_mul_pointwise(t0_, &poly_c, K, t0_);
-
     	poly_reduce(t0_, K);
     	poly_invntt_tomont(t0_, K);
+
+    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
+    	APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
+
 
     	poly_sub(z2, t0_, K, z2);
 
         poly_center(z1, L);
         poly_center(z2, K);
+
+    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
+    	APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
+
 
         //check norm
         rej |= !poly_check_norm(z1, L, B);
@@ -1038,7 +1057,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
         if(rej){
         	APP_RFD_MAC_802_15_4_DS2_Sign_Reset();
 
-    		g_msg_buffer.src_node_id = DS2_NODE_ID;
+    		g_msg_buffer.src_node_id = node_id;
     		g_msg_buffer.dst_node_id = DS2_BROADCAST_ID;
     		g_msg_buffer.msg_code = DS2_ERROR_Zi_REJECT;
     		g_msg_buffer.packet_length = 4;
@@ -1052,7 +1071,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
     		return;
         } else {
 
-    		g_msg_buffer.src_node_id = DS2_NODE_ID;
+    		g_msg_buffer.src_node_id = node_id;
     		g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
     		g_msg_buffer.msg_code = DS2_Ri_VALUE;
     		g_msg_buffer.packet_length = DS2_HEADER_LEN + SEED_BYTES;
@@ -1087,7 +1106,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_2(void)
 	    packet_num = DS2_Zi_1_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
 	    last_data_len = DS2_Zi_1_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
 
-	    g_msg_buffer.src_node_id = DS2_NODE_ID;
+	    g_msg_buffer.src_node_id = node_id;
 	    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 	    g_msg_buffer.msg_code = DS2_Zi_1_VALUE;
 	    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);
@@ -1136,7 +1155,7 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_3(void)
 	    packet_num = DS2_Zi_2_VALUE_SIZE / (DS2_MAX_DATA_LEN * 4);
 	    last_data_len = DS2_Zi_2_VALUE_SIZE % (DS2_MAX_DATA_LEN * 4);
 
-	    g_msg_buffer.src_node_id = DS2_NODE_ID;
+	    g_msg_buffer.src_node_id = node_id;
 	    g_msg_buffer.dst_node_id = DS2_COORDINATOR_ID;
 	    g_msg_buffer.msg_code = DS2_Zi_2_VALUE;
 	    g_msg_buffer.packet_length = DS2_HEADER_LEN + (DS2_MAX_DATA_LEN * 4);

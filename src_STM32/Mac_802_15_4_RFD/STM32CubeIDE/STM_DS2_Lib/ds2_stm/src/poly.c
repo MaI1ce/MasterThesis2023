@@ -368,7 +368,7 @@ uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L],
     double u = rand() / (double) RAND_MAX;
     #endif
     double x = 0;
-
+    APP_DBG("poly_reject x = %f",x);
     for (size_t i = 0; i < L; i++)
         for (size_t j = 0; j < _N; j++)
             x += (-2.0 * z1[i].coeffs[j] + cs1[i].coeffs[j]) * cs1[i].coeffs[j];
@@ -376,11 +376,11 @@ uint8_t poly_reject(const poly_t z1[L], const poly_t z2[K], const poly_t cs1[L],
     for (size_t i = 0; i < K; i++)
         for (size_t j = 0; j < _N; j++)
             x += (-2.0 * z2[i].coeffs[j] + cs2[i].coeffs[j]) * cs2[i].coeffs[j];
-
+    APP_DBG("poly_reject x = %f",x);
     x /= 2.0 * SIGMA * SIGMA;
-
+    APP_DBG("poly_reject x = %f",x);
     // printf("REJECT CHECK: %f, %f, %f, %f\n", u, (exp(x) / M), x, exp(x));
-    APP_DBG("poly_reject u = %f, x = %f",u, exp(x));
+    APP_DBG("poly_reject u = %f, x = %f, exp(x) = %f",u, x, exp(x));
     return u > (exp(x) / M);
 }
 

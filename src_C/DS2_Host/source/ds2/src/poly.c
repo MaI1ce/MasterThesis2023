@@ -440,11 +440,21 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     poly_t ck_ik = {0};
     uint32_t nonce = 0;
 
-    memset(f, 0, _K_*_K_*_N_);
+    printf("ck_seed = %d %d %d %d\n", *(uint32_t*)&ck_seed[0],
+        *(uint32_t*)&ck_seed[4],
+        *(uint32_t*)&ck_seed[8],
+        *(uint32_t*)&ck_seed[12]);
+
+    printf("r_seed = %d %d %d %d\n", *(uint32_t*)&r_seed[0],
+        *(uint32_t*)&r_seed[4],
+        *(uint32_t*)&r_seed[8],
+        *(uint32_t*)&r_seed[12]);
+
+    memset(f, 0, _K_*_K_*_N_*4);
 
     for(size_t k = 0; k < TC_COLS; k++) {
-    	nonce = 0;
     	for (size_t j = 0; j < _K_; j++) {
+            nonce = 0;
 			//generate r[j][k]
     		do {
     			nonce++;
@@ -456,7 +466,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
         		//generate ck[i][k]
         		poly_uniform(ck_seed, 1, i*TC_COLS+k, (poly_t*) &ck_ik);
 
-        		// f[i][j] += r[j][k] + ck[i][k]
+        		// f[i][j] += r[j][k] * ck[i][k]
     			for(size_t n = 0; n < _N_; n++)
     			    f[i][j].coeffs[n] += montgomery_reduce((int64_t) ck_ik.coeffs[n] * r_kj.coeffs[n]);
     		}

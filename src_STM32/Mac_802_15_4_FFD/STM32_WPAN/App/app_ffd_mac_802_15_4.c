@@ -210,7 +210,7 @@ void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
   MAC_Status_t MacStatus = MAC_ERROR;
 
   MAC_associateRes_t AssociateRes;
-  uint16_t shortAssociationAddr = 0x3344;
+  static uint16_t shortAssociationAddr = 0x3300;
 
   APP_DBG("Srv task :");
 
@@ -230,6 +230,8 @@ void APP_FFD_MAC_802_15_4_CoordSrvTask(void)
       return;
     }
     break;
+
+    shortAssociationAddr++;
   default:
     APP_DBG("Srv task : unknown Request");
   }
@@ -1455,11 +1457,14 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 
 	// check if all nodes ready
 	uint32_t ready_flag = 0xFFFFFFFF;
-	for(int i = 1; i < sizeof(g_Parties); i++){
-		ready_flag &= (g_Parties[id].status & DS2_PARTY_ACTIVE);
+	for(int i = 0; i < DS2_MAX_PARTY_NUM; i++){
+
+		ready_flag &= (g_Parties[i].status & DS2_PARTY_ACTIVE);
+		APP_DBG("DS2 - PARTY %d READY !", i);
 	}
 
-	if(ready_flag && (g_msg_buffer.msg_code < DS2_ABORT)){
+	if(ready_flag){
+		UART_TxCpltCallback();
 		APP_DBG("DS2 - COORDINATOR READY !");
 		g_AppState = DS2_READY;
 		g_msg_buffer.src_node_id = DS2_COORDINATOR_ID;
@@ -1495,7 +1500,7 @@ static void APP_FFD_MAC_802_15_4_DS2_NewConnection(void)
 static uint8_t xorSign( const char * pmessage, uint32_t message_len)
 {
   uint8_t seed = 0x00;
-  for (uint8_t i=0x00;i<message_len;i++)
+  for (uint32_t i=0x00;i<message_len;i++)
     seed = (uint8_t)pmessage[i]^seed;
   return seed;
 }

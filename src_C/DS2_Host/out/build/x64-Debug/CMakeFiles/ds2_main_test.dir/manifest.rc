@@ -1,0 +1,2 @@
+#pragma code_page(65001)
+1 /* CREATEPROCESS_MANIFEST_RESOURCE_ID */ 24 /* RT_MANIFEST */ "F:/MasterDiploma2/src_C/DS2_Host/out/build/x64-Debug/CMakeFiles/ds2_main_test.dir/embed.manifest"

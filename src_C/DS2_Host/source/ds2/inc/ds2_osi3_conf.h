@@ -7,7 +7,7 @@
 //#define COORDINATOR_NODE
 
 #define DS2_MAX_DATA_LEN 	25
-#define DS2_MAX_PARTY_NUM 	1 // N_PARTIES
+#define DS2_MAX_PARTY_NUM 	2 // N_PARTIES
 #define DS2_HEADER_LEN 		8
 #define DS2_COORDINATOR_ID 	254
 #define DS2_BROADCAST_ID 	0xff

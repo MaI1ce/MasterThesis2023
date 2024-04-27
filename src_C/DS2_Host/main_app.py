@@ -219,6 +219,10 @@ class Sniffer:
         self.keygen_time = 0
         self.sign_time = 0
         self.verify_time = 0
+
+        self.keygen_time_total = 0
+        self.sign_time_total = 0
+        self.verify_time_total = 0
         
         self.signature = None
         self.hmsg = None
@@ -320,12 +324,14 @@ class Sniffer:
         self.dbg_index = 0
         
     def keygen(self):
+        self.keygen_time_total = self.signer.get_timestamp()
         self.response(self.DS2_KEYGEN_START_TASK, dst_node=0xff)
         self.listbox_main.insert(self.index, "START KEYGEN")
         self.index += 1
 
     
     def sign(self):
+        self.sign_time_total = self.signer.get_timestamp()
         msg_text = self.msg_var.get()
         self.hmsg = self.signer.hash_msg(msg_text)
         self.signer.set_msg(self.hmsg)
@@ -346,6 +352,7 @@ class Sniffer:
         byte_data = str_data.encode("utf-8")
         pk = base64.b64decode(byte_data)
         file.close()
+       
 
         state = self.signer.get_internal_state()
         
@@ -363,6 +370,8 @@ class Sniffer:
             "msg": xorSign(state["msg"]),
             }
         
+        self.verify_time_total = self.signer.get_timestamp()
+
         K = 2 #z2
         L = 2 #z1
         N = 256
@@ -392,13 +401,16 @@ class Sniffer:
             
         self.signer.set_msg(self.hmsg)
         flag, self.verify_time = self.signer.verify(c, z1, z2, ri)
+        
+        self.verify_time_total = self.signer.get_timestamp() - self.verify_time_total
         if flag:
-            self.listbox_main.insert(self.index, "VERIFICATION - OK, TIME SPENT: {}".format(self.verify_time))
+            self.listbox_main.insert(self.index, "VERIFICATION - OK, DS2 TIME: {} TOTAL TIME: {}".format(self.verify_time, self.verify_time_total))
             self.index += 1
         else:
-            self.listbox_main.insert(self.index, "VERIFICATION - NOK, TIME SPENT: {}".format(self.verify_time))
+            self.listbox_main.insert(self.index, "VERIFICATION - NOK, DS2 TIME: {} TOTAL TIME: {}".format(self.verify_time, self.verify_time_total))
             self.index += 1
             
+
         
         state = self.signer.get_internal_state()
         after = {
@@ -565,7 +577,8 @@ class Sniffer:
                             self.listbox_main.insert(self.index, "KeyGen: send tr CRC {} - time {}".format(crc, time_stamp))
                             self.index += 1
                             self.response(self.DS2_Ti_VALUE_ACK, dst_node=0xff, data=tr)
-                            self.listbox_main.insert(self.index, "KEYS GENERATED - TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(self.keygen_time, self.fdc))
+                            self.keygen_time_total = self.signer.get_timestamp() - self.keygen_time_total
+                            self.listbox_main.insert(self.index, "KEYS GENERATED - DS2 TIME: {} TOTAL TIME: {}".format(self.keygen_time, self.keygen_time_total))
                             self.index += 1
                             public_key = self.signer.get_public_key()
                             b64_public_key = base64.b64encode(public_key)
@@ -617,9 +630,8 @@ class Sniffer:
                             self.signature, time_stamp = self.signer.get_signature()
                             self.sign_time += time_stamp
                             self.response(self.DS2_Zi_2_VALUE_ACK, dst_node=0xff)
-                            crc = xorSign(self.signature)
-                            print("Signature: ", ":".join("{:02x}".format(c) for c in self.signature))
-                            self.listbox_main.insert(self.index, "SIGNATURE GENERATED - CRC {} TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(crc, self.sign_time, self.fdc))
+                            self.sign_time_total = self.signer.get_timestamp() - self.sign_time_total
+                            self.listbox_main.insert(self.index, "SIGNATURE GENERATED - DS2 TIME: {} TOTAL TIME: {}".format(self.sign_time, self.sign_time_total))
                             self.index += 1
                             #self.listbox_main.insert(self.index, "SIGNATURE GENERATED - CRC {} TIME SPENT: {} FREQUENCY COEFFICIENT: {}".format(crc, self.keygen_time, self.fdc))
                             #self.index += 1
