@@ -26,14 +26,17 @@ class BufferToBig(Exception):
 
 
 class party:
+    K = 4
+    L = 4
+    DS2_SEED_SIZE = 64
     DS2_Pi_COMMIT_SIZE = 64
-    DS2_Pi_VALUE_SIZE = 16
+    DS2_Pi_VALUE_SIZE = DS2_SEED_SIZE
     DS2_Ti_COMMIT_SIZE = 64
-    DS2_Ti_VALUE_SIZE = 2 * (11 * (256 >> 3))
-    DS2_Fi_COMMIT_SIZE = 2*2*3*256
-    DS2_Zi_1_VALUE_SIZE = 3*2*256
-    DS2_Zi_2_VALUE_SIZE = 3*2*256
-    DS2_Ri_VALUE_SIZE = 16
+    DS2_Ti_VALUE_SIZE = K * (11 * (256 >> 3))
+    DS2_Fi_COMMIT_SIZE = K*K*3*256
+    DS2_Zi_1_VALUE_SIZE = 3*L*256
+    DS2_Zi_2_VALUE_SIZE = 3*K*256
+    DS2_Ri_VALUE_SIZE = DS2_SEED_SIZE
     
     DS2_ABORT = 0xC0
     DS2_ERROR_Pi_COMMIT                 = 0x03 | DS2_ABORT
@@ -203,7 +206,7 @@ class Sniffer:
     DS2_COORDINATOR_ID      = 254
     
     DS2_MAX_PACKET_LEN      = 100
-    SEED_BYTES              = 16
+    SEED_BYTES              = 64
 
     def __init__(self):
         self.root = tk.Tk()
@@ -372,8 +375,8 @@ class Sniffer:
         
         self.verify_time_total = self.signer.get_timestamp()
 
-        K = 2 #z2
-        L = 2 #z1
+        K = 4 #z2
+        L = 4 #z1
         N = 256
         
         offset = 0
@@ -432,10 +435,10 @@ class Sniffer:
         
     def commit_test(self):
         data = bytes([0xAA]*6176)
-        ri = data[0:16]
-        ck = data[16:32]
-        fi = data[32: 4128]
-        wi = data[4128:]
+        ri = data[0:self.SEED_BYTES]
+        ck = data[self.SEED_BYTES:2*self.SEED_BYTES]
+        fi = data[2*self.SEED_BYTES: 2*self.SEED_BYTES+1024*self.K*self.K]
+        wi = data[2*self.SEED_BYTES+1024*self.K*self.K:]
 
         flag, cpu_cycles = self.signer.check_commit(ri, ck, fi, wi)
         self.listbox_main.insert(self.index, "Commit (slow) time - {}".format( cpu_cycles))
@@ -486,7 +489,7 @@ class Sniffer:
         file = fd.asksaveasfile(initialfile='Untitled.log',defaultextension=".log",filetypes=[("All Files","*.*"),("Logs","*.log")])
         file_text = self.listbox_main.get(2, tk.END)
         for line in file_text:
-            file.write(line)
+            file.write(line + '\n')
         file.close()
         
     def abort(self, err_code:int):

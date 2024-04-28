@@ -25,7 +25,7 @@ void h1(const uint8_t seed[SEED_BYTES], uint32_t n, uint8_t g[L1]) {
     keccak_state_t state;
 
     keccak_init(&state);
-    shake256_absorb(&state, seed, 16);
+    shake256_absorb(&state, seed, SEED_BYTES);
     shake256_absorb_nonce(&state, n);
     shake256_finalize(&state);
     shake256_squeeze(&state, L1, g);

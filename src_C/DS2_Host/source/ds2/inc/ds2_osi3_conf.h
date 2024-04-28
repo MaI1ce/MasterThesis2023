@@ -7,7 +7,7 @@
 //#define COORDINATOR_NODE
 
 #define DS2_MAX_DATA_LEN 	25
-#define DS2_MAX_PARTY_NUM 	2 // N_PARTIES
+#define DS2_MAX_PARTY_NUM 	1 // N_PARTIES
 #define DS2_HEADER_LEN 		8
 #define DS2_COORDINATOR_ID 	254
 #define DS2_BROADCAST_ID 	0xff
@@ -18,7 +18,7 @@
 #define DS2_Ti_COMMIT_SIZE 	L2
 #define DS2_Ti_VALUE_SIZE 	_K_*POLY_T1_PACKED_BYTES
 
-#define DS2_Fi_COMMIT_SIZE	2 * 3 * _K_ * _N_
+#define DS2_Fi_COMMIT_SIZE  3 * _K_ * _K_ * _N_
 
 #define DS2_Zi_1_VALUE_SIZE 3 * _L_ * _N_
 #define DS2_Zi_2_VALUE_SIZE 3 * _K_ * _N_

@@ -247,12 +247,12 @@ std::string ds2_host::get_c(uint64_t& timestamp)
 
 	poly_challenge(c, &poly_c);
 	poly_ntt(&poly_c, 1);
-
+	/*
 	for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
 		for (size_t i = 0; i < _K_; i++) {
 			poly_uniform(ck_seed, 1, i * TC_COLS + k, &ck[i][k]);
 		}
-	}
+	}*/
 
 	//timestamp = static_cast<uint64_t>(std::round(coef * (get_timestamp() - timestamp)));//finish
 	timestamp = get_timestamp() - timestamp;
@@ -291,14 +291,16 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 	timestamp = get_timestamp();
 
 	uint8_t rej = 0;
+	/*
 	std::printf("A = %d\n", xorSign((const char*)A, sizeof(A)));
 	std::printf("ck = %d\n", xorSign((const char*)ck, sizeof(ck)));
 	std::printf("ck_seed = %d\n", xorSign((const char*)ck_seed, sizeof(ck_seed)));
 	std::printf("poly_c = %d\n", xorSign((const char*)&poly_c, sizeof(poly_c)));
+	*/
 	for (int i = 0; i < DS2_MAX_PARTY_NUM; i++) {
 		poly_unpack(TC_L, parties[i].zi_1_val, _L_, 0, z1_temp);
 		poly_unpack(TC_L, parties[i].zi_2_val, _K_, 0, z2_temp);
-
+		/*
 		for (size_t k = 0; k < TC_COLS; k++) { //WARNING !!!
 			for (size_t j = 0; j < _K_; j++) {
 				uint32_t nonce = 0;
@@ -307,22 +309,22 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 					sample_normal_from_seed(parties[i].ri_val, j * TC_COLS + k + nonce, 0, TC_S, _N_, ri[j][k].coeffs);
 				} while (!poly_check_norm(&ri[j][k], 1, TC_B));
 			}
-		}
-		std::printf("r_seed = %d\n", xorSign((const char*)parties[i].ri_val, sizeof(parties[i].ri_val)));
-		std::printf("r[%d] = %d\n", i, xorSign((const char*)ri, sizeof(ri)));
+		}*/
+		//std::printf("r_seed = %d\n", xorSign((const char*)parties[i].ri_val, sizeof(parties[i].ri_val)));
+		//std::printf("r[%d] = %d\n", i, xorSign((const char*)ri, sizeof(ri)));
 
 		poly_center(z1_temp, _L_);
 		poly_center(z2_temp, _K_);
 
-		std::printf("z1[%d] = %d\n", i, xorSign((const char*)z1_temp, sizeof(z1_temp)));
-		std::printf("z2[%d] = %d\n", i, xorSign((const char*)z2_temp, sizeof(z2_temp)));
+		//std::printf("z1[%d] = %d\n", i, xorSign((const char*)z1_temp, sizeof(z1_temp)));
+		//std::printf("z2[%d] = %d\n", i, xorSign((const char*)z2_temp, sizeof(z2_temp)));
 
 		poly_add(z1, z1_temp, _L_, z1);
 		poly_add(z2, z2_temp, _K_, z2);
 
 		// w = Az1 - ct1 * 2^D
 		poly_unpack(T1_BITS, parties[i].ti_val, _K_, 0, t1_temp);
-		std::printf("t1[%d] = %d\n", i, xorSign((const char*)t1_temp, sizeof(t1_temp)));
+		//std::printf("t1[%d] = %d\n", i, xorSign((const char*)t1_temp, sizeof(t1_temp)));
 		
 
 		// t1 * 2^D
@@ -345,21 +347,25 @@ std::string ds2_host::get_signature(uint64_t& timestamp)
 
 		poly_freeze(w_temp, _K_);
 
-		std::printf("w[%d] = %d\n", i, xorSign((const char*)w_temp, sizeof(w_temp)));
+		//std::printf("w[%d] = %d\n", i, xorSign((const char*)w_temp, sizeof(w_temp)));
 		// com_i = ck*r + w
 		poly_unpack(TC_L, parties[i].fi_commit, _K_ * _K_, 0, (poly_t*)F2);
-
+		/*
 		std::printf("ck_seed = %d %d %d %d\n", *(uint32_t*)&ck_seed[0],
 			*(uint32_t*)&ck_seed[4],
 			*(uint32_t*)&ck_seed[8],
 			*(uint32_t*)&ck_seed[12]);
-
+		
 		std::printf("r_seed = %d %d %d %d\n", *(uint32_t*)&parties[i].ri_val[0],
 			*(uint32_t*)&parties[i].ri_val[4],
 			*(uint32_t*)&parties[i].ri_val[8],
-			*(uint32_t*)&parties[i].ri_val[12]);
+			*(uint32_t*)&parties[i].ri_val[12]);*/
 		poly_gen_commit(ck_seed, parties[i].ri_val, F1);//WARNING !!!
-		std::printf("f[%d] = %d\n", i, xorSign((const char*)F1, sizeof(F1)));
+		
+		//poly_gen_commit2(ck, ri, F1);
+		//std::printf("f[%d] = %d\n", i, xorSign((const char*)F1, sizeof(F1)));
+
+
 
 		poly_add((poly_t*)&F1[1], (poly_t*)w_temp, _K_, (poly_t*)&F1[1]);
 		poly_freeze((poly_t*)F1, _K_ * _K_);

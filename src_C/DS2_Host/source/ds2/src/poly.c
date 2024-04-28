@@ -439,7 +439,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
     poly_t r_kj = {0};
     poly_t ck_ik = {0};
     uint32_t nonce = 0;
-
+    /*
     printf("ck_seed = %d %d %d %d\n", *(uint32_t*)&ck_seed[0],
         *(uint32_t*)&ck_seed[4],
         *(uint32_t*)&ck_seed[8],
@@ -451,7 +451,7 @@ void poly_gen_commit(const uint8_t ck_seed[SEED_BYTES], const uint8_t r_seed[SEE
         *(uint32_t*)&r_seed[12]);
 
     memset(f, 0, _K_*_K_*_N_*4);
-
+    */
     for(size_t k = 0; k < TC_COLS; k++) {
     	for (size_t j = 0; j < _K_; j++) {
             nonce = 0;
