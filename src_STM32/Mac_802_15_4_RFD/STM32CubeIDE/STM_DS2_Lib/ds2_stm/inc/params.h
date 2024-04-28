@@ -8,8 +8,8 @@
 #define _N 256
 #define _Q 8380417
 
-#define K 2
-#define L 2
+#define K 4
+#define L 4
 
 #define D 12
 
@@ -58,7 +58,7 @@
 #define L1 64
 #define L2 64
 
-#define SEED_BYTES 16
+#define SEED_BYTES 64
 #define T1_BITS 11
 #define POLY_T1_PACKED_BYTES (T1_BITS * (_N >> 3))
 

@@ -770,6 +770,8 @@ static void APP_FFD_MAC_802_15_4_DS2_Abort(void)
 	APP_FFD_MAC_802_15_4_DS2_KeyGen_Reset();
 }
 
+//TODO - Insert Stage 0 to for keygen
+
 static void APP_FFD_MAC_802_15_4_DS2_KeyGen_Stage_1(void)
 {
 	DS2_Packet *packet_ptr = (DS2_Packet *)g_DataInd_rx.msduPtr;

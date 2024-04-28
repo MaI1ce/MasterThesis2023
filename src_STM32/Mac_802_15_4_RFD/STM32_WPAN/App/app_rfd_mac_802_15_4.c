@@ -1005,20 +1005,20 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
         poly_add(cs2, y2, K, z2);
 
 		rej = 0;
-        rej = poly_reject(z1, z2, cs1, cs2);
+        //rej = poly_reject(z1, z2, cs1, cs2);
 		//APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 1 %d", rej);
 
-	    APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
+	    //APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
 
     	poly_copy(t0, K, t0_);
     	poly_ntt(t0_, K);
-    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
+    	//APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
     	poly_mul_pointwise(t0_, &poly_c, K, t0_);
     	poly_reduce(t0_, K);
     	poly_invntt_tomont(t0_, K);
 
-    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
-    	APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
+    	//APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
+    	//APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
 
 
     	poly_sub(z2, t0_, K, z2);
@@ -1026,18 +1026,18 @@ static void APP_RFD_MAC_802_15_4_DS2_Sign_Stage_1(void)
         poly_center(z1, L);
         poly_center(z2, K);
 
-    	APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
-    	APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
+    	//APP_DBG("RFD DS2 -- SIGN -- t0 = %ld", t0_[1].coeffs[_N-1]);
+    	//APP_DBG("RFD DS2 -- SIGN -- z2 = %ld", z2[1].coeffs[_N-1]);
 
 
         //check norm
-        rej |= !poly_check_norm(z1, L, B);
+        //rej |= !poly_check_norm(z1, L, B);
 		
-		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 2 %d", rej);
+		//APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 2 %d", rej);
 		
-        rej |= !poly_check_norm(z2, K, B);
+        //rej |= !poly_check_norm(z2, K, B);
 		
-		APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 3 %d", rej);
+		//APP_DBG("RFD DS2 -- SIGN -- REJECT RESULT 3 %d", rej);
 
 	    poly_addq(z1, L);
 	    poly_pack(TC_L, z1, L, g_DS2_Data.zi_1_val);
